@@ -1,0 +1,18 @@
+# Archivos compilados
+target/
+*.class
+
+# Archivos de IDE (No se suben, cada dev tiene su config)
+.nb-gradle/
+.nb-gradle-properties
+nbproject/private/
+.idea/
+*.iml
+
+# Base de datos (No subir la DB de pruebas)
+*.db
+*.sqlite
+gestion_pyme.db
+
+# Logs
+*.log

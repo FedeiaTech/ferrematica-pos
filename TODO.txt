@@ -1,0 +1,24 @@
+com.miempresa.erp
+│
+├── core (El activo más valioso - Lógica pura)
+│   ├── model        (Entidades: Cliente, Producto, Factura)
+│   ├── ports        (INTERFACES: Aquí defines las reglas)
+│   │   ├── input    (Lo que la UI puede pedir: CrearClienteUseCase)
+│   │   └── output   (Lo que necesitamos de fuera: ClienteRepository)
+│   └── service      (Implementación de la lógica: ClienteService)
+│
+├── infrastructure (Los detalles técnicos - Lo que cambiará)
+│   ├── adapters
+│   │   ├── database (Implementación con SQLite/Hibernate)
+│   │   └── email    (Implementación de envío de correos)
+│   └── ui           (Toda la vista de JavaFX va aquí)
+│       ├── controller
+│       └── view (archivos .fxml)
+│
+└── Main.java (El punto de entrada)
+
+
+
+TODO:
+Corregir id discontinuos al eliminar y crear uno nuevo
+agregar item en una ventana aparte
