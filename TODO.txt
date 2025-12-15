@@ -22,3 +22,107 @@ com.miempresa.erp
 TODO:
 Corregir id discontinuos al eliminar y crear uno nuevo
 agregar item en una ventana aparte
+
+🛡️ FASE 1: El Núcleo Blindado (Core Kernel)
+Objetivo: Preparar el sistema para ser seguro, configurable y modular antes de meter la complejidad fiscal.
+
+[ ] 1.1. Sistema de Usuarios y Seguridad (RBAC)
+
+Crear tabla usuarios (id, nombre, pass_hash, rol).
+
+Implementar Login Screen (Pantalla de acceso).
+
+Técnico: Usar BCrypt para no guardar contraseñas en texto plano.
+
+[ ] 1.2. Motor de Configuración (Empresa)
+
+Crear tabla configuracion (nombre_empresa, cuit, punto_venta, direccion, logo_path).
+
+Crear pantalla de "Mis Datos" para que el usuario cargue esto al iniciar por primera vez (Onboarding).
+
+[ ] 1.3. Sistema de "Feature Flags" (Interruptores)
+
+Crear lógica para activar/desactivar módulos.
+
+Implementación: Un simple booleano en la DB: modulo_fiscal_activo = true/false.
+
+Impacto: Esto permite vender el software en México (fiscal = false) o Argentina (fiscal = true) sin cambiar el código.
+
+🎨 FASE 2: Experiencia de Usuario y Ventas (UX/UI)
+Objetivo: Que el sistema se vea moderno (Bento Grid) y la venta sea fluida.
+
+[ ] 2.1. Dashboard "Bento Grid" (Pantalla de Inicio)
+
+Diseñar el Home con tarjetas informativas en lugar de un menú gris.
+
+Tarjetas: "Ventas de Hoy", "Estado de Conexión (AFIP)", "Stock Crítico", "Accesos Rápidos".
+
+[ ] 2.2. Rediseño de Pantalla de Ventas (POS)
+
+Implementar buscador de productos en tiempo real (mientras escribes).
+
+Agregar soporte para "Cantidad" y "Descuentos" en el renglón.
+
+Mostrar el Total grande y visible.
+
+Integrar botones de pago (Efectivo, Tarjeta, QR).
+
+[ ] 2.3. Divulgación Progresiva en Inventario
+
+Rediseñar el formulario de productos (que ya hiciste) para ocultar campos avanzados (impuestos, costos) bajo un botón "Ver más detalles".
+
+[ ] 2.4. Generación de Tickets (PDF Local)
+
+Implementar una librería (ej. iText o JasperReports) para generar un PDF básico con el detalle de la venta.
+
+🇦🇷 FASE 3: El Módulo Fiscal (Arquitectura Hexagonal)
+Objetivo: Conectar con ARCA usando el patrón "Sidecar" sin ensuciar el código Java.
+
+[ ] 3.1. Definición de Contratos (Java)
+
+Crear la interfaz IFiscalProvider y las clases de respuesta (ResultadoFiscal).
+
+[ ] 3.2. Desarrollo del Sidecar (Python)
+
+Crear script en Python usando pyafipws.
+
+Funcionalidad: Recibir JSON de venta -> Conectar WSAA/WSFE -> Devolver CAE.
+
+Empaquetar el script como .exe independiente.
+
+[ ] 3.3. Integración Java-Python
+
+Crear el FiscalService en Java que ejecuta el .exe de Python en segundo plano y lee su respuesta.
+
+[ ] 3.4. Manejo de Contingencias (Offline-First)
+
+Modificar la venta para que, si el Python falla o no hay internet, la venta se guarde igual con estado PENDIENTE_FISCAL.
+
+Crear un botón/proceso para "Reintentar ventas pendientes".
+
+📦 FASE 4: Producto y Distribución
+Objetivo: Empaquetar todo para que sea instalable y vendible.
+
+[ ] 4.1. Instalador Profesional
+
+Usar jpackage para crear un instalador nativo (.msi o .exe) que incluya:
+
+Tu JAR de Java.
+
+El JRE (Java Runtime) embebido (para que el cliente no tenga que instalar Java).
+
+La base de datos SQLite vacía.
+
+El ejecutable Sidecar de Python.
+
+[ ] 4.2. Sistema de Licencias Simple
+
+Crear una validación al inicio que pida un "Serial Key".
+
+Estrategia: Algoritmo matemático simple para validar claves offline (ej. verificar dígito verificador).
+
+[ ] 4.3. Documentación y Marketing
+
+Crear el README.md del repositorio privado (técnico).
+
+Crear una Landing Page simple o perfil en Itch.io con capturas del Dashboard.

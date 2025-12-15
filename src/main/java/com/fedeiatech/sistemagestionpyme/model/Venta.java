@@ -22,7 +22,7 @@ public class Venta {
     
     // Recalcular el total sumando los subtotales
     public void calcularTotal() {
-        this.total = 0.0;
+        this.total = 0;
         for (DetalleVenta d : detalles) {
             this.total += d.getSubtotal();
         }
@@ -36,7 +36,11 @@ public class Venta {
     public void setFecha(String fecha) { this.fecha = fecha; }
 
     public double getTotal() { return total; }
-    // No ponemos setTotal porque se calcula solo
+    
+    public void setTotal(double total) {
+        this.total = total;
+    }
+
 
     public List<DetalleVenta> getDetalles() { return detalles; }
 }

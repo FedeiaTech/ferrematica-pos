@@ -2,6 +2,7 @@ package com.fedeiatech.sistemagestionpyme.view;
 
 import com.fedeiatech.sistemagestionpyme.dao.VentaDAO;
 import com.fedeiatech.sistemagestionpyme.service.IFiscalProvider;
+import com.fedeiatech.sistemagestionpyme.service.LicenseService;
 import com.fedeiatech.sistemagestionpyme.service.MockFiscalProvider;
 import java.io.IOException;
 import java.net.URL;
@@ -13,6 +14,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Label;
 import javafx.stage.Stage;
 
@@ -93,5 +95,47 @@ public class DashboardController implements Initializable {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+    
+    @FXML
+    void abrirReportes(ActionEvent event) {
+        // VERIFICACIÓN DE LICENCIA (FEATURE FLAG)
+        if (LicenseService.permiteReportes()) {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/reports_view.fxml"));
+                Parent root = loader.load();
+                Stage stage = new Stage();
+                stage.setTitle("Reportes Avanzados (PRO)");
+                stage.setScene(new Scene(root));
+                stage.show();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        } else {
+            // MENSAJE DE UPSELL (VENTA)
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Característica Premium");
+            alert.setHeaderText("¡Desbloquea los Reportes!");
+            alert.setContentText("Esta función es exclusiva de la versión PRO.\n\n"
+                    + "Adquiere tu licencia para acceder al historial completo, "
+                    + "exportación a Excel y métricas avanzadas.");
+            alert.showAndWait();
+        }
+    }
+    
+    @FXML
+    void cambiarModoDev(ActionEvent event) {
+        // 1. Invertir el estado actual
+        boolean nuevoEstado = !LicenseService.esPremium();
+        LicenseService.setPremium(nuevoEstado);
+        
+        // 2. Avisar al desarrollador (Tú)
+        String modo = nuevoEstado ? "PREMIUM (PRO)" : "FREE (Community)";
+        
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Modo Desarrollador");
+        alert.setHeaderText("Licencia Cambiada");
+        alert.setContentText("El sistema ahora simula ser versión: " + modo + "\n\nPrueba los botones bloqueados ahora.");
+        alert.showAndWait();
     }
 }

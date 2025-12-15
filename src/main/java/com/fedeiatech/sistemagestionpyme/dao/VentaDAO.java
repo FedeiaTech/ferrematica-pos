@@ -104,4 +104,26 @@ public class VentaDAO {
         }
         return total;
     }
+    
+    // [PREMIUM FEATURE] - Listado histórico para reportes
+    public java.util.List<Venta> listarVentasHistoricas() throws SQLException {
+        java.util.List<Venta> lista = new java.util.ArrayList<>();
+        String sql = "SELECT * FROM ventas ORDER BY fecha DESC"; // Las más recientes primero
+        
+        try (Connection conn = ConexionDB.getConexion();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            
+            while (rs.next()) {
+                Venta v = new Venta();
+                v.setId(rs.getInt("id"));
+                v.setFecha(rs.getString("fecha"));
+                v.setTotal(rs.getDouble("total"));
+                // Nota: Por rendimiento, en un reporte general no solemos cargar los "detalles" (items) 
+                // de cada venta a menos que el usuario haga doble clic.
+                lista.add(v);
+            }
+        }
+        return lista;
+    }
 }
