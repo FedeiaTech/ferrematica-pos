@@ -12,7 +12,7 @@ public class App extends Application {
     @Override
     public void start(Stage stage) throws IOException {
         // 1. Definimos la ruta simple (en la raíz de resources)
-        String fxmlPath = "/main_view.fxml";
+        String fxmlPath = "/dashboard_view.fxml";
         
         // 2. Comprobamos si Java realmente lo ve antes de intentar cargarlo
         if (getClass().getResource(fxmlPath) == null) {
