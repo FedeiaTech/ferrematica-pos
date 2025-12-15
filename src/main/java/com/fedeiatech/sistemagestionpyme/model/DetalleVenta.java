@@ -37,4 +37,14 @@ public class DetalleVenta {
     public double getSubtotal() {
         return cantidad * precioUnitario;
     }
+    
+    // Esto permite que PropertyValueFactory use "codigoItem"
+    public String getCodigoItem() {
+        return (item != null) ? item.getCodigo() : "";
+    }
+
+    // Esto permite que PropertyValueFactory use "nombreItem"
+    public String getNombreItem() {
+        return (item != null) ? item.getNombre() : "";
+    }
 }

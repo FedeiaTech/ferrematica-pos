@@ -56,4 +56,10 @@ public class ItemVenta {
     public double calcularGanancia() {
         return precioVenta - precioCosto;
     }
+    
+    // Esto hace que los cuadros de diálogo muestren el nombre bonito
+    @Override
+    public String toString() {
+        return codigo + " | " + nombre + " ($ " + precioVenta + ")";
+    }
 }

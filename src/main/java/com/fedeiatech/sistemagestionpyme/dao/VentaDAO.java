@@ -38,8 +38,7 @@ public class VentaDAO {
             }
 
             // 3. Guardar Detalles y Descontar Stock
-            try (PreparedStatement pstDetalle = conn.prepareStatement(sqlDetalle);
-                 PreparedStatement pstStock = conn.prepareStatement(sqlStock)) {
+            try (PreparedStatement pstDetalle = conn.prepareStatement(sqlDetalle); PreparedStatement pstStock = conn.prepareStatement(sqlStock)) {
 
                 for (DetalleVenta detalle : venta.getDetalles()) {
                     // A. Insertar detalle
@@ -81,5 +80,28 @@ public class VentaDAO {
                 conn.setAutoCommit(true);
             }
         }
+    }
+
+    // Método para obtener el total vendido hoy
+    public double sumarVentasDelDia() throws SQLException {
+        double total = 0.0;
+        // Obtenemos la fecha de hoy en formato String (YYYY-MM-DD) para comparar
+        String fechaHoy = java.time.LocalDate.now().toString();
+
+        // SQL: Sumame el total de la tabla ventas donde la fecha empiece con hoy
+        String sql = "SELECT SUM(total) FROM ventas WHERE fecha LIKE ?";
+
+        try (Connection conn = ConexionDB.getConexion(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            // El símbolo % es el comodín. Buscamos '2025-12-15%'
+            pstmt.setString(1, fechaHoy + "%");
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    total = rs.getDouble(1);
+                }
+            }
+        }
+        return total;
     }
 }
