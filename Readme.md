@@ -25,6 +25,11 @@
 - [ ] **Conexión Fiscal ARCA** *(Planificado)*
 - [ ] **Reportes y Métricas** *(Planificado)*
 
+## 💎 Niveles de Licencia
+El sistema implementa *Feature Flags* para gestionar versiones:
+* **Community (Free):** POS, Inventario, Tickets simples.
+* **Professional (Paid):** + Reportes Históricos, Conexión ARCA, Métricas.
+
 ## ⚙️ Cómo ejecutar (Dev)
 1.  Clonar repositorio.
 2.  Ejecutar `mvn clean install`.
