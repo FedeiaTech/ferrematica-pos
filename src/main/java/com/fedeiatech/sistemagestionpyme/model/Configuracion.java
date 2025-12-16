@@ -7,6 +7,12 @@ public class Configuracion {
     private String condicionIva;
     private int puntoVenta;
     private String certificadoRuta;
+    private String rutaLogo;
+    private String mensajeTicket;
+    private boolean permitirStockNegativo;
+    private double recargoTarjeta;
+    private String rutaBackup;
+    private String rutaGuardadoTickets;
 
     // Constructor vacío
     public Configuracion() {
@@ -39,4 +45,27 @@ public class Configuracion {
 
     public String getCertificadoRuta() { return certificadoRuta; }
     public void setCertificadoRuta(String certificadoRuta) { this.certificadoRuta = certificadoRuta; }
+    
+    public String getRutaLogo() { return rutaLogo; }
+    public void setRutaLogo(String rutaLogo) { this.rutaLogo = rutaLogo; }
+
+    public String getMensajeTicket() { return mensajeTicket; }
+    public void setMensajeTicket(String mensajeTicket) { this.mensajeTicket = mensajeTicket; }
+
+    public boolean isPermitirStockNegativo() { return permitirStockNegativo; }
+    public void setPermitirStockNegativo(boolean permitirStockNegativo) { this.permitirStockNegativo = permitirStockNegativo; }
+
+    public double getRecargoTarjeta() { return recargoTarjeta; }
+    public void setRecargoTarjeta(double recargoTarjeta) { this.recargoTarjeta = recargoTarjeta; }
+    
+    public String getRutaBackup() { return rutaBackup; }
+    public void setRutaBackup(String rutaBackup) { this.rutaBackup = rutaBackup; }
+    
+    public String getRutaGuardadoTickets() {
+        return rutaGuardadoTickets;
+    }
+
+    public void setRutaGuardadoTickets(String rutaGuardadoTickets) {
+        this.rutaGuardadoTickets = rutaGuardadoTickets;
+    }
 }

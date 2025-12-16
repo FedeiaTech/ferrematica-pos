@@ -1,9 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TextArea?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.Tooltip?>
+<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.GridPane?>
@@ -12,71 +17,127 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<AnchorPane id="AnchorPane" prefHeight="500.0" prefWidth="700.0" style="-fx-background-color: #f4f6f8;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.fedeiatech.sistemagestionpyme.view.ConfigController">
+<AnchorPane id="AnchorPane" prefHeight="600.0" prefWidth="800.0" style="-fx-background-color: #f4f6f8;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.fedeiatech.sistemagestionpyme.view.ConfigController">
    <children>
-      <VBox spacing="20.0" AnchorPane.bottomAnchor="30.0" AnchorPane.leftAnchor="30.0" AnchorPane.rightAnchor="30.0" AnchorPane.topAnchor="30.0">
+      <VBox spacing="15.0" AnchorPane.bottomAnchor="20.0" AnchorPane.leftAnchor="20.0" AnchorPane.rightAnchor="20.0" AnchorPane.topAnchor="20.0">
          <children>
-            <Label text="Configuración del Negocio" textFill="#2c3e50">
+            <Label text="Configuración del Sistema" textFill="#2c3e50">
                <font>
                   <Font name="System Bold" size="24.0" />
                </font>
             </Label>
-            <Label text="Estos datos aparecerán en el encabezado de tus tickets y reportes." textFill="#7f8c8d" />
 
-            <GridPane hgap="20.0" vgap="15.0" style="-fx-background-color: white; -fx-padding: 30; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 5, 0, 0, 2);">
-              <columnConstraints>
-                <ColumnConstraints hgrow="SOMETIMES" maxWidth="200.0" minWidth="10.0" prefWidth="150.0" />
-                <ColumnConstraints hgrow="ALWAYS" minWidth="10.0" prefWidth="100.0" />
-              </columnConstraints>
-              <rowConstraints>
-                <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
-                <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
-                <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
-                  <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
-                  <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
-              </rowConstraints>
-               <children>
-                  <Label text="Nombre de Fantasía:" textFill="#2c3e50" GridPane.rowIndex="0">
-                     <font>
-                        <Font name="System Bold" size="14.0" />
-                     </font>
-                  </Label>
-                  <TextField fx:id="txtNombreEmpresa" promptText="Ej: Kiosco El Paso" style="-fx-font-size: 14;" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+            <TabPane tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS" style="-fx-background-color: white; -fx-background-radius: 5; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 5, 0, 0, 2);">
+               <tabs>
+                  <Tab text="🏢 Datos Empresa">
+                     <content>
+                        <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+                           <children>
+                              <GridPane hgap="15.0" vgap="15.0" AnchorPane.leftAnchor="20.0" AnchorPane.topAnchor="20.0">
+                                 <columnConstraints>
+                                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="150.0" />
+                                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="300.0" />
+                                 </columnConstraints>
+                                 <rowConstraints>
+                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                 </rowConstraints>
+                                 <children>
+                                    <Label text="Nombre Fantasía:" />
+                                    <TextField fx:id="txtNombreEmpresa" GridPane.columnIndex="1" />
+                                    <Label text="Doc. Tributario (CUIT):" GridPane.rowIndex="1" />
+                                    <TextField fx:id="txtCuit" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                                    <Label text="Dirección:" GridPane.rowIndex="2" />
+                                    <TextField fx:id="txtDireccion" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                                    <Label text="Condición IVA:" GridPane.rowIndex="3" />
+                                    <TextField fx:id="txtCondicionIva" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+                                    <Label text="Punto de Venta:" GridPane.rowIndex="4" />
+                                    <TextField fx:id="txtPuntoVenta" GridPane.columnIndex="1" GridPane.rowIndex="4" />
+                                 </children>
+                              </GridPane>
+                           </children>
+                        </AnchorPane>
+                     </content>
+                  </Tab>
 
-                  <Label text="CUIT / DNI:" textFill="#2c3e50" GridPane.rowIndex="1">
-                     <font>
-                        <Font name="System Bold" size="14.0" />
-                     </font>
-                  </Label>
-                  <TextField fx:id="txtCuit" promptText="20-xxxxxxxx-x" style="-fx-font-size: 14;" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                  <Tab text="🎨 Personalización">
+                     <content>
+                        <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+                           <children>
+                              <VBox spacing="15.0" AnchorPane.leftAnchor="20.0" AnchorPane.topAnchor="20.0">
+                                 <children>
+                                    <Label text="Logotipo del Ticket:" style="-fx-font-weight: bold;" />
+                                    <HBox spacing="10.0" alignment="CENTER_LEFT">
+                                       <children>
+                                          <ImageView fx:id="imgLogoPreview" fitHeight="80.0" fitWidth="80.0" pickOnBounds="true" preserveRatio="true" style="-fx-effect: dropshadow(three-pass-box, gray, 5, 0, 0, 0);" />
+                                          <Button text="Seleccionar Imagen..." onAction="#seleccionarLogo" />
+                                          <Label fx:id="lblRutaLogo" text="Sin imagen seleccionada" textFill="GRAY" wrapText="true" maxWidth="300" />
+                                       </children>
+                                    </HBox>
+                                    
+                                    <Label text="Mensaje al Pie del Ticket:" style="-fx-font-weight: bold;" />
+                                    <TextArea fx:id="txtMensajeTicket" prefHeight="80.0" prefWidth="400.0" promptText="Ej: Gracias por su compra. No se aceptan cambios los domingos." />
+                                 </children>
+                              </VBox>
+                           </children>
+                        </AnchorPane>
+                     </content>
+                  </Tab>
 
-                  <Label text="Dirección Comercial:" textFill="#2c3e50" GridPane.rowIndex="2">
-                     <font>
-                        <Font name="System Bold" size="14.0" />
-                     </font>
-                  </Label>
-                  <TextField fx:id="txtDireccion" promptText="Calle Falsa 123, Santa Fe" style="-fx-font-size: 14;" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                  <Tab text="🛡️ Sistema y Seguridad">
+                     <content>
+                        <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+                           <children>
+                              <VBox spacing="20.0" AnchorPane.leftAnchor="20.0" AnchorPane.topAnchor="20.0">
+                                 <children>
+                                    <Label text="Reglas de Negocio" style="-fx-font-weight: bold; -fx-font-size: 14;" />
+                                    <CheckBox fx:id="chkStockNegativo" text="Permitir ventas con Stock Negativo (Recomendado para empezar)" />
+                                    
+                                    <HBox spacing="10.0" alignment="CENTER_LEFT">
+                                       <children>
+                                          <Label text="Recargo por pago con Tarjeta (%):" />
+                                          <TextField fx:id="txtRecargo" prefWidth="60.0" text="0.0" />
+                                       </children>
+                                    </HBox>
+                                    
+                                    <Label text="Almacenamiento de Tickets PDF:" style="-fx-font-weight: bold; -fx-padding: 10 0 0 0;" />
+                                    <HBox spacing="10.0" alignment="CENTER_LEFT">
+                                       <children>
+                                          <TextField fx:id="txtRutaTickets" promptText="Si está vacío, los tickets son temporales" HBox.hgrow="ALWAYS" editable="false" />
+                                          <Button text="Seleccionar Carpeta 📂" onAction="#seleccionarCarpetaTickets" />
+                                          <Button text="❌" onAction="#borrarRutaTickets" style="-fx-background-color: #e74c3c; -fx-text-fill: white;">
+                                             <tooltip>
+                                                <Tooltip text="Volver a modo temporal" />
+                                             </tooltip>
+                                          </Button>
+                                       </children>
+                                    </HBox>
+                                    <Label text="Si seleccionas una carpeta, todos los tickets se guardarán allí permanentemente." textFill="GRAY" />
 
-                  <Label text="Condición IVA:" textFill="#2c3e50" GridPane.rowIndex="3">
-                     <font>
-                        <Font name="System Bold" size="14.0" />
-                     </font>
-                  </Label>
-                  <TextField fx:id="txtCondicionIva" promptText="Responsable Inscripto / Monotributo" style="-fx-font-size: 14;" GridPane.columnIndex="1" GridPane.rowIndex="3" />
-                  
-                  <Label text="Punto de Venta (AFIP):" textFill="#2c3e50" GridPane.rowIndex="4">
-                     <font>
-                        <Font name="System Bold" size="14.0" />
-                     </font>
-                  </Label>
-                  <TextField fx:id="txtPuntoVenta" promptText="1" style="-fx-font-size: 14;" GridPane.columnIndex="1" GridPane.rowIndex="4" />
-               </children>
-            </GridPane>
-            
+                                    <Label text="Copia de Seguridad (Backup)" style="-fx-font-weight: bold; -fx-font-size: 14;" />
+                                    <HBox spacing="10.0" alignment="CENTER_LEFT">
+                                       <children>
+                                          <Button text="Generar Copia de Seguridad Ahora 💾" onAction="#generarBackup" style="-fx-background-color: #e67e22; -fx-text-fill: white; -fx-font-weight: bold;" />
+                                          <Button text="Restaurar Copia Antigua ⚠️" onAction="#restaurarBackup" style="-fx-background-color: #c0392b; -fx-text-fill: white; -fx-font-weight: bold;" />
+                                       </children>
+                                    </HBox>
+                                    <Label text="Guarda una copia de tu base de datos en un lugar seguro (Pendrive o Nube)." textFill="GRAY" />
+                                 </children>
+                              </VBox>
+                           </children>
+                        </AnchorPane>
+                     </content>
+                  </Tab>
+               </tabs>
+            </TabPane>
+
             <HBox alignment="CENTER_RIGHT" spacing="15.0">
                <children>
-                  <Button onAction="#cerrarVentana" text="Cancelar" style="-fx-background-color: transparent; -fx-text-fill: #7f8c8d; -fx-font-weight: bold; -fx-border-color: #bdc3c7; -fx-border-radius: 5;" />
-                  <Button onAction="#guardarCambios" text="Guardar Datos 💾" style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14; -fx-background-radius: 5; -fx-padding: 10 20;" />
+                  <Button onAction="#cerrarVentana" text="Cancelar" />
+                  <Button onAction="#guardarCambios" text="GUARDAR TODO ✅" style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10 20;" />
                </children>
             </HBox>
          </children>

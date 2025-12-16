@@ -27,6 +27,7 @@
                 <TableColumn fx:id="colId" prefWidth="75.0" text="ID Venta" />
                 <TableColumn fx:id="colFecha" prefWidth="200.0" text="Fecha y Hora" />
                 <TableColumn fx:id="colTotal" prefWidth="150.0" text="Total (ARS)" />
+                <TableColumn fx:id="colAccion" prefWidth="100.0" text="Acción" />
               </columns>
                <columnResizePolicy>
                   <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />

@@ -62,8 +62,8 @@ public class DashboardController implements Initializable {
     @FXML
     void abrirInventario(ActionEvent event) {
         try {
-            // Cargamos la vista de inventario
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/main_view.fxml"));
+            // CAMBIO: Ahora apunta a inventory_view.fxml
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/inventory_view.fxml"));
             Parent root = loader.load();
             
             Stage stage = new Stage();

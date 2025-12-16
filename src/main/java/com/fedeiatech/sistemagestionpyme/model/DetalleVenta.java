@@ -1,50 +1,60 @@
 package com.fedeiatech.sistemagestionpyme.model;
 
 public class DetalleVenta {
-    private int id;
-    private int idVenta;
-    private ItemVenta item; // Guardamos el objeto Item completo para saber su nombre
-    private double cantidad;
-    private double precioUnitario;
-    
-    // Constructor vacío
-    public DetalleVenta() {}
+    private ItemVenta item;
+    private double cantidad; // Ahora usamos double para permitir 1.5 kg, etc.
+    private double precioUnitario; // IMPORTANTE: Guardamos el precio histórico aquí
 
-    // Constructor útil
+    // Constructor vacío
+    public DetalleVenta() {
+    }
+
+    // Constructor para Venta Nueva (toma el precio actual del item)
     public DetalleVenta(ItemVenta item, double cantidad) {
         this.item = item;
         this.cantidad = cantidad;
-        this.precioUnitario = item.getPrecioVenta(); // El precio se congela al momento de la venta
+        this.precioUnitario = item.getPrecioVenta(); // Congelamos el precio al momento de crear
     }
 
-    // Getters y Setters
-    public int getId() { return id; }
-    public void setId(int id) { this.id = id; }
+    // --- GETTERS Y SETTERS ---
 
-    public int getIdVenta() { return idVenta; }
-    public void setIdVenta(int idVenta) { this.idVenta = idVenta; }
+    public ItemVenta getItem() {
+        return item;
+    }
 
-    public ItemVenta getItem() { return item; }
-    public void setItem(ItemVenta item) { this.item = item; }
+    public void setItem(ItemVenta item) {
+        this.item = item;
+    }
 
-    public double getCantidad() { return cantidad; }
-    public void setCantidad(double cantidad) { this.cantidad = cantidad; }
+    public double getCantidad() {
+        return cantidad;
+    }
 
-    public double getPrecioUnitario() { return precioUnitario; }
-    public void setPrecioUnitario(double precioUnitario) { this.precioUnitario = precioUnitario; }
+    public void setCantidad(double cantidad) {
+        this.cantidad = cantidad;
+    }
 
-    // Calculado: Cantidad * Precio
+    public double getPrecioUnitario() {
+        return precioUnitario;
+    }
+
+    // Usado para cargar ventas viejas con precios viejos
+    public void setPrecioUnitario(double precioUnitario) {
+        this.precioUnitario = precioUnitario;
+    }
+
+    // --- SUBTOTAL CALCULADO (Sin Setter) ---
+    // El subtotal siempre es el resultado de la matemática, no se asigna manualmente.
     public double getSubtotal() {
-        return cantidad * precioUnitario;
+        return this.cantidad * this.precioUnitario;
     }
     
-    // Esto permite que PropertyValueFactory use "codigoItem"
+    // Getters auxiliares para la Tabla (TableView usa PropertyValueFactory busca "nombreItem")
     public String getCodigoItem() {
-        return (item != null) ? item.getCodigo() : "";
+        return item != null ? item.getCodigo() : "";
     }
-
-    // Esto permite que PropertyValueFactory use "nombreItem"
+    
     public String getNombreItem() {
-        return (item != null) ? item.getNombre() : "";
+        return item != null ? item.getNombre() : "";
     }
 }

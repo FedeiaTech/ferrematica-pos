@@ -126,4 +126,52 @@ public class VentaDAO {
         }
         return lista;
     }
+    
+    // Método para recuperar una venta COMPLETA con sus detalles (para reimprimir)
+    public Venta obtenerVentaCompleta(int idVenta) throws SQLException {
+        Venta venta = null;
+        String sqlVenta = "SELECT * FROM ventas WHERE id = ?";
+        
+        // CORREGIDO: Cambiado 'detalle_ventas' por 'detalles_venta' (plural)
+        String sqlDetalles = "SELECT d.cantidad, d.precio_unitario, i.codigo, i.nombre " +
+                             "FROM detalles_venta d " +  
+                             "JOIN items i ON d.id_item = i.id " +
+                             "WHERE d.id_venta = ?";
+
+        try (Connection conn = ConexionDB.getConexion()) {
+            // 1. Obtener Cabecera
+            try (PreparedStatement pstmt = conn.prepareStatement(sqlVenta)) {
+                pstmt.setInt(1, idVenta);
+                ResultSet rs = pstmt.executeQuery();
+                if (rs.next()) {
+                    venta = new Venta();
+                    venta.setId(rs.getInt("id"));
+                    venta.setFecha(rs.getString("fecha"));
+                    venta.setTotal(rs.getDouble("total"));
+                }
+            }
+
+            // 2. Obtener Detalles (Items)
+            if (venta != null) {
+                try (PreparedStatement pstmt = conn.prepareStatement(sqlDetalles)) {
+                    pstmt.setInt(1, idVenta);
+                    ResultSet rs = pstmt.executeQuery();
+                    while (rs.next()) {
+                        com.fedeiatech.sistemagestionpyme.model.ItemVenta item = new com.fedeiatech.sistemagestionpyme.model.ItemVenta();
+                        item.setCodigo(rs.getString("codigo"));
+                        item.setNombre(rs.getString("nombre"));
+                        
+                        com.fedeiatech.sistemagestionpyme.model.DetalleVenta detalle = new com.fedeiatech.sistemagestionpyme.model.DetalleVenta(
+                            item, 
+                            rs.getDouble("cantidad")
+                        );
+                        
+                        detalle.setPrecioUnitario(rs.getDouble("precio_unitario"));
+                        venta.agregarDetalle(detalle);
+                    }
+                }
+            }
+        }
+        return venta;
+    }
 }

@@ -4,6 +4,7 @@ import com.fedeiatech.sistemagestionpyme.dao.ItemDAO;
 import com.fedeiatech.sistemagestionpyme.model.ItemVenta;
 import java.net.URL;
 import java.sql.SQLException;
+import java.util.Optional;
 import java.util.ResourceBundle;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -11,41 +12,31 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.control.ButtonType;
-import java.util.Optional;
+import javafx.scene.paint.Color;
 
-public class MainController implements Initializable {
+public class InventoryController implements Initializable {
 
     // --- TABLA ---
-    @FXML
-    private TableView<ItemVenta> tablaItems;
-    @FXML
-    private TableColumn<ItemVenta, Integer> colId;
-    @FXML
-    private TableColumn<ItemVenta, String> colCodigo; // Nuevo columna
-    @FXML
-    private TableColumn<ItemVenta, String> colNombre;
-    @FXML
-    private TableColumn<ItemVenta, Double> colPrecio;
-    @FXML
-    private TableColumn<ItemVenta, Double> colStock;
+    @FXML private TableView<ItemVenta> tablaItems;
+    @FXML private TableColumn<ItemVenta, Integer> colId;
+    @FXML private TableColumn<ItemVenta, String> colCodigo;
+    @FXML private TableColumn<ItemVenta, String> colNombre;
+    @FXML private TableColumn<ItemVenta, Double> colPrecio;
+    @FXML private TableColumn<ItemVenta, Double> colStock; // Ojo: Double para manejar decimales
 
     // --- FORMULARIO ---
-    @FXML
-    private TextField txtCodigo;
-    @FXML
-    private TextField txtNombre;
-    @FXML
-    private TextField txtPrecio;
-    @FXML
-    private TextField txtStock;
-    @FXML
-    private CheckBox chkServicio;
+    @FXML private TextField txtCodigo;
+    @FXML private TextField txtNombre;
+    @FXML private TextField txtPrecio;
+    @FXML private TextField txtStock;
+    @FXML private CheckBox chkServicio;
 
     private ItemDAO itemDAO;
     private ObservableList<ItemVenta> listaItems;
@@ -63,11 +54,59 @@ public class MainController implements Initializable {
         colNombre.setCellValueFactory(new PropertyValueFactory<>("nombre"));
         colPrecio.setCellValueFactory(new PropertyValueFactory<>("precioVenta"));
         colStock.setCellValueFactory(new PropertyValueFactory<>("stock"));
+
+        // --- LÓGICA VISUAL AVANZADA ---
+        colStock.setCellFactory(column -> new TableCell<ItemVenta, Double>() {
+            @Override
+            protected void updateItem(Double item, boolean empty) {
+                super.updateItem(item, empty);
+
+                // Limpiar celda si está vacía
+                if (empty || getTableRow() == null) {
+                    setText(null);
+                    setGraphic(null);
+                    setStyle("");
+                    return;
+                }
+
+                // Obtener el objeto completo de la fila para saber si es servicio
+                ItemVenta rowData = getTableRow().getItem();
+                
+                // Si la fila es nula (a veces pasa al renderizar), salir
+                if (rowData == null) return;
+
+                // CASO 1: ES SERVICIO
+                if (rowData.isEsServicio()) {
+                    setText("Servicio");
+                    setTextFill(Color.BLUE); // Azul para diferenciar
+                    setStyle("-fx-font-weight: bold; -fx-alignment: CENTER;");
+                } 
+                // CASO 2: ES PRODUCTO FÍSICO
+                else {
+                    if (item == null) {
+                        setText("0");
+                        setTextFill(Color.ORANGE);
+                        return;
+                    }
+                    
+                    setText(item.toString());
+                    setStyle("-fx-alignment: CENTER_RIGHT;"); // Números a la derecha queda mejor
+
+                    if (item < 0) {
+                        setTextFill(Color.RED); // ROJO: Alerta
+                        setStyle("-fx-font-weight: bold; -fx-alignment: CENTER_RIGHT;");
+                    } else if (item == 0) {
+                        setTextFill(Color.ORANGE); // NARANJA: Agotado
+                    } else {
+                        setTextFill(Color.BLACK); // NEGRO: Normal
+                    }
+                }
+            }
+        });
     }
 
     private void cargarDatos() {
         try {
-            // Guardamos la lista en una variable global para poder modificarla luego
             listaItems = FXCollections.observableArrayList(itemDAO.listarTodos());
             tablaItems.setItems(listaItems);
         } catch (SQLException e) {
@@ -75,46 +114,38 @@ public class MainController implements Initializable {
         }
     }
 
-    // --- MÉTODO DEL BOTÓN GUARDAR ---
     @FXML
     void guardarItem(ActionEvent event) {
         try {
-            // 1. Validar datos mínimos
             if (txtCodigo.getText().isEmpty() || txtNombre.getText().isEmpty() || txtPrecio.getText().isEmpty()) {
                 mostrarAlerta(Alert.AlertType.WARNING, "Datos incompletos", "Por favor llena Código, Nombre y Precio.");
                 return;
             }
 
-            // 2. Crear objeto (Parseando los números)
             ItemVenta nuevoItem = new ItemVenta();
             nuevoItem.setCodigo(txtCodigo.getText());
             nuevoItem.setNombre(txtNombre.getText());
-            nuevoItem.setDescripcion(""); // Opcional por ahora
-            nuevoItem.setPrecioCosto(0.0); // Opcional por ahora
+            nuevoItem.setDescripcion(""); 
+            nuevoItem.setPrecioCosto(0.0); 
             nuevoItem.setPrecioVenta(Double.parseDouble(txtPrecio.getText()));
 
-            // Si es servicio, el stock es -1, si no, lo que diga la caja
             if (chkServicio.isSelected()) {
                 nuevoItem.setEsServicio(true);
-                nuevoItem.setStock(-1);
+                nuevoItem.setStock(-1); // Convención para servicios
             } else {
                 nuevoItem.setEsServicio(false);
-                // Si la caja de stock está vacía, ponemos 0
                 String stockStr = txtStock.getText().isEmpty() ? "0" : txtStock.getText();
                 nuevoItem.setStock(Double.parseDouble(stockStr));
             }
 
-            // 3. Guardar en Base de Datos
             itemDAO.guardar(nuevoItem);
 
-            // 4. Refrescar la tabla (re-cargando todo o agregando a la lista)
             cargarDatos();
             limpiarFormulario();
-
             mostrarAlerta(Alert.AlertType.INFORMATION, "Éxito", "Producto guardado correctamente.");
 
         } catch (NumberFormatException e) {
-            mostrarAlerta(Alert.AlertType.ERROR, "Error de Formato", "El Precio y Stock deben ser números válidos (usa punto para decimales).");
+            mostrarAlerta(Alert.AlertType.ERROR, "Error de Formato", "El Precio y Stock deben ser números válidos.");
         } catch (SQLException e) {
             mostrarAlerta(Alert.AlertType.ERROR, "Error Base de Datos", "No se pudo guardar: " + e.getMessage());
         }
@@ -122,35 +153,26 @@ public class MainController implements Initializable {
 
     @FXML
     void eliminarItem(ActionEvent event) {
-        // 1. Obtener item seleccionado
         ItemVenta itemSeleccionado = tablaItems.getSelectionModel().getSelectedItem();
-
         if (itemSeleccionado == null) {
             mostrarAlerta(Alert.AlertType.WARNING, "Atención", "Selecciona un producto de la lista para eliminar.");
             return;
         }
 
-        // 2. CREAR LA CONFIRMACIÓN
         Alert confirmacion = new Alert(Alert.AlertType.CONFIRMATION);
         confirmacion.setTitle("Confirmar eliminación");
-        confirmacion.setHeaderText(null);
-        confirmacion.setContentText("¿Estás seguro de que deseas eliminar: " + itemSeleccionado.getNombre() + "?");
+        confirmacion.setHeaderText("¿Estás seguro?");
+        confirmacion.setContentText("Vas a eliminar: " + itemSeleccionado.getNombre());
 
-        // 3. Mostrar y esperar respuesta
         Optional<ButtonType> resultado = confirmacion.showAndWait();
-
-        // 4. Si el usuario dijo "OK", procedemos
         if (resultado.isPresent() && resultado.get() == ButtonType.OK) {
             try {
                 itemDAO.eliminar(itemSeleccionado.getId());
-                cargarDatos(); // Refrescar tabla
-                mostrarAlerta(Alert.AlertType.INFORMATION, "Eliminado", "El producto fue eliminado correctamente.");
+                cargarDatos();
+                mostrarAlerta(Alert.AlertType.INFORMATION, "Eliminado", "Producto eliminado.");
             } catch (SQLException e) {
                 mostrarAlerta(Alert.AlertType.ERROR, "Error", "No se pudo eliminar: " + e.getMessage());
             }
-        } else {
-            // El usuario canceló o cerró la ventana
-            System.out.println("Eliminación cancelada por el usuario.");
         }
     }
 

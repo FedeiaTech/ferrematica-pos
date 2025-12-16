@@ -3,32 +3,37 @@
 **Sistema de Gestión ERP Modular y Resiliente para Pymes.**
 *Diseñado para la transición ARCA (ex-AFIP) y alta performance en escritorio.*
 
-🚧 **Estado:** Desarrollo Activo (v0.2-alpha) | 🔒 **Repositorio Privado**
+🚀 **Estado:** MVP Estable (v0.5) | 🔒 **Repositorio Privado**
 
-## 🚀 Características Clave
+## 🌟 Características Clave
 * **Arquitectura Hexagonal:** Núcleo de negocio desacoplado de la normativa fiscal.
 * **Interfaz Moderna:** Dashboard estilo "Bento Grid" con JavaFX.
-* **Motor Híbrido:** Lógica Java + Sidecar Python para conexión ARCA (en desarrollo).
-* **Base de Datos Local:** SQLite para funcionamiento Offline-First.
+* **Punto de Venta (POS):** Facturación rápida con validación de stock y atajos de teclado.
+* **Motor de Tickets:** Generación de PDF (iText) con soporte para impresoras térmicas y guardado temporal/fijo.
+* **Base de Datos Local:** SQLite para funcionamiento Offline-First robusto.
 
 ## 🛠️ Stack Tecnológico
 * **Lenguaje:** Java 21 LTS
 * **UI:** JavaFX + FXML
 * **Build:** Maven
 * **DB:** SQLite (JDBC)
-* **Fiscal:** PyAfipWs (Integración planificada)
+* **Reportes:** iText PDF (OpenPDF)
 
-## 📋 Módulos
+## 📋 Estado de Módulos
 - [x] **Gestión de Inventario (CRUD)**
 - [x] **Dashboard Operativo**
-- [ ] **Punto de Venta (POS)** *(En progreso)*
+- [x] **Punto de Venta (POS)**
+- [x] **Motor de Tickets (PDF)**
+- [x] **Configuración y Persistencia**
+- [ ] **Métricas y Gráficos (Dashboard)** *(Próximamente)*
+- [ ] **Gestión de Clientes** *(Próximamente)*
+- [ ] **Importación Masiva (Excel)** *(Próximamente)*
 - [ ] **Conexión Fiscal ARCA** *(Planificado)*
-- [ ] **Reportes y Métricas** *(Planificado)*
 
-## 💎 Niveles de Licencia
+## 💎 Niveles de Licencia (Planificado)
 El sistema implementa *Feature Flags* para gestionar versiones:
-* **Community (Free):** POS, Inventario, Tickets simples.
-* **Professional (Paid):** + Reportes Históricos, Conexión ARCA, Métricas.
+* **Community (Free):** POS, Inventario Ilimitado, Tickets PDF Temporales.
+* **Professional (Paid):** Dashboard de Métricas, Importación Excel, Cuenta Corriente, Tickets Archivados, Conexión Fiscal.
 
 ## ⚙️ Cómo ejecutar (Dev)
 1.  Clonar repositorio.
