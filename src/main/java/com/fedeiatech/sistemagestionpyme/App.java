@@ -11,6 +11,9 @@ public class App extends Application {
 
     @Override
     public void start(Stage stage) throws IOException {
+        // 0. Inicializar Tablas Críticas (Si no existen)
+        new com.fedeiatech.sistemagestionpyme.dao.ConfiguracionDAO().inicializarTabla();
+        
         // 1. Definimos la ruta simple (en la raíz de resources)
         String fxmlPath = "/dashboard_view.fxml";
         
