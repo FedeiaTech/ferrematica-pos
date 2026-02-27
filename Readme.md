@@ -5,6 +5,10 @@
 
 **Estado:** MVP Estable (v0.5) | **Repositorio Público**
 
+
+![Main](https://github.com/FedeiaTech/JFX-Business-Engine/blob/develop/img/01.jpg)
+
+
 ## Características Clave
 * **Arquitectura Hexagonal:** Núcleo de negocio desacoplado de la normativa fiscal.
 * **Interfaz Moderna:** Dashboard estilo "Bento Grid" con JavaFX.
@@ -42,8 +46,8 @@ El sistema implementa *Feature Flags* para gestionar versiones:
 
 ## Capturas del programa
 
-![Main](https://github.com/FedeiaTech/JFX-Business-Engine/blob/develop/img/01.jpg)
 ![Venta](https://github.com/FedeiaTech/JFX-Business-Engine/blob/develop/img/02.jpg)
+
 ![Inventario](https://github.com/FedeiaTech/JFX-Business-Engine/blob/develop/img/03.jpg)
 ---
 © 2026 FedeiaTech - Todos los derechos reservados.
