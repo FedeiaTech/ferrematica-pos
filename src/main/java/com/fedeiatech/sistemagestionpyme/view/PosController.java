@@ -22,7 +22,6 @@ import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
-import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
@@ -36,9 +35,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseEvent;
 import javafx.stage.Stage;
-import javafx.geometry.Point2D; // <--- Importante para la lógica de coordenadas
 
 public class PosController implements Initializable {
 
@@ -46,8 +43,8 @@ public class PosController implements Initializable {
     @FXML private Label lblTotal;
     @FXML private Button btnCobrar; 
     @FXML private Button btnEliminar; 
-    @FXML private javafx.scene.layout.AnchorPane rootPane;
     
+    // Quitamos rootPane ya que no lo usamos para eventos
     @FXML private TableView<DetalleVenta> tablaDetalles;
     @FXML private TableColumn<DetalleVenta, String> colCodigo;
     @FXML private TableColumn<DetalleVenta, String> colNombre;
@@ -91,46 +88,18 @@ public class PosController implements Initializable {
         // 2. Foco inicial
         Platform.runLater(() -> txtBuscador.requestFocus());
         
+        // 3. Evento Enter en buscador
         txtBuscador.setOnKeyPressed(event -> {
             if (event.getCode() == KeyCode.ENTER) {
                 buscarProducto();
             }
         });
         
-        // 3. Lógica de Deselección (MÉTODO MATEMÁTICO - MÁS ROBUSTO)
-        // Esperamos a que la Scene cambie (se cargue) para agregar el filtro
-        rootPane.sceneProperty().addListener((obs, oldScene, newScene) -> {
-            if (newScene != null) {
-                newScene.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> {
-                    // Convertimos la coordenada del clic (Scene X,Y) a coordenadas locales de cada control
-                    // y preguntamos: "¿El clic cayó dentro de ti?"
-                    
-                    boolean clicEnTabla = estaDentro(tablaDetalles, event);
-                    boolean clicEnBotonEliminar = estaDentro(btnEliminar, event);
-                    boolean clicEnBotonCobrar = estaDentro(btnCobrar, event);
-                    boolean clicEnBuscador = estaDentro(txtBuscador, event);
-
-                    // Si el clic NO fue en la tabla y NO fue en los botones de acción...
-                    if (!clicEnTabla && !clicEnBotonEliminar && !clicEnBotonCobrar && !clicEnBuscador) {
-                        tablaDetalles.getSelectionModel().clearSelection();
-                    }
-                });
-            }
-        });
-        
-        // 4. Lógica visual del botón ELIMINAR
+        // 4. Lógica visual del botón ELIMINAR (Habilitar/Deshabilitar)
         actualizarBotonEliminar(null);
         tablaDetalles.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
             actualizarBotonEliminar(newSelection);
         });
-    }
-    
-    // Método auxiliar para verificar coordenadas
-    private boolean estaDentro(Node nodo, MouseEvent event) {
-        if (nodo == null || !nodo.isVisible()) return false;
-        // Convierte el punto del clic a la coordenada del nodo y verifica si está dentro
-        Point2D puntoLocal = nodo.sceneToLocal(event.getSceneX(), event.getSceneY());
-        return nodo.contains(puntoLocal);
     }
     
     private void actualizarBotonEliminar(DetalleVenta seleccion) {
@@ -154,6 +123,7 @@ public class PosController implements Initializable {
         
         tablaDetalles.setItems(listaCarrito);
         
+        // Permitir borrar con tecla SUPR
         tablaDetalles.setOnKeyPressed((KeyEvent event) -> {
             if (event.getCode() == KeyCode.DELETE) {
                 eliminarFilaSeleccionada();
