@@ -19,17 +19,13 @@ public class VentaDAO {
 
         try {
             conn = ConexionDB.getConexion();
-            // 1. INICIO DE TRANSACCIÓN (Apagamos el guardado automático)
             conn.setAutoCommit(false);
 
-            // 2. Guardar Cabecera (Venta)
-            // RETURN_GENERATED_KEYS es para recuperar el ID (ej: Venta N° 50) que SQLite acaba de crear
             try (PreparedStatement pstVenta = conn.prepareStatement(sqlVenta, Statement.RETURN_GENERATED_KEYS)) {
                 pstVenta.setString(1, venta.getFecha());
                 pstVenta.setDouble(2, venta.getTotal());
                 pstVenta.executeUpdate();
 
-                // Recuperamos el ID generado
                 try (ResultSet rs = pstVenta.getGeneratedKeys()) {
                     if (rs.next()) {
                         venta.setId(rs.getInt(1));
@@ -37,11 +33,9 @@ public class VentaDAO {
                 }
             }
 
-            // 3. Guardar Detalles y Descontar Stock
             try (PreparedStatement pstDetalle = conn.prepareStatement(sqlDetalle); PreparedStatement pstStock = conn.prepareStatement(sqlStock)) {
 
                 for (DetalleVenta detalle : venta.getDetalles()) {
-                    // A. Insertar detalle
                     pstDetalle.setInt(1, venta.getId());
                     pstDetalle.setInt(2, detalle.getItem().getId());
                     pstDetalle.setDouble(3, detalle.getCantidad());
@@ -49,8 +43,6 @@ public class VentaDAO {
                     pstDetalle.setDouble(5, detalle.getSubtotal());
                     pstDetalle.executeUpdate();
 
-                    // B. Descontar stock (Solo si NO es servicio)
-                    // Si es servicio, el stock es -1 o infinito, no lo tocamos
                     if (!detalle.getItem().isEsServicio()) {
                         pstStock.setDouble(1, detalle.getCantidad());
                         pstStock.setInt(2, detalle.getItem().getId());
@@ -59,12 +51,10 @@ public class VentaDAO {
                 }
             }
 
-            // 4. CONFIRMAR TODO (Commit)
             conn.commit();
             System.out.println("Venta registrada con éxito. ID: " + venta.getId());
 
         } catch (SQLException e) {
-            // 5. SI ALGO FALLA, DESHACER TODO (Rollback)
             if (conn != null) {
                 try {
                     System.err.println("Error en transacción. Deshaciendo cambios...");
@@ -73,27 +63,20 @@ public class VentaDAO {
                     ex.printStackTrace();
                 }
             }
-            throw e; // Relanzamos el error para que la Pantalla avise al usuario
+            throw e;
         } finally {
-            // Restaurar el modo normal
             if (conn != null) {
                 conn.setAutoCommit(true);
             }
         }
     }
 
-    // Método para obtener el total vendido hoy
     public double sumarVentasDelDia() throws SQLException {
         double total = 0.0;
-        // Obtenemos la fecha de hoy en formato String (YYYY-MM-DD) para comparar
         String fechaHoy = java.time.LocalDate.now().toString();
-
-        // SQL: Sumame el total de la tabla ventas donde la fecha empiece con hoy
         String sql = "SELECT SUM(total) FROM ventas WHERE fecha LIKE ?";
 
         try (Connection conn = ConexionDB.getConexion(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            // El símbolo % es el comodín. Buscamos '2025-12-15%'
             pstmt.setString(1, fechaHoy + "%");
 
             try (ResultSet rs = pstmt.executeQuery()) {
@@ -104,42 +87,35 @@ public class VentaDAO {
         }
         return total;
     }
-    
-    // [PREMIUM FEATURE] - Listado histórico para reportes
+
     public java.util.List<Venta> listarVentasHistoricas() throws SQLException {
         java.util.List<Venta> lista = new java.util.ArrayList<>();
-        String sql = "SELECT * FROM ventas ORDER BY fecha DESC"; // Las más recientes primero
-        
+        String sql = "SELECT * FROM ventas ORDER BY fecha DESC";
+
         try (Connection conn = ConexionDB.getConexion();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
-            
+
             while (rs.next()) {
                 Venta v = new Venta();
                 v.setId(rs.getInt("id"));
                 v.setFecha(rs.getString("fecha"));
                 v.setTotal(rs.getDouble("total"));
-                // Nota: Por rendimiento, en un reporte general no solemos cargar los "detalles" (items) 
-                // de cada venta a menos que el usuario haga doble clic.
                 lista.add(v);
             }
         }
         return lista;
     }
-    
-    // Método para recuperar una venta COMPLETA con sus detalles (para reimprimir)
+
     public Venta obtenerVentaCompleta(int idVenta) throws SQLException {
         Venta venta = null;
         String sqlVenta = "SELECT * FROM ventas WHERE id = ?";
-        
-        // CORREGIDO: Cambiado 'detalle_ventas' por 'detalles_venta' (plural)
         String sqlDetalles = "SELECT d.cantidad, d.precio_unitario, i.codigo, i.nombre " +
-                             "FROM detalles_venta d " +  
+                             "FROM detalles_venta d " +
                              "JOIN items i ON d.id_item = i.id " +
                              "WHERE d.id_venta = ?";
 
         try (Connection conn = ConexionDB.getConexion()) {
-            // 1. Obtener Cabecera
             try (PreparedStatement pstmt = conn.prepareStatement(sqlVenta)) {
                 pstmt.setInt(1, idVenta);
                 ResultSet rs = pstmt.executeQuery();
@@ -151,7 +127,6 @@ public class VentaDAO {
                 }
             }
 
-            // 2. Obtener Detalles (Items)
             if (venta != null) {
                 try (PreparedStatement pstmt = conn.prepareStatement(sqlDetalles)) {
                     pstmt.setInt(1, idVenta);
@@ -160,12 +135,12 @@ public class VentaDAO {
                         com.fedeiatech.sistemagestionpyme.model.ItemVenta item = new com.fedeiatech.sistemagestionpyme.model.ItemVenta();
                         item.setCodigo(rs.getString("codigo"));
                         item.setNombre(rs.getString("nombre"));
-                        
+
                         com.fedeiatech.sistemagestionpyme.model.DetalleVenta detalle = new com.fedeiatech.sistemagestionpyme.model.DetalleVenta(
-                            item, 
+                            item,
                             rs.getDouble("cantidad")
                         );
-                        
+
                         detalle.setPrecioUnitario(rs.getDouble("precio_unitario"));
                         venta.agregarDetalle(detalle);
                     }

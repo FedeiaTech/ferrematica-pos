@@ -14,11 +14,9 @@ public class Configuracion {
     private String rutaBackup;
     private String rutaGuardadoTickets;
 
-    // Constructor vacío
     public Configuracion() {
     }
 
-    // Constructor completo
     public Configuracion(String nombreEmpresa, String cuit, String direccion, String condicionIva, int puntoVenta) {
         this.nombreEmpresa = nombreEmpresa;
         this.cuit = cuit;
@@ -27,7 +25,6 @@ public class Configuracion {
         this.puntoVenta = puntoVenta;
     }
 
-    // --- GETTERS Y SETTERS ---
     public String getNombreEmpresa() { return nombreEmpresa; }
     public void setNombreEmpresa(String nombreEmpresa) { this.nombreEmpresa = nombreEmpresa; }
 
@@ -45,7 +42,7 @@ public class Configuracion {
 
     public String getCertificadoRuta() { return certificadoRuta; }
     public void setCertificadoRuta(String certificadoRuta) { this.certificadoRuta = certificadoRuta; }
-    
+
     public String getRutaLogo() { return rutaLogo; }
     public void setRutaLogo(String rutaLogo) { this.rutaLogo = rutaLogo; }
 
@@ -57,10 +54,10 @@ public class Configuracion {
 
     public double getRecargoTarjeta() { return recargoTarjeta; }
     public void setRecargoTarjeta(double recargoTarjeta) { this.recargoTarjeta = recargoTarjeta; }
-    
+
     public String getRutaBackup() { return rutaBackup; }
     public void setRutaBackup(String rutaBackup) { this.rutaBackup = rutaBackup; }
-    
+
     public String getRutaGuardadoTickets() {
         return rutaGuardadoTickets;
     }

@@ -1,7 +1,7 @@
 package com.fedeiatech.sistemagestionpyme.model;
 
 public class ItemVenta {
-    
+
     private int id;
     private String codigo;
     private String nombre;
@@ -11,11 +11,9 @@ public class ItemVenta {
     private double stock;
     private boolean esServicio;
 
-    // 1. Constructor Vacio (Necesario para herramientas y buenas prácticas)
     public ItemVenta() {
     }
 
-    // 2. Constructor Completo (Para crear objetos rápido en el Main)
     public ItemVenta(int id, String codigo, String nombre, String descripcion, double precioCosto, double precioVenta, double stock, boolean esServicio) {
         this.id = id;
         this.codigo = codigo;
@@ -27,7 +25,6 @@ public class ItemVenta {
         this.esServicio = esServicio;
     }
 
-    // 3. Getters y Setters (Lo que Lombok falló en crear)
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
 
@@ -52,12 +49,10 @@ public class ItemVenta {
     public boolean isEsServicio() { return esServicio; }
     public void setEsServicio(boolean esServicio) { this.esServicio = esServicio; }
 
-    // Lógica de negocio
     public double calcularGanancia() {
         return precioVenta - precioCosto;
     }
-    
-    // Esto hace que los cuadros de diálogo muestren el nombre bonito
+
     @Override
     public String toString() {
         return codigo + " | " + nombre + " ($ " + precioVenta + ")";

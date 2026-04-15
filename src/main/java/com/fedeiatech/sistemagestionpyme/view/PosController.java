@@ -41,10 +41,9 @@ public class PosController implements Initializable {
 
     @FXML private TextField txtBuscador;
     @FXML private Label lblTotal;
-    @FXML private Button btnCobrar; 
-    @FXML private Button btnEliminar; 
-    
-    // Quitamos rootPane ya que no lo usamos para eventos
+    @FXML private Button btnCobrar;
+    @FXML private Button btnEliminar;
+
     @FXML private TableView<DetalleVenta> tablaDetalles;
     @FXML private TableColumn<DetalleVenta, String> colCodigo;
     @FXML private TableColumn<DetalleVenta, String> colNombre;
@@ -64,8 +63,7 @@ public class PosController implements Initializable {
         ventaDAO = new VentaDAO();
         listaCarrito = FXCollections.observableArrayList();
         configDAO = new ConfiguracionDAO();
-        
-        // 1. Configuración de filas rojas (Stock)
+
         tablaDetalles.setRowFactory(tv -> new TableRow<DetalleVenta>() {
             @Override
             protected void updateItem(DetalleVenta detalle, boolean empty) {
@@ -75,7 +73,7 @@ public class PosController implements Initializable {
                 } else {
                     boolean stockProblematico = verificarProblemaStock(detalle);
                     if (stockProblematico) {
-                        setStyle("-fx-background-color: #ffcdd2;"); // Rojo claro
+                        setStyle("-fx-background-color: #ffcdd2;");
                     } else {
                         setStyle("");
                     }
@@ -84,46 +82,42 @@ public class PosController implements Initializable {
         });
 
         configurarTabla();
-        
-        // 2. Foco inicial
+
         Platform.runLater(() -> txtBuscador.requestFocus());
-        
-        // 3. Evento Enter en buscador
+
         txtBuscador.setOnKeyPressed(event -> {
             if (event.getCode() == KeyCode.ENTER) {
                 buscarProducto();
             }
         });
-        
-        // 4. Lógica visual del botón ELIMINAR (Habilitar/Deshabilitar)
+
         actualizarBotonEliminar(null);
         tablaDetalles.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
             actualizarBotonEliminar(newSelection);
         });
     }
-    
+
     private void actualizarBotonEliminar(DetalleVenta seleccion) {
-        if (btnEliminar == null) return; 
+        if (btnEliminar == null) return;
 
         if (seleccion == null) {
             btnEliminar.setDisable(true);
-            btnEliminar.setStyle("-fx-background-color: #ecf0f1; -fx-text-fill: #bdc3c7;"); 
+            btnEliminar.setStyle("-fx-background-color: #ecf0f1; -fx-text-fill: #bdc3c7;");
         } else {
             btnEliminar.setDisable(false);
-            btnEliminar.setStyle("-fx-background-color: #c0392b; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;"); 
+            btnEliminar.setStyle("-fx-background-color: #c0392b; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;");
         }
     }
-    
+
     private void configurarTabla() {
         colCodigo.setCellValueFactory(new PropertyValueFactory<>("codigoItem"));
         colNombre.setCellValueFactory(new PropertyValueFactory<>("nombreItem"));
         colPrecio.setCellValueFactory(new PropertyValueFactory<>("precioUnitario"));
         colCantidad.setCellValueFactory(new PropertyValueFactory<>("cantidad"));
-        colSubtotal.setCellValueFactory(new PropertyValueFactory<>("subtotal")); 
-        
+        colSubtotal.setCellValueFactory(new PropertyValueFactory<>("subtotal"));
+
         tablaDetalles.setItems(listaCarrito);
-        
-        // Permitir borrar con tecla SUPR
+
         tablaDetalles.setOnKeyPressed((KeyEvent event) -> {
             if (event.getCode() == KeyCode.DELETE) {
                 eliminarFilaSeleccionada();
@@ -135,25 +129,23 @@ public class PosController implements Initializable {
     void agregarProductoManual(ActionEvent event) {
         buscarProducto();
     }
-    
+
     private void buscarProducto() {
         String termino = txtBuscador.getText().trim();
         if (termino.isEmpty()) return;
 
         try {
             List<ItemVenta> resultados = itemDAO.listarTodos().stream()
-                .filter(p -> p.getCodigo().equalsIgnoreCase(termino) || 
+                .filter(p -> p.getCodigo().equalsIgnoreCase(termino) ||
                              p.getNombre().toLowerCase().contains(termino.toLowerCase()))
                 .collect(Collectors.toList());
 
             if (resultados.isEmpty()) {
                 mostrarAlerta(Alert.AlertType.WARNING, "No encontrado", "No existe producto con ese criterio.");
-            } 
-            else if (resultados.size() == 1) {
+            } else if (resultados.size() == 1) {
                 agregarAlCarrito(resultados.get(0));
                 txtBuscador.clear();
-            } 
-            else {
+            } else {
                 seleccionarDeLista(resultados);
             }
 
@@ -184,15 +176,15 @@ public class PosController implements Initializable {
                 break;
             }
         }
-        
+
         if (!encontrado) {
             listaCarrito.add(new DetalleVenta(item, 1));
         }
 
-        tablaDetalles.refresh(); 
+        tablaDetalles.refresh();
         recalcularTotal();
     }
-    
+
     @FXML
     void eliminarLinea(ActionEvent event) {
         eliminarFilaSeleccionada();
@@ -202,20 +194,20 @@ public class PosController implements Initializable {
         DetalleVenta seleccionado = tablaDetalles.getSelectionModel().getSelectedItem();
         if (seleccionado != null) {
             listaCarrito.remove(seleccionado);
-            recalcularTotal(); 
-            txtBuscador.requestFocus(); 
+            recalcularTotal();
+            txtBuscador.requestFocus();
         } else {
             mostrarAlerta(Alert.AlertType.WARNING, "Atención", "Selecciona un ítem de la lista para quitarlo.");
         }
     }
-    
+
     private void recalcularTotal() {
         totalVenta = 0.0;
         for (DetalleVenta d : listaCarrito) {
             totalVenta += d.getSubtotal();
         }
         lblTotal.setText(String.format("ARS %.2f", totalVenta));
-        validarBotonCobrar(); 
+        validarBotonCobrar();
     }
 
     @FXML
@@ -229,31 +221,27 @@ public class PosController implements Initializable {
             venta.calcularTotal();
 
             ventaDAO.registrarVenta(venta);
-            
-            // 1. Generar Ticket (Sin abrirlo)
+
             TicketService ticketService = new TicketService();
             File ticketGenerado = ticketService.generarTicketPDF(venta);
 
-            // 2. Mostrar Alerta Personalizada
             Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
             alert.setTitle("Venta Exitosa");
             alert.setHeaderText("La venta #" + venta.getId() + " se registró correctamente.");
             alert.setContentText("¿Deseas ver o imprimir el ticket?");
 
-            // Definir botones
             ButtonType btnImprimir = new ButtonType("🖨️ Ver Ticket", ButtonBar.ButtonData.YES);
             ButtonType btnCerrar = new ButtonType("Cerrar", ButtonBar.ButtonData.NO);
 
             alert.getButtonTypes().setAll(btnImprimir, btnCerrar);
 
-            // Esperar respuesta
             Optional<ButtonType> resultado = alert.showAndWait();
             if (resultado.isPresent() && resultado.get() == btnImprimir) {
                 ticketService.abrirArchivo(ticketGenerado);
             }
 
             limpiarPantalla();
-            
+
         } catch (SQLException e) {
             mostrarAlerta(Alert.AlertType.ERROR, "Error", e.getMessage());
         }
@@ -263,7 +251,7 @@ public class PosController implements Initializable {
     void cancelarVenta(ActionEvent event) {
         ((Stage) txtBuscador.getScene().getWindow()).close();
     }
-    
+
     private void limpiarPantalla() {
         listaCarrito.clear();
         recalcularTotal();
@@ -276,7 +264,7 @@ public class PosController implements Initializable {
         alert.setContentText(mensaje);
         alert.showAndWait();
     }
-    
+
     private boolean verificarProblemaStock(DetalleVenta detalle) {
         try {
             if (detalle.getItem().isEsServicio()) return false;
@@ -284,23 +272,23 @@ public class PosController implements Initializable {
             Configuracion config = configDAO.obtenerConfiguracion();
             boolean permitirNegativo = (config != null) && config.isPermitirStockNegativo();
 
-            if (permitirNegativo) return false; 
+            if (permitirNegativo) return false;
 
             double stockReal = detalle.getItem().getStock();
             double cantidadSolicitada = detalle.getCantidad();
 
-            return cantidadSolicitada > stockReal; 
+            return cantidadSolicitada > stockReal;
 
         } catch (SQLException e) {
-            return true; 
+            return true;
         }
     }
-    
+
     private void validarBotonCobrar() {
-        if (btnCobrar == null) return; 
+        if (btnCobrar == null) return;
 
         boolean hayErrores = false;
-        
+
         for (DetalleVenta d : listaCarrito) {
             if (verificarProblemaStock(d)) {
                 hayErrores = true;
@@ -311,11 +299,11 @@ public class PosController implements Initializable {
         if (hayErrores || listaCarrito.isEmpty()) {
             btnCobrar.setDisable(true);
             btnCobrar.setText(hayErrores ? "STOCK INSUFICIENTE (!)" : "COBRAR (F12)");
-            btnCobrar.setStyle("-fx-background-color: #95a5a6; -fx-text-fill: white; -fx-font-size: 18px; -fx-font-weight: bold;"); 
+            btnCobrar.setStyle("-fx-background-color: #95a5a6; -fx-text-fill: white; -fx-font-size: 18px; -fx-font-weight: bold;");
         } else {
             btnCobrar.setDisable(false);
             btnCobrar.setText("COBRAR (F12)");
-            btnCobrar.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-size: 18px; -fx-font-weight: bold; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 5, 0, 0, 1);"); 
+            btnCobrar.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-size: 18px; -fx-font-weight: bold; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 5, 0, 0, 1);");
         }
     }
 }

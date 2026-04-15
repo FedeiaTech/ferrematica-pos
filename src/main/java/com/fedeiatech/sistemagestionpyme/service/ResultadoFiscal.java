@@ -1,18 +1,16 @@
 package com.fedeiatech.sistemagestionpyme.service;
 
 public class ResultadoFiscal {
-    
-    private boolean aprobado;
-    private String cae;             // Código de Autorización Electrónico
-    private String vencimientoCae;  // Fecha de vencimiento del CAE
-    private String observaciones;   // Mensajes de error o advertencias (ej. "CUIT inválido")
-    private String numeroComprobante; // El número final asignado (ej. 00000045)
 
-    // Constructor vacío
+    private boolean aprobado;
+    private String cae;
+    private String vencimientoCae;
+    private String observaciones;
+    private String numeroComprobante;
+
     public ResultadoFiscal() {
     }
 
-    // Constructor para aprobación exitosa
     public ResultadoFiscal(String cae, String vencimientoCae, String numeroComprobante) {
         this.aprobado = true;
         this.cae = cae;
@@ -21,7 +19,6 @@ public class ResultadoFiscal {
         this.observaciones = "Aprobado";
     }
 
-    // Constructor para rechazos o errores
     public static ResultadoFiscal error(String mensaje) {
         ResultadoFiscal r = new ResultadoFiscal();
         r.setAprobado(false);
@@ -29,7 +26,6 @@ public class ResultadoFiscal {
         return r;
     }
 
-    // Getters y Setters
     public boolean isAprobado() { return aprobado; }
     public void setAprobado(boolean aprobado) { this.aprobado = aprobado; }
 

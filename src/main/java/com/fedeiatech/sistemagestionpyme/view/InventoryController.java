@@ -25,15 +25,13 @@ import javafx.scene.paint.Color;
 
 public class InventoryController implements Initializable {
 
-    // --- TABLA ---
     @FXML private TableView<ItemVenta> tablaItems;
     @FXML private TableColumn<ItemVenta, Integer> colId;
     @FXML private TableColumn<ItemVenta, String> colCodigo;
     @FXML private TableColumn<ItemVenta, String> colNombre;
     @FXML private TableColumn<ItemVenta, Double> colPrecio;
-    @FXML private TableColumn<ItemVenta, Double> colStock; // Ojo: Double para manejar decimales
+    @FXML private TableColumn<ItemVenta, Double> colStock;
 
-    // --- FORMULARIO ---
     @FXML private TextField txtCodigo;
     @FXML private TextField txtNombre;
     @FXML private TextField txtPrecio;
@@ -89,13 +87,11 @@ public class InventoryController implements Initializable {
         colPrecio.setCellValueFactory(new PropertyValueFactory<>("precioVenta"));
         colStock.setCellValueFactory(new PropertyValueFactory<>("stock"));
 
-        // --- LÓGICA VISUAL AVANZADA ---
         colStock.setCellFactory(column -> new TableCell<ItemVenta, Double>() {
             @Override
             protected void updateItem(Double item, boolean empty) {
                 super.updateItem(item, empty);
 
-                // Limpiar celda si está vacía
                 if (empty || getTableRow() == null) {
                     setText(null);
                     setGraphic(null);
@@ -103,36 +99,31 @@ public class InventoryController implements Initializable {
                     return;
                 }
 
-                // Obtener el objeto completo de la fila para saber si es servicio
                 ItemVenta rowData = getTableRow().getItem();
-                
-                // Si la fila es nula (a veces pasa al renderizar), salir
+
                 if (rowData == null) return;
 
-                // CASO 1: ES SERVICIO
                 if (rowData.isEsServicio()) {
                     setText("Servicio");
-                    setTextFill(Color.BLUE); // Azul para diferenciar
+                    setTextFill(Color.BLUE);
                     setStyle("-fx-font-weight: bold; -fx-alignment: CENTER;");
-                } 
-                // CASO 2: ES PRODUCTO FÍSICO
-                else {
+                } else {
                     if (item == null) {
                         setText("0");
                         setTextFill(Color.ORANGE);
                         return;
                     }
-                    
+
                     setText(item.toString());
-                    setStyle("-fx-alignment: CENTER_RIGHT;"); // Números a la derecha queda mejor
+                    setStyle("-fx-alignment: CENTER_RIGHT;");
 
                     if (item < 0) {
-                        setTextFill(Color.RED); // ROJO: Alerta
+                        setTextFill(Color.RED);
                         setStyle("-fx-font-weight: bold; -fx-alignment: CENTER_RIGHT;");
                     } else if (item == 0) {
-                        setTextFill(Color.ORANGE); // NARANJA: Agotado
+                        setTextFill(Color.ORANGE);
                     } else {
-                        setTextFill(Color.BLACK); // NEGRO: Normal
+                        setTextFill(Color.BLACK);
                     }
                 }
             }

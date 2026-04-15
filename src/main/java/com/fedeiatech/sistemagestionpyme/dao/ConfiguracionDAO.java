@@ -9,7 +9,6 @@ import java.sql.Statement;
 
 public class ConfiguracionDAO {
 
-    // LEER CONFIGURACIÓN (SELECT)
     public Configuracion obtenerConfiguracion() throws SQLException {
         String sql = "SELECT * FROM configuracion WHERE id = 1";
         Configuracion config = null;
@@ -20,33 +19,23 @@ public class ConfiguracionDAO {
 
             if (rs.next()) {
                 config = new Configuracion();
-                
-                // Campos básicos (Tab 1)
                 config.setNombreEmpresa(rs.getString("nombre_empresa"));
                 config.setCuit(rs.getString("cuit"));
                 config.setDireccion(rs.getString("direccion"));
                 config.setCondicionIva(rs.getString("condicion_iva"));
                 config.setPuntoVenta(rs.getInt("punto_venta"));
                 config.setCertificadoRuta(rs.getString("certificado_ruta"));
-
-                // --- NUEVOS CAMPOS (Tab 2 y 3) ---
                 config.setRutaLogo(rs.getString("ruta_logo"));
                 config.setMensajeTicket(rs.getString("mensaje_ticket"));
-                
-                // SQLite guarda booleans como 1 (true) o 0 (false)
                 config.setPermitirStockNegativo(rs.getInt("permitir_stock_negativo") == 1);
-                
                 config.setRecargoTarjeta(rs.getDouble("recargo_tarjeta"));
                 config.setRutaBackup(rs.getString("ruta_backup"));
-                
-                // NUEVO: Ruta de guardado de tickets
                 config.setRutaGuardadoTickets(rs.getString("ruta_tickets"));
             }
         }
         return config;
     }
 
-    // GUARDAR CONFIGURACIÓN (UPDATE)
     public void guardarConfiguracion(Configuracion config) throws SQLException {
         String sql = "UPDATE configuracion SET "
                    + "nombre_empresa=?, cuit=?, direccion=?, condicion_iva=?, punto_venta=?, "
@@ -74,44 +63,36 @@ public class ConfiguracionDAO {
             pstmt.executeUpdate();
         }
     }
-    
-    // MIGRACIÓN Y CREACIÓN DE TABLA
+
     public void inicializarTabla() {
-        // Estructura básica original
         String sqlCreate = "CREATE TABLE IF NOT EXISTS configuracion ("
                          + "id INTEGER PRIMARY KEY CHECK (id = 1), "
                          + "nombre_empresa TEXT, cuit TEXT, direccion TEXT, "
                          + "condicion_iva TEXT, punto_venta INTEGER DEFAULT 1, "
                          + "certificado_ruta TEXT)";
-        
-        // Fila por defecto
+
         String sqlInsert = "INSERT OR IGNORE INTO configuracion (id, nombre_empresa, cuit, direccion, condicion_iva) "
                          + "VALUES (1, 'Mi Negocio', '20-00000000-0', 'Sin Dirección', 'Consumidor Final')";
-        
+
         try (Connection conn = ConexionDB.getConexion();
              Statement stmt = conn.createStatement()) {
-            
+
             stmt.execute(sqlCreate);
             stmt.execute(sqlInsert);
-            
-            // IMPORTANTE: Llamamos a la actualización para crear las columnas nuevas
             actualizarTabla(conn);
-            
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
-    // Método para agregar columnas nuevas si no existen (Migración)
     private void actualizarTabla(Connection conn) {
         try (Statement stmt = conn.createStatement()) {
-            // Intentamos agregar cada columna nueva. Si ya existe, SQLite ignorará el error o lanzará uno controlable.
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN ruta_logo TEXT"); } catch (SQLException e) {}
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN mensaje_ticket TEXT"); } catch (SQLException e) {}
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN permitir_stock_negativo INTEGER DEFAULT 1"); } catch (SQLException e) {}
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN recargo_tarjeta REAL DEFAULT 0.0"); } catch (SQLException e) {}
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN ruta_backup TEXT"); } catch (SQLException e) {}
-            // NUEVO:
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN ruta_tickets TEXT"); } catch (SQLException e) {}
         } catch (SQLException e) {
             e.printStackTrace();
