@@ -44,6 +44,7 @@ public class PosController implements Initializable {
     @FXML private Label lblTotal;
     @FXML private Button btnCobrar;
     @FXML private Button btnEliminar;
+    @FXML private Button btnVaciar;
 
     @FXML private TableView<DetalleVenta> tablaDetalles;
     @FXML private TableColumn<DetalleVenta, String> colCodigo;
@@ -65,23 +66,6 @@ public class PosController implements Initializable {
         listaCarrito = FXCollections.observableArrayList();
         configDAO = new ConfiguracionDAO();
 
-        tablaDetalles.setRowFactory(tv -> new TableRow<DetalleVenta>() {
-            @Override
-            protected void updateItem(DetalleVenta detalle, boolean empty) {
-                super.updateItem(detalle, empty);
-                if (detalle == null || empty) {
-                    setStyle("");
-                } else {
-                    boolean stockProblematico = verificarProblemaStock(detalle);
-                    if (stockProblematico) {
-                        setStyle("-fx-background-color: #ffcdd2;");
-                    } else {
-                        setStyle("");
-                    }
-                }
-            }
-        });
-
         configurarTabla();
 
         Platform.runLater(() -> txtBuscador.requestFocus());
@@ -95,6 +79,34 @@ public class PosController implements Initializable {
         actualizarBotonEliminar(null);
         tablaDetalles.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
             actualizarBotonEliminar(newSelection);
+        });
+
+        listaCarrito.addListener((javafx.collections.ListChangeListener<DetalleVenta>) c -> {
+            if (btnVaciar != null) btnVaciar.setDisable(listaCarrito.isEmpty());
+        });
+
+        tablaDetalles.setRowFactory(tv -> {
+            TableRow<DetalleVenta> fila = new TableRow<DetalleVenta>() {
+                @Override
+                protected void updateItem(DetalleVenta detalle, boolean empty) {
+                    super.updateItem(detalle, empty);
+                    if (detalle == null || empty) {
+                        setStyle("");
+                    } else {
+                        if (verificarProblemaStock(detalle)) {
+                            setStyle("-fx-background-color: #ffcdd2;");
+                        } else {
+                            setStyle("");
+                        }
+                    }
+                }
+            };
+            fila.setOnMouseClicked(event -> {
+                if (event.getClickCount() == 2 && !fila.isEmpty()) {
+                    ajustarCantidad(fila.getItem());
+                }
+            });
+            return fila;
         });
     }
 
@@ -239,6 +251,53 @@ public class PosController implements Initializable {
             txtBuscador.requestFocus();
         } else {
             mostrarAlerta(Alert.AlertType.WARNING, "Atención", "Selecciona un ítem de la lista para quitarlo.");
+        }
+    }
+
+    private void ajustarCantidad(DetalleVenta detalle) {
+        String unidad = detalle.getItem().getUnidad();
+        String cantidadActual = detalle.getCantidad() % 1 == 0
+                ? String.valueOf((int) detalle.getCantidad())
+                : String.valueOf(detalle.getCantidad());
+
+        TextInputDialog dialog = new TextInputDialog(cantidadActual);
+        dialog.setTitle("Ajustar cantidad");
+        dialog.setHeaderText(detalle.getNombreItem());
+        dialog.setContentText("Nueva cantidad (" + unidad + "):");
+
+        Optional<String> resultado = dialog.showAndWait();
+        if (resultado.isEmpty()) return;
+
+        try {
+            double nuevaCantidad = Double.parseDouble(resultado.get().replace(",", "."));
+            if (nuevaCantidad <= 0) {
+                listaCarrito.remove(detalle);
+            } else {
+                detalle.setCantidad(nuevaCantidad);
+                tablaDetalles.refresh();
+            }
+            recalcularTotal();
+        } catch (NumberFormatException e) {
+            mostrarAlerta(Alert.AlertType.ERROR, "Error de formato", "Ingresá un número válido (Ej: 1.5)");
+        }
+    }
+
+    @FXML
+    void vaciarCarrito(ActionEvent event) {
+        if (listaCarrito.isEmpty()) return;
+
+        Alert confirmacion = new Alert(Alert.AlertType.CONFIRMATION);
+        confirmacion.setTitle("Vaciar carrito");
+        confirmacion.setHeaderText("¿Vaciar todos los ítems?");
+        confirmacion.setContentText("Se eliminarán " + listaCarrito.size() + " ítem(s) del carrito.");
+
+        ButtonType btnConfirmar = new ButtonType("Vaciar", ButtonBar.ButtonData.OK_DONE);
+        ButtonType btnCancelarBtn = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
+        confirmacion.getButtonTypes().setAll(btnConfirmar, btnCancelarBtn);
+
+        Optional<ButtonType> resultado = confirmacion.showAndWait();
+        if (resultado.isPresent() && resultado.get() == btnConfirmar) {
+            limpiarPantalla();
         }
     }
 

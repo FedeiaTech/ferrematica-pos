@@ -45,7 +45,7 @@
                 <HBox alignment="CENTER_RIGHT" spacing="20.0" style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 20; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 5, 0, 0, 2);">
                     <children>
                         <Button fx:id="btnEliminar" onAction="#eliminarLinea" text="Quitar Item" style="-fx-background-color: #f39c12; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10 20;" />
-                        
+                        <Button fx:id="btnVaciar" onAction="#vaciarCarrito" text="Vaciar Todo" disable="true" style="-fx-background-color: #c0392b; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10 20;" />
                         <Button onAction="#cancelarVenta" text="Cancelar (ESC)" style="-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10 20;" />
                         
                         <Region HBox.hgrow="ALWAYS" />
