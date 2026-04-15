@@ -31,6 +31,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.KeyCode;
@@ -114,6 +115,21 @@ public class PosController implements Initializable {
         colNombre.setCellValueFactory(new PropertyValueFactory<>("nombreItem"));
         colPrecio.setCellValueFactory(new PropertyValueFactory<>("precioUnitario"));
         colCantidad.setCellValueFactory(new PropertyValueFactory<>("cantidad"));
+        colCantidad.setCellFactory(col -> new javafx.scene.control.TableCell<DetalleVenta, Double>() {
+            @Override
+            protected void updateItem(Double valor, boolean empty) {
+                super.updateItem(valor, empty);
+                if (empty || valor == null || getTableRow() == null || getTableRow().getItem() == null) {
+                    setText(null);
+                    return;
+                }
+                DetalleVenta d = getTableRow().getItem();
+                String unidad = d.getItem().getUnidad();
+                setText(valor % 1 == 0
+                        ? (int) valor.doubleValue() + " " + unidad
+                        : valor + " " + unidad);
+            }
+        });
         colSubtotal.setCellValueFactory(new PropertyValueFactory<>("subtotal"));
 
         tablaDetalles.setItems(listaCarrito);
@@ -168,17 +184,42 @@ public class PosController implements Initializable {
     }
 
     private void agregarAlCarrito(ItemVenta item) {
+        double cantidad;
+
+        if (item.esPorPeso()) {
+            TextInputDialog dialog = new TextInputDialog("1");
+            dialog.setTitle("Cantidad");
+            dialog.setHeaderText(item.getNombre() + " — se vende por " + item.getUnidad());
+            dialog.setContentText("Ingresá la cantidad (" + item.getUnidad() + "):");
+
+            Optional<String> resultado = dialog.showAndWait();
+            if (resultado.isEmpty()) return;
+
+            try {
+                cantidad = Double.parseDouble(resultado.get().replace(",", "."));
+                if (cantidad <= 0) {
+                    mostrarAlerta(Alert.AlertType.WARNING, "Cantidad inválida", "La cantidad debe ser mayor a cero.");
+                    return;
+                }
+            } catch (NumberFormatException e) {
+                mostrarAlerta(Alert.AlertType.ERROR, "Error de formato", "Ingresá un número válido (Ej: 1.5)");
+                return;
+            }
+        } else {
+            cantidad = 1;
+        }
+
         boolean encontrado = false;
         for (DetalleVenta d : listaCarrito) {
             if (d.getItem().getId() == item.getId()) {
-                d.setCantidad(d.getCantidad() + 1);
+                d.setCantidad(d.getCantidad() + cantidad);
                 encontrado = true;
                 break;
             }
         }
 
         if (!encontrado) {
-            listaCarrito.add(new DetalleVenta(item, 1));
+            listaCarrito.add(new DetalleVenta(item, cantidad));
         }
 
         tablaDetalles.refresh();

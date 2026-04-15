@@ -10,9 +10,8 @@ import java.util.List;
 
 public class ItemDAO {
 
-    // GUARDAR (Create)
     public void guardar(ItemVenta item) throws SQLException {
-        String sql = "INSERT INTO items (codigo, nombre, descripcion, precio_costo, precio_venta, stock, es_servicio) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO items (codigo, nombre, descripcion, precio_costo, precio_venta, stock, es_servicio, unidad) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         
         try (Connection conn = ConexionDB.getConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -23,15 +22,15 @@ public class ItemDAO {
             pstmt.setDouble(4, item.getPrecioCosto());
             pstmt.setDouble(5, item.getPrecioVenta());
             pstmt.setDouble(6, item.getStock());
-            pstmt.setInt(7, item.isEsServicio() ? 1 : 0); // Convertimos boolean a int
-            
+            pstmt.setInt(7, item.isEsServicio() ? 1 : 0);
+            pstmt.setString(8, item.getUnidad());
+
             pstmt.executeUpdate();
         }
     }
-    
-    // ACTUALIZAR (Update)
+
     public void actualizar(ItemVenta item) throws SQLException {
-        String sql = "UPDATE items SET codigo=?, nombre=?, descripcion=?, precio_costo=?, precio_venta=?, stock=?, es_servicio=? WHERE id=?";
+        String sql = "UPDATE items SET codigo=?, nombre=?, descripcion=?, precio_costo=?, precio_venta=?, stock=?, es_servicio=?, unidad=? WHERE id=?";
 
         try (Connection conn = ConexionDB.getConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -43,25 +42,22 @@ public class ItemDAO {
             pstmt.setDouble(5, item.getPrecioVenta());
             pstmt.setDouble(6, item.getStock());
             pstmt.setInt(7, item.isEsServicio() ? 1 : 0);
-            pstmt.setInt(8, item.getId());
+            pstmt.setString(8, item.getUnidad());
+            pstmt.setInt(9, item.getId());
 
             pstmt.executeUpdate();
         }
     }
 
-    // ELIMINAR (Delete)
     public void eliminar(int id) throws SQLException {
         String sql = "DELETE FROM items WHERE id = ?";
-        
         try (Connection conn = ConexionDB.getConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
             pstmt.setInt(1, id);
             pstmt.executeUpdate();
         }
     }
 
-    // LISTAR TODOS (Read)
     public List<ItemVenta> listarTodos() throws SQLException {
         List<ItemVenta> lista = new ArrayList<>();
         String sql = "SELECT * FROM items";
@@ -80,7 +76,8 @@ public class ItemDAO {
                 item.setPrecioVenta(rs.getDouble("precio_venta"));
                 item.setStock(rs.getDouble("stock"));
                 item.setEsServicio(rs.getInt("es_servicio") == 1);
-                
+                String unidad = rs.getString("unidad");
+                item.setUnidad(unidad != null ? unidad : "u");
                 lista.add(item);
             }
         }

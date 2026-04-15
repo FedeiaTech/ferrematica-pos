@@ -34,7 +34,7 @@
                         <TableColumn fx:id="colCodigo" prefWidth="100.0" text="Código" />
                         <TableColumn fx:id="colNombre" prefWidth="300.0" text="Producto / Servicio" />
                         <TableColumn fx:id="colPrecio" prefWidth="120.0" text="Precio Unit." />
-                        <TableColumn fx:id="colCantidad" prefWidth="80.0" text="Cant." />
+                        <TableColumn fx:id="colCantidad" prefWidth="100.0" text="Cantidad" />
                         <TableColumn fx:id="colSubtotal" prefWidth="120.0" text="Subtotal" />
                     </columns>
                     <columnResizePolicy>

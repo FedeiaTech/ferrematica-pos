@@ -7,6 +7,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class VentaDAO {
 
@@ -105,6 +107,78 @@ public class VentaDAO {
             }
         }
         return lista;
+    }
+
+    public int contarVentasDelDia() throws SQLException {
+        String fechaHoy = java.time.LocalDate.now().toString();
+        String sql = "SELECT COUNT(*) FROM ventas WHERE fecha LIKE ?";
+        try (Connection conn = ConexionDB.getConexion();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, fechaHoy + "%");
+            try (ResultSet rs = pstmt.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
+        }
+    }
+
+    public double obtenerGananciaEstimadaDelDia() throws SQLException {
+        String fechaHoy = java.time.LocalDate.now().toString();
+        String sql = "SELECT SUM((d.precio_unitario - i.precio_costo) * d.cantidad) " +
+                     "FROM detalles_venta d " +
+                     "JOIN items i ON d.id_item = i.id " +
+                     "JOIN ventas v ON d.id_venta = v.id " +
+                     "WHERE v.fecha LIKE ? AND i.es_servicio = 0";
+        try (Connection conn = ConexionDB.getConexion();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, fechaHoy + "%");
+            try (ResultSet rs = pstmt.executeQuery()) {
+                return rs.next() ? rs.getDouble(1) : 0.0;
+            }
+        }
+    }
+
+    public int contarItemsStockCritico() throws SQLException {
+        String sql = "SELECT COUNT(*) FROM items WHERE es_servicio = 0 AND stock <= 5";
+        try (Connection conn = ConexionDB.getConexion();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            return rs.next() ? rs.getInt(1) : 0;
+        }
+    }
+
+    public Map<String, Double> obtenerVentasUltimos7Dias() throws SQLException {
+        Map<String, Double> resultado = new LinkedHashMap<>();
+        String sql = "SELECT DATE(fecha) as dia, SUM(total) as total_dia " +
+                     "FROM ventas " +
+                     "WHERE DATE(fecha) >= DATE('now', '-6 days') " +
+                     "GROUP BY DATE(fecha) " +
+                     "ORDER BY dia ASC";
+        try (Connection conn = ConexionDB.getConexion();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                resultado.put(rs.getString("dia"), rs.getDouble("total_dia"));
+            }
+        }
+        return resultado;
+    }
+
+    public Map<String, Double> obtenerTop5ProductosMasVendidos() throws SQLException {
+        Map<String, Double> resultado = new LinkedHashMap<>();
+        String sql = "SELECT i.nombre, SUM(d.cantidad) as total_vendido " +
+                     "FROM detalles_venta d " +
+                     "JOIN items i ON d.id_item = i.id " +
+                     "GROUP BY d.id_item, i.nombre " +
+                     "ORDER BY total_vendido DESC " +
+                     "LIMIT 5";
+        try (Connection conn = ConexionDB.getConexion();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                resultado.put(rs.getString("nombre"), rs.getDouble("total_vendido"));
+            }
+        }
+        return resultado;
     }
 
     public Venta obtenerVentaCompleta(int idVenta) throws SQLException {

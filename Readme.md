@@ -88,6 +88,16 @@ La base de datos `gestion_pyme.db` se crea automáticamente en la raíz del proy
 
 ## Changelog
 
+### v0.6.0 — 2026-04-15
+
+- **FASE 1 — Dashboard KPIs y Gráficos:**
+  - Tarjeta "Ventas del Día" ahora incluye contador de transacciones.
+  - Nueva tarjeta "Ganancia Estimada del Día" (precio venta − costo, solo productos físicos).
+  - Nueva tarjeta "Items Stock Crítico" (productos con stock ≤ 5, con semáforo visual).
+  - BarChart con ventas de los últimos 7 días.
+  - PieChart con top 5 productos más vendidos por unidades.
+  - `VentaDAO`: 5 nuevos métodos de agregación SQL.
+
 ### v0.5.2 — 2026-04-15
 
 - **Fix:** Edición de productos en Inventario. Seleccionar una fila puebla el formulario y activa el modo edición. El botón cambia a ACTUALIZAR. CANCELAR restaura el estado inicial.

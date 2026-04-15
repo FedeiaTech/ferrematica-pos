@@ -15,6 +15,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
@@ -36,6 +37,7 @@ public class InventoryController implements Initializable {
     @FXML private TextField txtNombre;
     @FXML private TextField txtPrecio;
     @FXML private TextField txtStock;
+    @FXML private ComboBox<String> cmbUnidad;
     @FXML private CheckBox chkServicio;
     @FXML private Button btnGuardar;
     @FXML private Button btnCancelar;
@@ -48,12 +50,25 @@ public class InventoryController implements Initializable {
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         itemDAO = new ItemDAO();
+
+        cmbUnidad.getItems().addAll("u", "kg", "g", "lt");
+        cmbUnidad.setValue("u");
+
         configurarColumnas();
         cargarDatos();
 
         tablaItems.getSelectionModel().selectedItemProperty().addListener((obs, anterior, seleccionado) -> {
             if (seleccionado != null) {
                 entrarModoEdicion(seleccionado);
+            }
+        });
+
+        chkServicio.selectedProperty().addListener((obs, anterior, seleccionado) -> {
+            txtStock.setDisable(seleccionado);
+            cmbUnidad.setDisable(seleccionado);
+            if (seleccionado) {
+                txtStock.clear();
+                cmbUnidad.setValue("u");
             }
         });
     }
@@ -64,8 +79,18 @@ public class InventoryController implements Initializable {
         txtNombre.setText(item.getNombre());
         txtPrecio.setText(String.valueOf(item.getPrecioVenta()));
         chkServicio.setSelected(item.isEsServicio());
-        txtStock.setText(item.isEsServicio() ? "" : String.valueOf(item.getStock()));
-        txtStock.setDisable(item.isEsServicio());
+
+        if (item.isEsServicio()) {
+            txtStock.clear();
+            txtStock.setDisable(true);
+            cmbUnidad.setValue("u");
+            cmbUnidad.setDisable(true);
+        } else {
+            txtStock.setText(String.valueOf(item.getStock()));
+            txtStock.setDisable(false);
+            cmbUnidad.setValue(item.getUnidad());
+            cmbUnidad.setDisable(false);
+        }
 
         lblFormTitulo.setText("Editando: " + item.getNombre());
         btnGuardar.setText("ACTUALIZAR");
@@ -100,31 +125,34 @@ public class InventoryController implements Initializable {
                 }
 
                 ItemVenta rowData = getTableRow().getItem();
-
                 if (rowData == null) return;
 
                 if (rowData.isEsServicio()) {
                     setText("Servicio");
                     setTextFill(Color.BLUE);
                     setStyle("-fx-font-weight: bold; -fx-alignment: CENTER;");
-                } else {
-                    if (item == null) {
-                        setText("0");
-                        setTextFill(Color.ORANGE);
-                        return;
-                    }
+                    return;
+                }
 
-                    setText(item.toString());
+                if (item == null) {
+                    setText("0 " + rowData.getUnidad());
+                    setTextFill(Color.ORANGE);
                     setStyle("-fx-alignment: CENTER_RIGHT;");
+                    return;
+                }
 
-                    if (item < 0) {
-                        setTextFill(Color.RED);
-                        setStyle("-fx-font-weight: bold; -fx-alignment: CENTER_RIGHT;");
-                    } else if (item == 0) {
-                        setTextFill(Color.ORANGE);
-                    } else {
-                        setTextFill(Color.BLACK);
-                    }
+                setText(item % 1 == 0
+                        ? (int) item.doubleValue() + " " + rowData.getUnidad()
+                        : item + " " + rowData.getUnidad());
+                setStyle("-fx-alignment: CENTER_RIGHT;");
+
+                if (item < 0) {
+                    setTextFill(Color.RED);
+                    setStyle("-fx-font-weight: bold; -fx-alignment: CENTER_RIGHT;");
+                } else if (item == 0) {
+                    setTextFill(Color.ORANGE);
+                } else {
+                    setTextFill(Color.BLACK);
                 }
             }
         });
@@ -157,10 +185,12 @@ public class InventoryController implements Initializable {
             if (chkServicio.isSelected()) {
                 item.setEsServicio(true);
                 item.setStock(-1);
+                item.setUnidad("u");
             } else {
                 item.setEsServicio(false);
                 String stockStr = txtStock.getText().isEmpty() ? "0" : txtStock.getText();
                 item.setStock(Double.parseDouble(stockStr));
+                item.setUnidad(cmbUnidad.getValue() != null ? cmbUnidad.getValue() : "u");
             }
 
             if (itemEnEdicion != null) {
@@ -214,6 +244,8 @@ public class InventoryController implements Initializable {
         txtPrecio.clear();
         txtStock.clear();
         txtStock.setDisable(false);
+        cmbUnidad.setValue("u");
+        cmbUnidad.setDisable(false);
         chkServicio.setSelected(false);
         lblFormTitulo.setText("Nuevo Producto / Servicio:");
         btnGuardar.setText("AGREGAR");

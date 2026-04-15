@@ -10,8 +10,10 @@ public class ItemVenta {
     private double precioVenta;
     private double stock;
     private boolean esServicio;
+    private String unidad;
 
     public ItemVenta() {
+        this.unidad = "u";
     }
 
     public ItemVenta(int id, String codigo, String nombre, String descripcion, double precioCosto, double precioVenta, double stock, boolean esServicio) {
@@ -23,6 +25,7 @@ public class ItemVenta {
         this.precioVenta = precioVenta;
         this.stock = stock;
         this.esServicio = esServicio;
+        this.unidad = "u";
     }
 
     public int getId() { return id; }
@@ -48,6 +51,14 @@ public class ItemVenta {
 
     public boolean isEsServicio() { return esServicio; }
     public void setEsServicio(boolean esServicio) { this.esServicio = esServicio; }
+
+    public String getUnidad() { return unidad != null ? unidad : "u"; }
+    public void setUnidad(String unidad) { this.unidad = unidad; }
+
+    public boolean esPorPeso() {
+        String u = getUnidad();
+        return u.equals("kg") || u.equals("g") || u.equals("lt");
+    }
 
     public double calcularGanancia() {
         return precioVenta - precioCosto;

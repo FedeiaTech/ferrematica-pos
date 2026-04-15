@@ -39,6 +39,11 @@ public class ConexionDB {
                 + ");";
         stmt.execute(sqlItems);
 
+        try {
+            stmt.execute("ALTER TABLE items ADD COLUMN unidad TEXT DEFAULT 'u'");
+        } catch (SQLException ignored) {
+        }
+
         String sqlVentas = "CREATE TABLE IF NOT EXISTS ventas ("
                 + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
                 + "fecha TEXT NOT NULL,"
