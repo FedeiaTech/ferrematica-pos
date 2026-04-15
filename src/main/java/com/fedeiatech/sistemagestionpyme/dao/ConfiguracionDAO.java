@@ -48,36 +48,29 @@ public class ConfiguracionDAO {
 
     // GUARDAR CONFIGURACIÓN (UPDATE)
     public void guardarConfiguracion(Configuracion config) throws SQLException {
-        // Actualizamos TODOS los campos
         String sql = "UPDATE configuracion SET "
                    + "nombre_empresa=?, cuit=?, direccion=?, condicion_iva=?, punto_venta=?, "
-                   + "ruta_logo=?, mensaje_ticket=?, permitir_stock_negativo=?, recargo_tarjeta=?, ruta_backup=?, "
-                   + "ruta_tickets=? " // <--- NUEVO CAMPO (Index 11)
+                   + "certificado_ruta=?, "
+                   + "ruta_logo=?, mensaje_ticket=?, permitir_stock_negativo=?, recargo_tarjeta=?, "
+                   + "ruta_backup=?, ruta_tickets=? "
                    + "WHERE id=1";
 
         try (Connection conn = ConexionDB.getConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            // Tab 1
             pstmt.setString(1, config.getNombreEmpresa());
             pstmt.setString(2, config.getCuit());
             pstmt.setString(3, config.getDireccion());
             pstmt.setString(4, config.getCondicionIva());
             pstmt.setInt(5, config.getPuntoVenta());
-            
-            // Tab 2
-            pstmt.setString(6, config.getRutaLogo());
-            pstmt.setString(7, config.getMensajeTicket());
-            
-            // Tab 3 (Convertir boolean a int)
-            pstmt.setInt(8, config.isPermitirStockNegativo() ? 1 : 0);
-            
-            pstmt.setDouble(9, config.getRecargoTarjeta());
-            pstmt.setString(10, config.getRutaBackup());
-            
-            // NUEVO: Guardar ruta de tickets
-            pstmt.setString(11, config.getRutaGuardadoTickets());
-            
+            pstmt.setString(6, config.getCertificadoRuta());
+            pstmt.setString(7, config.getRutaLogo());
+            pstmt.setString(8, config.getMensajeTicket());
+            pstmt.setInt(9, config.isPermitirStockNegativo() ? 1 : 0);
+            pstmt.setDouble(10, config.getRecargoTarjeta());
+            pstmt.setString(11, config.getRutaBackup());
+            pstmt.setString(12, config.getRutaGuardadoTickets());
+
             pstmt.executeUpdate();
         }
     }

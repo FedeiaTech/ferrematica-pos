@@ -1,53 +1,102 @@
-# JFX-Business-Engine - FedeiaTech
+# JFX-Business-Engine — FedeiaTech
 
-**Sistema de Gestión ERP Modular y Resiliente para Pymes.**
-*Diseñado para la transición ARCA (ex-AFIP) y alta performance en escritorio.*
+**Sistema de Gestión Comercial para PyMEs argentinas.**  
+*Offline-First, orientado a comercios minoristas. Preparado para integración fiscal ARCA.*
 
-**Estado:** MVP Estable (v0.5) | **Repositorio Público**
-
+**Estado:** v0.5.1 — Estable | **Licencia:** Propietaria
 
 ![Main](https://github.com/FedeiaTech/JFX-Business-Engine/blob/develop/img/01.jpg)
 
+---
 
-## Características Clave
-* **Arquitectura Hexagonal:** Núcleo de negocio desacoplado de la normativa fiscal.
-* **Interfaz Moderna:** Dashboard estilo "Bento Grid" con JavaFX.
-* **Punto de Venta (POS):** Facturación rápida con validación de stock y atajos de teclado.
-* **Motor de Tickets:** Generación de PDF (iText) con soporte para impresoras térmicas y guardado temporal/fijo.
-* **Base de Datos Local:** SQLite para funcionamiento Offline-First robusto.
+## Características
+
+- **Punto de Venta (POS):** Facturación rápida con búsqueda por código/nombre, validación de stock en tiempo real y atajos de teclado.
+- **Motor de Tickets PDF:** Generación de comprobantes con logo, datos de empresa y guardado temporal o permanente. Soporte para impresoras térmicas.
+- **Gestión de Inventario:** Alta y baja de productos físicos y servicios con control de stock visual por colores.
+- **Reportes:** Historial de ventas con opción de reimprimir cualquier ticket anterior.
+- **Configuración de Empresa:** Nombre, CUIT, dirección, logo, mensaje de ticket, backup y restore de base de datos.
+- **Base de Datos Local:** SQLite — funciona sin conexión a internet. Sin servidores externos.
+
+---
 
 ## Stack Tecnológico
-* **Lenguaje:** Java 21 LTS
-* **UI:** JavaFX + FXML
-* **Build:** Maven
-* **DB:** SQLite (JDBC)
-* **Reportes:** iText PDF (OpenPDF)
+
+| Componente | Tecnología |
+| --- | --- |
+| Lenguaje | Java 21 LTS |
+| UI | JavaFX 21 + FXML + JFoenix |
+| Build | Maven 3.9+ |
+| Base de datos | SQLite (xerial JDBC) |
+| PDF | OpenPDF |
+
+---
 
 ## Estado de Módulos
-- [x] **Gestión de Inventario (CRUD)**
-- [x] **Dashboard Operativo**
-- [x] **Punto de Venta (POS)**
-- [x] **Motor de Tickets (PDF)**
-- [x] **Configuración y Persistencia**
-- [ ] **Métricas y Gráficos (Dashboard)** *(Próximamente)*
-- [ ] **Gestión de Clientes** *(Próximamente)*
-- [ ] **Importación Masiva (Excel)** *(Próximamente)*
-- [ ] **Conexión Fiscal ARCA** *(Planificado)*
 
-## Niveles de Licencia (Planificado)
-El sistema implementa *Feature Flags* para gestionar versiones:
-* **Community (Free):** POS, Inventario Ilimitado, Tickets PDF Temporales.
-* **Professional (Paid):** Dashboard de Métricas, Importación Excel, Cuenta Corriente, Tickets Archivados, Conexión Fiscal.
+- [x] **Punto de Venta (POS)** — transacción atómica, stock, ticket PDF
+- [x] **Motor de Tickets PDF** — logo, datos empresa, guardado permanente/temporal
+- [x] **Dashboard Operativo** — ventas del día, accesos directos
+- [x] **Configuración y Persistencia** — empresa, backup/restore
+- [ ] **Edición de Productos** *(en desarrollo)*
+- [ ] **Métricas y Gráficos Dashboard** *(próximamente)*
+- [ ] **Importación Masiva Excel** *(próximamente)*
+- [ ] **Gestión de Clientes y Cuenta Corriente** *(próximamente)*
+- [ ] **Login y Roles de Usuario** *(próximamente)*
+- [ ] **Conexión Fiscal ARCA** *(planificado post v1.0)*
 
-## Cómo ejecutar (Dev)
-1.  Clonar repositorio.
-2.  Ejecutar `mvn clean install`.
-3.  Correr la clase `Launcher.java`.
+---
 
-## Capturas del programa
+## Niveles de Licencia
+
+| Feature | Community (Free) | Professional (Paid) |
+| --- | --- | --- |
+| POS | ✓ | ✓ |
+| Inventario ilimitado | ✓ | ✓ |
+| Tickets PDF temporales | ✓ | ✓ |
+| Historial de ventas | — | ✓ |
+| Tickets archivados permanentes | — | ✓ |
+| Dashboard métricas y gráficos | — | ✓ |
+| Importación Excel | — | ✓ |
+| Cuenta Corriente / Clientes | — | ✓ |
+| Conexión Fiscal ARCA | — | ✓ |
+
+---
+
+## Cómo ejecutar (Desarrollo)
+
+**Requisitos:** JDK 21 + Maven 3.9+
+
+```bash
+# Clonar y ejecutar
+git clone https://github.com/FedeiaTech/JFX-Business-Engine.git
+cd JFX-Business-Engine
+mvn javafx:run
+```
+
+La base de datos `gestion_pyme.db` se crea automáticamente en la raíz del proyecto al primer arranque.
+
+---
+
+## Capturas
 
 ![Venta](https://github.com/FedeiaTech/JFX-Business-Engine/blob/develop/img/02.jpg)
 
 ![Inventario](https://github.com/FedeiaTech/JFX-Business-Engine/blob/develop/img/03.jpg)
+
 ---
-© 2026 FedeiaTech - Todos los derechos reservados.
+
+## Changelog
+
+### v0.5.1 — 2026-04-15
+
+- **Fix:** `ConfiguracionDAO` — los campos `certificado_ruta` y `ruta_backup` se perdían en cada guardado de configuración. El UPDATE ahora incluye todos los campos del modelo y preserva los valores sin UI.
+
+### v0.5 — 2026-04-13
+
+- Finalización módulo POS y generación de Tickets PDF.
+- MVP Estable inicial.
+
+---
+
+*© 2026 FedeiaTech — Todos los derechos reservados.*

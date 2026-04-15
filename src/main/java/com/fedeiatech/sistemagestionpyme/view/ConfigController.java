@@ -140,7 +140,10 @@ public class ConfigController implements Initializable {
         try {
             int pv = Integer.parseInt(txtPuntoVenta.getText());
             double recargo = Double.parseDouble(txtRecargo.getText());
-            
+
+            // Preservar campos sin UI (certificado_ruta, ruta_backup) leyendo el valor actual
+            Configuracion configActual = configDAO.obtenerConfiguracion();
+
             Configuracion config = new Configuracion();
             // Tab 1
             config.setNombreEmpresa(txtNombreEmpresa.getText());
@@ -148,16 +151,22 @@ public class ConfigController implements Initializable {
             config.setDireccion(txtDireccion.getText());
             config.setCondicionIva(txtCondicionIva.getText());
             config.setPuntoVenta(pv);
-            
+
             // Tab 2
             config.setRutaLogo(lblRutaLogo.getText());
             config.setMensajeTicket(txtMensajeTicket.getText());
-            config.setRutaGuardadoTickets(txtRutaTickets.getText()); // <--- Guardamos la ruta
-            
+            config.setRutaGuardadoTickets(txtRutaTickets.getText());
+
             // Tab 3
             config.setPermitirStockNegativo(chkStockNegativo.isSelected());
             config.setRecargoTarjeta(recargo);
-            
+
+            // Preservar campos gestionados por otras pantallas o procesos
+            if (configActual != null) {
+                config.setCertificadoRuta(configActual.getCertificadoRuta());
+                config.setRutaBackup(configActual.getRutaBackup());
+            }
+
             configDAO.guardarConfiguracion(config);
             
             mostrarAlerta("Guardado", "Configuración actualizada correctamente.");

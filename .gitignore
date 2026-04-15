@@ -16,3 +16,19 @@ gestion_pyme.db
 
 # Logs
 *.log
+
+# VSCode
+.vscode/
+
+# Claude Code — documentación y configuración de IA (uso interno, no subir)
+CLAUDE.md
+.claude/
+
+# Certificados y credenciales AFIP/ARCA
+*.p12
+*.crt
+*.key
+*.pem
+
+# Backups locales
+*.db.bak
