@@ -12,6 +12,7 @@ public class App extends Application {
     @Override
     public void start(Stage stage) throws IOException {
         new com.fedeiatech.sistemagestionpyme.dao.ConfiguracionDAO().inicializarTabla();
+        com.fedeiatech.sistemagestionpyme.dao.DataSeeder.sembrarDemoSiVacio();
 
         String fxmlPath = "/dashboard_view.fxml";
 
@@ -26,7 +27,7 @@ public class App extends Application {
 
         Scene scene = new Scene(root);
         stage.setScene(scene);
-        stage.setTitle("Sistema FedeiaTech - Pyme v0.5");
+        stage.setTitle("Sistema FedeiaTech - Pyme v0.6");
         stage.show();
     }
 

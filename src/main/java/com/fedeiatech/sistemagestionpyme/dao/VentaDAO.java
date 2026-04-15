@@ -181,6 +181,84 @@ public class VentaDAO {
         return resultado;
     }
 
+    public java.util.List<String[]> obtenerResumenDiario(String desde, String hasta) throws SQLException {
+        java.util.List<String[]> resultado = new java.util.ArrayList<>();
+        String sql = "SELECT DATE(fecha) as dia, COUNT(*) as cant, SUM(total) as total_dia " +
+                     "FROM ventas WHERE DATE(fecha) BETWEEN ? AND ? " +
+                     "GROUP BY DATE(fecha) ORDER BY dia ASC";
+        try (Connection conn = ConexionDB.getConexion();
+             PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setString(1, desde);
+            pst.setString(2, hasta);
+            try (ResultSet rs = pst.executeQuery()) {
+                while (rs.next()) {
+                    resultado.add(new String[]{
+                        rs.getString("dia"),
+                        String.valueOf(rs.getInt("cant")),
+                        String.valueOf(rs.getDouble("total_dia"))
+                    });
+                }
+            }
+        }
+        return resultado;
+    }
+
+    public java.util.List<String[]> obtenerVentasPorProducto(String desde, String hasta) throws SQLException {
+        java.util.List<String[]> resultado = new java.util.ArrayList<>();
+        String sql = "SELECT i.nombre, i.unidad, SUM(d.cantidad) as cant, SUM(d.subtotal) as total " +
+                     "FROM detalles_venta d " +
+                     "JOIN items i ON d.id_item = i.id " +
+                     "JOIN ventas v ON d.id_venta = v.id " +
+                     "WHERE DATE(v.fecha) BETWEEN ? AND ? " +
+                     "GROUP BY d.id_item, i.nombre, i.unidad " +
+                     "ORDER BY cant DESC";
+        try (Connection conn = ConexionDB.getConexion();
+             PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setString(1, desde);
+            pst.setString(2, hasta);
+            try (ResultSet rs = pst.executeQuery()) {
+                while (rs.next()) {
+                    resultado.add(new String[]{
+                        rs.getString("nombre"),
+                        rs.getString("unidad"),
+                        String.valueOf(rs.getDouble("cant")),
+                        String.valueOf(rs.getDouble("total"))
+                    });
+                }
+            }
+        }
+        return resultado;
+    }
+
+    public java.util.List<String[]> obtenerDetalleCompleto(String desde, String hasta) throws SQLException {
+        java.util.List<String[]> resultado = new java.util.ArrayList<>();
+        String sql = "SELECT DATE(v.fecha) as dia, v.id, i.nombre, d.cantidad, i.unidad, d.precio_unitario, d.subtotal " +
+                     "FROM detalles_venta d " +
+                     "JOIN items i ON d.id_item = i.id " +
+                     "JOIN ventas v ON d.id_venta = v.id " +
+                     "WHERE DATE(v.fecha) BETWEEN ? AND ? " +
+                     "ORDER BY v.fecha ASC, v.id ASC";
+        try (Connection conn = ConexionDB.getConexion();
+             PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setString(1, desde);
+            pst.setString(2, hasta);
+            try (ResultSet rs = pst.executeQuery()) {
+                while (rs.next()) {
+                    resultado.add(new String[]{
+                        rs.getString("dia"),
+                        String.valueOf(rs.getInt("id")),
+                        rs.getString("nombre"),
+                        String.valueOf(rs.getDouble("cantidad")),
+                        rs.getString("unidad"),
+                        String.valueOf(rs.getDouble("precio_unitario")),
+                        String.valueOf(rs.getDouble("subtotal"))
+                    });
+                }
+            }
+        }
+        return resultado;
+    }
+
     public Venta obtenerVentaCompleta(int idVenta) throws SQLException {
         Venta venta = null;
         String sqlVenta = "SELECT * FROM ventas WHERE id = ?";

@@ -3,9 +3,9 @@
 **Sistema de Gestión Comercial para PyMEs argentinas.**  
 *Offline-First, orientado a comercios minoristas. Preparado para integración fiscal ARCA.*
 
-**Estado:** v0.5.2 — Estable | **Licencia:** Propietaria
+**Estado:** v0.6.1 — Estable | **Licencia:** Propietaria
 
-![Main](https://github.com/FedeiaTech/JFX-Business-Engine/blob/develop/img/01.jpg)
+![Panel de Control](Screenshots/01.jpg)
 
 ---
 
@@ -29,19 +29,19 @@
 | Build | Maven 3.9+ |
 | Base de datos | SQLite (xerial JDBC) |
 | PDF | OpenPDF |
+| Excel | Apache POI 5.2.5 |
 
 ---
 
 ## Estado de Módulos
 
-- [x] **Punto de Venta (POS)** — transacción atómica, stock, ticket PDF
+- [x] **Punto de Venta (POS)** — transacción atómica, stock, ticket PDF, ajuste de cantidades en carrito
 - [x] **Motor de Tickets PDF** — logo, datos empresa, guardado permanente/temporal
-- [x] **Dashboard Operativo** — ventas del día, accesos directos
+- [x] **Dashboard con KPIs y Gráficos** — ventas del día, ganancia estimada, stock crítico, BarChart 7 días, PieChart top 5
+- [x] **Gestión de Inventario** — CRUD completo con unidades por ítem (u/kg/g/lt)
 - [x] **Configuración y Persistencia** — empresa, backup/restore
-- [x] **Edición de Productos** — selección en tabla puebla el formulario, CANCELAR para salir del modo
-- [ ] **Métricas y Gráficos Dashboard** *(próximamente)*
+- [x] **Reportes con Export Excel** — resumen diario, por producto y detalle completo filtrado por período
 - [ ] **Importación Masiva Excel** *(próximamente)*
-- [ ] **Gestión de Clientes y Cuenta Corriente** *(próximamente)*
 - [ ] **Login y Roles de Usuario** *(próximamente)*
 - [ ] **Conexión Fiscal ARCA** *(planificado post v1.0)*
 
@@ -80,13 +80,26 @@ La base de datos `gestion_pyme.db` se crea automáticamente en la raíz del proy
 
 ## Capturas
 
-![Venta](https://github.com/FedeiaTech/JFX-Business-Engine/blob/develop/img/02.jpg)
-
-![Inventario](https://github.com/FedeiaTech/JFX-Business-Engine/blob/develop/img/03.jpg)
+| Punto de Venta | Gestión de Inventario |
+| --- | --- |
+| ![Punto de Venta](Screenshots/02.jpg) | ![Gestión de Inventario](Screenshots/03.jpg) |
 
 ---
 
 ## Changelog
+
+### v0.6.1 — 2026-04-15
+
+- **POS — Gestión de cantidades en carrito:**
+  - Doble-click sobre una fila abre diálogo para ajustar cantidad (pre-cargado con valor actual). Ingresar ≤ 0 elimina la línea.
+  - Nuevo botón "Vaciar Todo" con confirmación. Se habilita solo cuando hay ítems en el carrito.
+- **Reportes — Export a Excel:**
+  - Botón "Exportar Excel" con selector de período (DatePicker desde/hasta) y tres tipos de reporte:
+    - *Resumen diario*: una fila por día con cantidad de ventas y total ARS.
+    - *Por producto*: unidades vendidas y total por ítem en el período.
+    - *Detalle completo*: una fila por ítem vendido con precio unitario y subtotal.
+  - Encabezados en negrito, formato numérico `#,##0.00`, auto-filtro y columnas auto-dimensionadas.
+- **Datos demo:** primer arranque con DB vacía carga automáticamente 10 productos de kiosco y 25 ventas históricas de ejemplo.
 
 ### v0.6.0 — 2026-04-15
 
