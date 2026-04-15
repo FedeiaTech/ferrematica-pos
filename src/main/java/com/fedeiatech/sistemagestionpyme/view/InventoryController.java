@@ -12,8 +12,10 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.Label;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
@@ -37,15 +39,47 @@ public class InventoryController implements Initializable {
     @FXML private TextField txtPrecio;
     @FXML private TextField txtStock;
     @FXML private CheckBox chkServicio;
+    @FXML private Button btnGuardar;
+    @FXML private Button btnCancelar;
+    @FXML private Label lblFormTitulo;
 
     private ItemDAO itemDAO;
     private ObservableList<ItemVenta> listaItems;
+    private ItemVenta itemEnEdicion = null;
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         itemDAO = new ItemDAO();
         configurarColumnas();
         cargarDatos();
+
+        tablaItems.getSelectionModel().selectedItemProperty().addListener((obs, anterior, seleccionado) -> {
+            if (seleccionado != null) {
+                entrarModoEdicion(seleccionado);
+            }
+        });
+    }
+
+    private void entrarModoEdicion(ItemVenta item) {
+        itemEnEdicion = item;
+        txtCodigo.setText(item.getCodigo());
+        txtNombre.setText(item.getNombre());
+        txtPrecio.setText(String.valueOf(item.getPrecioVenta()));
+        chkServicio.setSelected(item.isEsServicio());
+        txtStock.setText(item.isEsServicio() ? "" : String.valueOf(item.getStock()));
+        txtStock.setDisable(item.isEsServicio());
+
+        lblFormTitulo.setText("Editando: " + item.getNombre());
+        btnGuardar.setText("ACTUALIZAR");
+        btnGuardar.setStyle("-fx-background-color: #2980b9; -fx-text-fill: white; -fx-font-weight: bold;");
+        btnCancelar.setVisible(true);
+        btnCancelar.setManaged(true);
+    }
+
+    @FXML
+    void cancelarEdicion(ActionEvent event) {
+        itemEnEdicion = null;
+        limpiarFormulario();
     }
 
     private void configurarColumnas() {
@@ -122,27 +156,32 @@ public class InventoryController implements Initializable {
                 return;
             }
 
-            ItemVenta nuevoItem = new ItemVenta();
-            nuevoItem.setCodigo(txtCodigo.getText());
-            nuevoItem.setNombre(txtNombre.getText());
-            nuevoItem.setDescripcion(""); 
-            nuevoItem.setPrecioCosto(0.0); 
-            nuevoItem.setPrecioVenta(Double.parseDouble(txtPrecio.getText()));
+            ItemVenta item = (itemEnEdicion != null) ? itemEnEdicion : new ItemVenta();
+            item.setCodigo(txtCodigo.getText());
+            item.setNombre(txtNombre.getText());
+            item.setDescripcion(item.getDescripcion() != null ? item.getDescripcion() : "");
+            item.setPrecioCosto(item.getPrecioCosto());
+            item.setPrecioVenta(Double.parseDouble(txtPrecio.getText()));
 
             if (chkServicio.isSelected()) {
-                nuevoItem.setEsServicio(true);
-                nuevoItem.setStock(-1); // Convención para servicios
+                item.setEsServicio(true);
+                item.setStock(-1);
             } else {
-                nuevoItem.setEsServicio(false);
+                item.setEsServicio(false);
                 String stockStr = txtStock.getText().isEmpty() ? "0" : txtStock.getText();
-                nuevoItem.setStock(Double.parseDouble(stockStr));
+                item.setStock(Double.parseDouble(stockStr));
             }
 
-            itemDAO.guardar(nuevoItem);
+            if (itemEnEdicion != null) {
+                itemDAO.actualizar(item);
+                mostrarAlerta(Alert.AlertType.INFORMATION, "Éxito", "Producto actualizado correctamente.");
+            } else {
+                itemDAO.guardar(item);
+                mostrarAlerta(Alert.AlertType.INFORMATION, "Éxito", "Producto guardado correctamente.");
+            }
 
             cargarDatos();
             limpiarFormulario();
-            mostrarAlerta(Alert.AlertType.INFORMATION, "Éxito", "Producto guardado correctamente.");
 
         } catch (NumberFormatException e) {
             mostrarAlerta(Alert.AlertType.ERROR, "Error de Formato", "El Precio y Stock deben ser números válidos.");
@@ -177,11 +216,19 @@ public class InventoryController implements Initializable {
     }
 
     private void limpiarFormulario() {
+        itemEnEdicion = null;
+        tablaItems.getSelectionModel().clearSelection();
         txtCodigo.clear();
         txtNombre.clear();
         txtPrecio.clear();
         txtStock.clear();
+        txtStock.setDisable(false);
         chkServicio.setSelected(false);
+        lblFormTitulo.setText("Nuevo Producto / Servicio:");
+        btnGuardar.setText("AGREGAR");
+        btnGuardar.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold;");
+        btnCancelar.setVisible(false);
+        btnCancelar.setManaged(false);
     }
 
     private void mostrarAlerta(Alert.AlertType tipo, String titulo, String mensaje) {

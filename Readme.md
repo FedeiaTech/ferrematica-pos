@@ -3,7 +3,7 @@
 **Sistema de Gestión Comercial para PyMEs argentinas.**  
 *Offline-First, orientado a comercios minoristas. Preparado para integración fiscal ARCA.*
 
-**Estado:** v0.5.1 — Estable | **Licencia:** Propietaria
+**Estado:** v0.5.2 — Estable | **Licencia:** Propietaria
 
 ![Main](https://github.com/FedeiaTech/JFX-Business-Engine/blob/develop/img/01.jpg)
 
@@ -38,7 +38,7 @@
 - [x] **Motor de Tickets PDF** — logo, datos empresa, guardado permanente/temporal
 - [x] **Dashboard Operativo** — ventas del día, accesos directos
 - [x] **Configuración y Persistencia** — empresa, backup/restore
-- [ ] **Edición de Productos** *(en desarrollo)*
+- [x] **Edición de Productos** — selección en tabla puebla el formulario, CANCELAR para salir del modo
 - [ ] **Métricas y Gráficos Dashboard** *(próximamente)*
 - [ ] **Importación Masiva Excel** *(próximamente)*
 - [ ] **Gestión de Clientes y Cuenta Corriente** *(próximamente)*
@@ -87,6 +87,10 @@ La base de datos `gestion_pyme.db` se crea automáticamente en la raíz del proy
 ---
 
 ## Changelog
+
+### v0.5.2 — 2026-04-15
+
+- **Fix:** Edición de productos en Inventario. Seleccionar una fila puebla el formulario y activa el modo edición. El botón cambia a ACTUALIZAR. CANCELAR restaura el estado inicial.
 
 ### v0.5.1 — 2026-04-15
 

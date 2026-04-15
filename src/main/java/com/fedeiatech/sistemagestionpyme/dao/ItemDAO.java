@@ -29,6 +29,26 @@ public class ItemDAO {
         }
     }
     
+    // ACTUALIZAR (Update)
+    public void actualizar(ItemVenta item) throws SQLException {
+        String sql = "UPDATE items SET codigo=?, nombre=?, descripcion=?, precio_costo=?, precio_venta=?, stock=?, es_servicio=? WHERE id=?";
+
+        try (Connection conn = ConexionDB.getConexion();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, item.getCodigo());
+            pstmt.setString(2, item.getNombre());
+            pstmt.setString(3, item.getDescripcion());
+            pstmt.setDouble(4, item.getPrecioCosto());
+            pstmt.setDouble(5, item.getPrecioVenta());
+            pstmt.setDouble(6, item.getStock());
+            pstmt.setInt(7, item.isEsServicio() ? 1 : 0);
+            pstmt.setInt(8, item.getId());
+
+            pstmt.executeUpdate();
+        }
+    }
+
     // ELIMINAR (Delete)
     public void eliminar(int id) throws SQLException {
         String sql = "DELETE FROM items WHERE id = ?";

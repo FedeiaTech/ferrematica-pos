@@ -34,12 +34,12 @@
                     </columnResizePolicy>
                 </TableView>
 
-                <Label text="Nuevo Producto / Servicio:" textFill="#7f8c8d">
+                <Label fx:id="lblFormTitulo" text="Nuevo Producto / Servicio:" textFill="#7f8c8d">
                     <font>
                         <Font name="System Bold" size="14.0" />
                     </font>
                 </Label>
-            
+
                 <HBox spacing="10.0" alignment="CENTER_LEFT" style="-fx-background-color: #ecf0f1; -fx-padding: 10; -fx-background-radius: 5;">
                     <children>
                         <TextField fx:id="txtCodigo" promptText="Cód (ej. A01)" prefWidth="100.0" />
@@ -47,7 +47,8 @@
                         <TextField fx:id="txtPrecio" promptText="Precio $" prefWidth="100.0" />
                         <TextField fx:id="txtStock" promptText="Stock" prefWidth="80.0" />
                         <CheckBox fx:id="chkServicio" text="Es Servicio" />
-                        <Button mnemonicParsing="false" onAction="#guardarItem" text="AGREGAR" style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold;" />
+                        <Button fx:id="btnGuardar" mnemonicParsing="false" onAction="#guardarItem" text="AGREGAR" style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold;" />
+                        <Button fx:id="btnCancelar" mnemonicParsing="false" onAction="#cancelarEdicion" text="CANCELAR" visible="false" managed="false" style="-fx-background-color: #7f8c8d; -fx-text-fill: white; -fx-font-weight: bold;" />
                         <Button mnemonicParsing="false" onAction="#eliminarItem" text="ELIMINAR" style="-fx-background-color: #c0392b; -fx-text-fill: white; -fx-font-weight: bold;" />
                     </children>
                 </HBox>
