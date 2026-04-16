@@ -1,9 +1,11 @@
 package com.fedeiatech.sistemagestionpyme.view;
 
 import com.fedeiatech.sistemagestionpyme.dao.VentaDAO;
+import com.fedeiatech.sistemagestionpyme.model.Usuario;
 import com.fedeiatech.sistemagestionpyme.service.IFiscalProvider;
 import com.fedeiatech.sistemagestionpyme.service.LicenseService;
 import com.fedeiatech.sistemagestionpyme.service.MockFiscalProvider;
+import com.fedeiatech.sistemagestionpyme.service.SessionService;
 import java.io.IOException;
 import java.net.URL;
 import java.sql.SQLException;
@@ -20,7 +22,7 @@ import javafx.scene.Scene;
 import javafx.scene.chart.BarChart;
 import javafx.scene.chart.PieChart;
 import javafx.scene.chart.XYChart;
-import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
@@ -32,8 +34,13 @@ public class DashboardController implements Initializable {
     @FXML private Label lblContadorVentas;
     @FXML private Label lblGananciaDia;
     @FXML private Label lblStockCritico;
+    @FXML private Label lblUsuario;
     @FXML private BarChart<String, Number> chartVentas7Dias;
     @FXML private PieChart chartTop5;
+    @FXML private Button btnInventario;
+    @FXML private Button btnConfiguracion;
+    @FXML private Button btnReportes;
+    @FXML private Button btnUsuarios;
 
     private IFiscalProvider fiscalProvider;
     private VentaDAO ventaDAO;
@@ -43,8 +50,23 @@ public class DashboardController implements Initializable {
         fiscalProvider = new MockFiscalProvider();
         ventaDAO = new VentaDAO();
 
+        aplicarRestriccionesPorRol();
         verificarEstadoFiscal();
         cargarMetricas();
+    }
+
+    private void aplicarRestriccionesPorRol() {
+        Usuario usuario = SessionService.getInstance().getUsuarioActivo();
+        if (usuario == null) return;
+
+        lblUsuario.setText(usuario.getNombre() + "  ·  " + usuario.getRol());
+
+        boolean esAdmin = usuario.esAdmin();
+        btnInventario.setDisable(!esAdmin);
+        btnConfiguracion.setDisable(!esAdmin);
+        btnReportes.setDisable(!esAdmin);
+        btnUsuarios.setVisible(esAdmin);
+        btnUsuarios.setManaged(esAdmin);
     }
 
     private void cargarMetricas() {
@@ -106,16 +128,7 @@ public class DashboardController implements Initializable {
 
     @FXML
     void abrirInventario(ActionEvent event) {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/inventory_view.fxml"));
-            Parent root = loader.load();
-            Stage stage = new Stage();
-            stage.setTitle("Gestión de Inventario");
-            stage.setScene(new Scene(root));
-            stage.show();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        abrirVentana("/inventory_view.fxml", "Gestión de Inventario", false);
     }
 
     @FXML
@@ -136,48 +149,42 @@ public class DashboardController implements Initializable {
 
     @FXML
     void abrirReportes(ActionEvent event) {
-        if (LicenseService.permiteReportes()) {
-            try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/reports_view.fxml"));
-                Parent root = loader.load();
-                Stage stage = new Stage();
-                stage.setTitle("Reportes Avanzados (PRO)");
-                stage.setScene(new Scene(root));
-                stage.show();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        } else {
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("Característica Premium");
-            alert.setHeaderText("¡Desbloquea los Reportes!");
-            alert.setContentText("Esta función es exclusiva de la versión PRO.\n\n"
-                    + "Adquiere tu licencia para acceder al historial completo, "
-                    + "exportación a Excel y métricas avanzadas.");
-            alert.showAndWait();
-        }
-    }
-
-    @FXML
-    void cambiarModoDev(ActionEvent event) {
-        boolean nuevoEstado = !LicenseService.esPremium();
-        LicenseService.setPremium(nuevoEstado);
-        String modo = nuevoEstado ? "PREMIUM (PRO)" : "FREE (Community)";
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Modo Desarrollador");
-        alert.setHeaderText("Licencia Cambiada");
-        alert.setContentText("El sistema ahora simula ser versión: " + modo + "\n\nPrueba los botones bloqueados ahora.");
-        alert.showAndWait();
+        abrirVentana("/reports_view.fxml", "Reportes Avanzados", false);
     }
 
     @FXML
     void abrirConfiguracion(ActionEvent event) {
+        abrirVentana("/config_view.fxml", "Configuración de Empresa", false);
+    }
+
+    @FXML
+    void abrirUsuarios(ActionEvent event) {
+        abrirVentana("/admin_usuarios_view.fxml", "Gestión de Usuarios", false);
+    }
+
+    @FXML
+    void cerrarSesion(ActionEvent event) {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/config_view.fxml"));
+            SessionService.getInstance().cerrarSesion();
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/login_view.fxml"));
+            Parent root = loader.load();
+            Stage stage = (Stage) lblUsuario.getScene().getWindow();
+            stage.setScene(new Scene(root));
+            stage.setMaximized(false);
+            stage.setTitle("Sistema FedeiaTech - Pyme v0.7");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void abrirVentana(String fxmlPath, String titulo, boolean maximizar) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
             Parent root = loader.load();
             Stage stage = new Stage();
-            stage.setTitle("Configuración de Empresa");
+            stage.setTitle(titulo);
             stage.setScene(new Scene(root));
+            if (maximizar) stage.setMaximized(true);
             stage.show();
         } catch (IOException e) {
             e.printStackTrace();
