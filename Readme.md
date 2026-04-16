@@ -3,7 +3,7 @@
 **Sistema de Gestión Comercial para PyMEs argentinas.**  
 *Offline-First, orientado a comercios minoristas. Preparado para integración fiscal ARCA.*
 
-**Estado:** v0.6.1 — Estable | **Licencia:** Propietaria
+**Estado:** v0.7.0 — Estable | **Licencia:** Propietaria
 
 ![Panel de Control](Screenshots/01.jpg)
 
@@ -41,7 +41,7 @@
 - [x] **Gestión de Inventario** — CRUD completo con unidades por ítem (u/kg/g/lt)
 - [x] **Configuración y Persistencia** — empresa, backup/restore
 - [x] **Reportes con Export Excel** — resumen diario, por producto y detalle completo filtrado por período
-- [ ] **Importación Masiva Excel** *(próximamente)*
+- [x] **Importación Masiva Excel** — plantilla descargable, validación por fila, resumen pre-confirmación y detección de duplicados
 - [ ] **Login y Roles de Usuario** *(próximamente)*
 - [ ] **Conexión Fiscal ARCA** *(planificado post v1.0)*
 
@@ -87,6 +87,16 @@ La base de datos `gestion_pyme.db` se crea automáticamente en la raíz del proy
 ---
 
 ## Changelog
+
+### v0.7.0 — 2026-04-16
+
+- **Inventario — Importación masiva desde Excel:**
+  - Botón "Descargar Plantilla" genera un `.xlsx` con encabezados y fila de ejemplo en gris/itálico.
+  - Botón "Importar Excel" abre selector de archivo, valida cada fila y muestra resumen expandible antes de confirmar.
+  - Errores cubiertos: campo vacío, tipo inválido, NaN/Infinito, valor negativo, error de celda/fórmula, unidad desconocida.
+  - Si hay productos con código ya existente: diálogo para Actualizar / Saltar / Cancelar (decisión global).
+  - Botón "?" muestra el formato de columnas y valores válidos.
+  - `ItemDAO.buscarPorCodigo()` para detección de duplicados antes de insertar.
 
 ### v0.6.1 — 2026-04-15
 
