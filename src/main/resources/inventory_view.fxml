@@ -20,9 +20,19 @@
               AnchorPane.rightAnchor="15.0" AnchorPane.topAnchor="15.0">
             <children>
 
-                <Label text="Gestión de Inventario" textFill="#2c3e50">
-                    <font><Font name="System Bold" size="24.0" /></font>
-                </Label>
+                <HBox alignment="CENTER_LEFT" spacing="0.0">
+                    <children>
+                        <Label text="Gestión de Inventario" textFill="#2c3e50" HBox.hgrow="ALWAYS">
+                            <font><Font name="System Bold" size="24.0" /></font>
+                        </Label>
+                        <Button onAction="#descargarPlantilla" text="⬇ Plantilla"
+                                style="-fx-background-color: #2980b9; -fx-text-fill: white; -fx-font-size: 11px; -fx-padding: 6 12; -fx-cursor: hand; -fx-background-radius: 6 0 0 6;" />
+                        <Button onAction="#importarExcel" text="📂 Importar Excel"
+                                style="-fx-background-color: #8e44ad; -fx-text-fill: white; -fx-font-size: 11px; -fx-padding: 6 12; -fx-cursor: hand; -fx-background-radius: 0;" />
+                        <Button onAction="#mostrarInfoImport" text="?"
+                                style="-fx-background-color: #7f8c8d; -fx-text-fill: white; -fx-font-size: 11px; -fx-padding: 6 10; -fx-cursor: hand; -fx-background-radius: 0 6 6 0;" />
+                    </children>
+                </HBox>
 
                 <TableView fx:id="tablaItems" VBox.vgrow="ALWAYS"
                            style="-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 5, 0, 0, 2);">

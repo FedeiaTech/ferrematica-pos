@@ -2,8 +2,14 @@ package com.fedeiatech.sistemagestionpyme.view;
 
 import com.fedeiatech.sistemagestionpyme.dao.ItemDAO;
 import com.fedeiatech.sistemagestionpyme.model.ItemVenta;
+import com.fedeiatech.sistemagestionpyme.service.ExportService;
+import com.fedeiatech.sistemagestionpyme.service.ImportService;
+import com.fedeiatech.sistemagestionpyme.service.ImportService.ImportResult;
+import java.io.File;
 import java.net.URL;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.ResourceBundle;
 import javafx.collections.FXCollections;
@@ -13,6 +19,7 @@ import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
@@ -20,9 +27,11 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.paint.Color;
+import javafx.stage.FileChooser;
 
 public class InventoryController implements Initializable {
 
@@ -234,6 +243,160 @@ public class InventoryController implements Initializable {
                 mostrarAlerta(Alert.AlertType.ERROR, "Error", "No se pudo eliminar: " + e.getMessage());
             }
         }
+    }
+
+    @FXML
+    void descargarPlantilla(ActionEvent event) {
+        FileChooser fc = new FileChooser();
+        fc.setTitle("Guardar plantilla de inventario");
+        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("Excel (*.xlsx)", "*.xlsx"));
+        fc.setInitialFileName("plantilla_inventario.xlsx");
+        File docDir = new File(System.getProperty("user.home") + "/Documents");
+        if (docDir.exists()) fc.setInitialDirectory(docDir);
+        File destino = fc.showSaveDialog(btnGuardar.getScene().getWindow());
+        if (destino == null) return;
+
+        try {
+            File generado = new ExportService().generarPlantillaInventario(destino);
+            new ExportService().abrirArchivo(generado);
+        } catch (Exception e) {
+            mostrarAlerta(Alert.AlertType.ERROR, "Error", "No se pudo generar la plantilla: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    void importarExcel(ActionEvent event) {
+        FileChooser fc = new FileChooser();
+        fc.setTitle("Seleccionar archivo Excel");
+        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("Excel (*.xlsx)", "*.xlsx"));
+        File docDir = new File(System.getProperty("user.home") + "/Documents");
+        if (docDir.exists()) fc.setInitialDirectory(docDir);
+        File archivo = fc.showOpenDialog(btnGuardar.getScene().getWindow());
+        if (archivo == null) return;
+
+        ImportResult result;
+        try {
+            result = new ImportService().importarDesdeExcel(archivo);
+        } catch (Exception e) {
+            mostrarAlerta(Alert.AlertType.ERROR, "Error al leer archivo", e.getMessage());
+            return;
+        }
+
+        if (result.validos.isEmpty() && result.errores.isEmpty()) {
+            mostrarAlerta(Alert.AlertType.WARNING, "Archivo vacío", "El archivo no contiene datos.");
+            return;
+        }
+
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Importar inventario");
+        confirm.setHeaderText(result.validos.size() + " producto(s) válido(s) para importar" +
+                (result.errores.isEmpty() ? "" : "\n⚠ " + result.errores.size() + " fila(s) con errores — no se importarán"));
+
+        if (!result.errores.isEmpty()) {
+            TextArea ta = new TextArea(String.join("\n", result.errores));
+            ta.setEditable(false);
+            ta.setWrapText(true);
+            ta.setPrefHeight(150);
+            confirm.getDialogPane().setExpandableContent(ta);
+            confirm.getDialogPane().setExpanded(result.validos.isEmpty());
+        }
+
+        if (result.validos.isEmpty()) {
+            confirm.getButtonTypes().setAll(ButtonType.OK);
+            confirm.setContentText("No hay productos válidos para importar.");
+            confirm.showAndWait();
+            return;
+        }
+
+        confirm.setContentText("¿Continuar con la importación?");
+        Optional<ButtonType> res = confirm.showAndWait();
+        if (res.isEmpty() || res.get() != ButtonType.OK) return;
+
+        List<ItemVenta> nuevos = new ArrayList<>();
+        List<ItemVenta> duplicados = new ArrayList<>();
+        try {
+            for (ItemVenta item : result.validos) {
+                ItemVenta existente = itemDAO.buscarPorCodigo(item.getCodigo());
+                if (existente != null) {
+                    item.setId(existente.getId());
+                    duplicados.add(item);
+                } else {
+                    nuevos.add(item);
+                }
+            }
+        } catch (SQLException e) {
+            mostrarAlerta(Alert.AlertType.ERROR, "Error BD", e.getMessage());
+            return;
+        }
+
+        boolean actualizarDuplicados = false;
+        if (!duplicados.isEmpty()) {
+            ButtonType btnActualizar = new ButtonType("Actualizar");
+            ButtonType btnSaltar = new ButtonType("Saltar");
+            ButtonType btnCancelarDup = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
+
+            Alert dupAlert = new Alert(Alert.AlertType.CONFIRMATION);
+            dupAlert.setTitle("Productos duplicados");
+            dupAlert.setHeaderText(duplicados.size() + " producto(s) ya existen con el mismo código.");
+            dupAlert.setContentText("¿Qué deseas hacer con ellos?");
+            dupAlert.getButtonTypes().setAll(btnActualizar, btnSaltar, btnCancelarDup);
+
+            Optional<ButtonType> dupRes = dupAlert.showAndWait();
+            if (dupRes.isEmpty() || dupRes.get() == btnCancelarDup) return;
+            actualizarDuplicados = dupRes.get() == btnActualizar;
+        }
+
+        int guardados = 0;
+        int saltados = 0;
+        List<String> erroresBD = new ArrayList<>();
+
+        for (ItemVenta item : nuevos) {
+            try {
+                itemDAO.guardar(item);
+                guardados++;
+            } catch (SQLException e) {
+                erroresBD.add(item.getCodigo() + ": " + e.getMessage());
+            }
+        }
+
+        if (actualizarDuplicados) {
+            for (ItemVenta item : duplicados) {
+                try {
+                    itemDAO.actualizar(item);
+                    guardados++;
+                } catch (SQLException e) {
+                    erroresBD.add(item.getCodigo() + ": " + e.getMessage());
+                }
+            }
+        } else {
+            saltados = duplicados.size();
+        }
+
+        cargarDatos();
+
+        String resumen = guardados + " producto(s) importado(s)";
+        if (saltados > 0) resumen += "\n" + saltados + " saltado(s) por duplicado";
+        if (!erroresBD.isEmpty()) resumen += "\n" + erroresBD.size() + " error(es) de base de datos";
+        mostrarAlerta(Alert.AlertType.INFORMATION, "Importación completada", resumen);
+    }
+
+    @FXML
+    void mostrarInfoImport(ActionEvent event) {
+        Alert info = new Alert(Alert.AlertType.INFORMATION);
+        info.setTitle("Formato de importación Excel");
+        info.setHeaderText("Columnas requeridas en el archivo");
+        info.setContentText(
+            "A  Código        — Identificador único (requerido)\n" +
+            "B  Nombre        — Nombre del producto (requerido)\n" +
+            "C  Descripción   — Texto libre (opcional)\n" +
+            "D  Precio Costo  — Número ≥ 0 (opcional, default 0)\n" +
+            "E  Precio Venta  — Número ≥ 0 (requerido)\n" +
+            "F  Stock         — Número ≥ 0 (ignorado si es servicio)\n" +
+            "G  Unidad        — u / kg / g / lt  (default: u)\n" +
+            "H  Es Servicio   — SI o NO\n\n" +
+            "Tip: usá 'Plantilla' para descargar el formato correcto."
+        );
+        info.showAndWait();
     }
 
     private void limpiarFormulario() {

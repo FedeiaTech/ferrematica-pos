@@ -102,6 +102,54 @@ public class ExportService {
         return destino;
     }
 
+    public File generarPlantillaInventario(File destino) throws IOException {
+        try (XSSFWorkbook workbook = new XSSFWorkbook()) {
+            XSSFSheet sheet = workbook.createSheet("Inventario");
+
+            CellStyle headerStyle = workbook.createCellStyle();
+            XSSFFont headerFont = workbook.createFont();
+            headerFont.setBold(true);
+            headerFont.setColor(IndexedColors.WHITE.getIndex());
+            headerStyle.setFont(headerFont);
+            headerStyle.setFillForegroundColor(IndexedColors.DARK_GREEN.getIndex());
+            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            headerStyle.setAlignment(HorizontalAlignment.CENTER);
+            headerStyle.setBorderBottom(BorderStyle.MEDIUM);
+
+            CellStyle exampleStyle = workbook.createCellStyle();
+            XSSFFont exampleFont = workbook.createFont();
+            exampleFont.setItalic(true);
+            exampleFont.setColor(IndexedColors.GREY_50_PERCENT.getIndex());
+            exampleStyle.setFont(exampleFont);
+
+            String[] headers = {"Código", "Nombre", "Descripción", "Precio Costo", "Precio Venta", "Stock", "Unidad", "Es Servicio"};
+            String[] example = {"EJEM01", "Producto Ejemplo", "Descripción opcional", "100", "150", "10", "u", "NO"};
+
+            XSSFRow headerRow = sheet.createRow(0);
+            for (int i = 0; i < headers.length; i++) {
+                XSSFCell cell = headerRow.createCell(i);
+                cell.setCellValue(headers[i]);
+                cell.setCellStyle(headerStyle);
+            }
+
+            XSSFRow exampleRow = sheet.createRow(1);
+            for (int i = 0; i < example.length; i++) {
+                XSSFCell cell = exampleRow.createCell(i);
+                cell.setCellValue(example[i]);
+                cell.setCellStyle(exampleStyle);
+            }
+
+            for (int i = 0; i < headers.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+
+            try (FileOutputStream fos = new FileOutputStream(destino)) {
+                workbook.write(fos);
+            }
+        }
+        return destino;
+    }
+
     public void abrirArchivo(File archivo) {
         try {
             if (java.awt.Desktop.isDesktopSupported()) {

@@ -58,6 +58,31 @@ public class ItemDAO {
         }
     }
 
+    public ItemVenta buscarPorCodigo(String codigo) throws SQLException {
+        String sql = "SELECT * FROM items WHERE codigo = ?";
+        try (Connection conn = ConexionDB.getConexion();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, codigo);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    ItemVenta item = new ItemVenta();
+                    item.setId(rs.getInt("id"));
+                    item.setCodigo(rs.getString("codigo"));
+                    item.setNombre(rs.getString("nombre"));
+                    item.setDescripcion(rs.getString("descripcion"));
+                    item.setPrecioCosto(rs.getDouble("precio_costo"));
+                    item.setPrecioVenta(rs.getDouble("precio_venta"));
+                    item.setStock(rs.getDouble("stock"));
+                    item.setEsServicio(rs.getInt("es_servicio") == 1);
+                    String unidad = rs.getString("unidad");
+                    item.setUnidad(unidad != null ? unidad : "u");
+                    return item;
+                }
+            }
+        }
+        return null;
+    }
+
     public List<ItemVenta> listarTodos() throws SQLException {
         List<ItemVenta> lista = new ArrayList<>();
         String sql = "SELECT * FROM items";
