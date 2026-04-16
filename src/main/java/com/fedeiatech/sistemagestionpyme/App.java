@@ -11,23 +11,20 @@ public class App extends Application {
 
     @Override
     public void start(Stage stage) throws IOException {
-        new com.fedeiatech.sistemagestionpyme.dao.ConfiguracionDAO().inicializarTabla();
-        com.fedeiatech.sistemagestionpyme.dao.DataSeeder.sembrarDemoSiVacio();
-
-        String fxmlPath = "/dashboard_view.fxml";
-
-        if (getClass().getResource(fxmlPath) == null) {
-            System.err.println("CRÍTICO: No se encuentra el archivo en: " + fxmlPath);
-            System.err.println("Asegúrate de que main_view.fxml esté directamente en src/main/resources");
-            return;
+        try {
+            new com.fedeiatech.sistemagestionpyme.dao.ConfiguracionDAO().inicializarTabla();
+            new com.fedeiatech.sistemagestionpyme.dao.UsuarioDAO().inicializarTabla();
+            com.fedeiatech.sistemagestionpyme.dao.DataSeeder.sembrarDemoSiVacio();
+        } catch (Exception e) {
+            System.err.println("Error en inicialización: " + e.getMessage());
         }
 
-        FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/login_view.fxml"));
         Parent root = loader.load();
 
         Scene scene = new Scene(root);
         stage.setScene(scene);
-        stage.setTitle("Sistema FedeiaTech - Pyme v0.6");
+        stage.setTitle("Sistema FedeiaTech - Pyme v0.7");
         stage.show();
     }
 
