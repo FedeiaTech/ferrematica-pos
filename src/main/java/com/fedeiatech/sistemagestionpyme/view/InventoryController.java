@@ -5,6 +5,8 @@ import com.fedeiatech.sistemagestionpyme.model.ItemVenta;
 import com.fedeiatech.sistemagestionpyme.service.ExportService;
 import com.fedeiatech.sistemagestionpyme.service.ImportService;
 import com.fedeiatech.sistemagestionpyme.service.ImportService.ImportResult;
+import com.fedeiatech.sistemagestionpyme.service.SessionService;
+import com.fedeiatech.sistemagestionpyme.service.ThemeService;
 import java.io.File;
 import java.net.URL;
 import java.sql.SQLException;
@@ -30,11 +32,15 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
 
 public class InventoryController implements Initializable {
 
+    @FXML private AnchorPane rootPane;
+    @FXML private HBox formHBox;
     @FXML private TableView<ItemVenta> tablaItems;
     @FXML private TableColumn<ItemVenta, Integer> colId;
     @FXML private TableColumn<ItemVenta, String> colCodigo;
@@ -60,14 +66,23 @@ public class InventoryController implements Initializable {
     public void initialize(URL url, ResourceBundle rb) {
         itemDAO = new ItemDAO();
 
+        rootPane.setStyle(ThemeService.getInstance().getBgStyle());
+
         cmbUnidad.getItems().addAll("u", "kg", "g", "lt");
         cmbUnidad.setValue("u");
 
         configurarColumnas();
         cargarDatos();
 
+        if (!SessionService.getInstance().esAdmin()) {
+            formHBox.setVisible(false);
+            formHBox.setManaged(false);
+            lblFormTitulo.setVisible(false);
+            lblFormTitulo.setManaged(false);
+        }
+
         tablaItems.getSelectionModel().selectedItemProperty().addListener((obs, anterior, seleccionado) -> {
-            if (seleccionado != null) {
+            if (seleccionado != null && SessionService.getInstance().esAdmin()) {
                 entrarModoEdicion(seleccionado);
             }
         });

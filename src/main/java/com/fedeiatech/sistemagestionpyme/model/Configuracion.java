@@ -13,6 +13,7 @@ public class Configuracion {
     private double recargoTarjeta;
     private String rutaBackup;
     private String rutaGuardadoTickets;
+    private String colorTema = "#f4f6f8";
 
     public Configuracion() {
     }
@@ -65,4 +66,7 @@ public class Configuracion {
     public void setRutaGuardadoTickets(String rutaGuardadoTickets) {
         this.rutaGuardadoTickets = rutaGuardadoTickets;
     }
+
+    public String getColorTema() { return colorTema; }
+    public void setColorTema(String colorTema) { this.colorTema = colorTema; }
 }

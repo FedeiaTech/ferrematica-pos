@@ -4,6 +4,7 @@ import com.fedeiatech.sistemagestionpyme.dao.VentaDAO;
 import com.fedeiatech.sistemagestionpyme.model.Venta;
 import com.fedeiatech.sistemagestionpyme.service.ExportService;
 import com.fedeiatech.sistemagestionpyme.service.LicenseService;
+import com.fedeiatech.sistemagestionpyme.service.ThemeService;
 import com.fedeiatech.sistemagestionpyme.service.TicketService;
 import java.io.File;
 import java.net.URL;
@@ -28,12 +29,14 @@ import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
 import javafx.stage.FileChooser;
 import javafx.util.Callback;
 
 public class ReportsController implements Initializable {
 
+    @FXML private AnchorPane rootPane;
     @FXML private TableView<Venta> tablaVentas;
     @FXML private TableColumn<Venta, Integer> colId;
     @FXML private TableColumn<Venta, String> colFecha;
@@ -43,6 +46,8 @@ public class ReportsController implements Initializable {
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
+        rootPane.setStyle(ThemeService.getInstance().getBgStyle());
+
         if (!LicenseService.permiteReportes()) {
             mostrarAlerta("Acceso Denegado", "No tienes licencia para ver este módulo.");
             return;

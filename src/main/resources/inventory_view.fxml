@@ -12,7 +12,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<AnchorPane prefHeight="600.0" prefWidth="900.0"
+<AnchorPane fx:id="rootPane" prefHeight="600.0" prefWidth="900.0"
             xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.fedeiatech.sistemagestionpyme.view.InventoryController">
     <children>
@@ -52,7 +52,7 @@
                     <font><Font name="System Bold" size="14.0" /></font>
                 </Label>
 
-                <HBox spacing="10.0" alignment="BOTTOM_LEFT"
+                <HBox fx:id="formHBox" spacing="10.0" alignment="BOTTOM_LEFT"
                       style="-fx-background-color: #ecf0f1; -fx-padding: 12; -fx-background-radius: 5;">
                     <children>
 

@@ -6,6 +6,7 @@ import com.fedeiatech.sistemagestionpyme.service.IFiscalProvider;
 import com.fedeiatech.sistemagestionpyme.service.LicenseService;
 import com.fedeiatech.sistemagestionpyme.service.MockFiscalProvider;
 import com.fedeiatech.sistemagestionpyme.service.SessionService;
+import com.fedeiatech.sistemagestionpyme.service.ThemeService;
 import java.io.IOException;
 import java.net.URL;
 import java.sql.SQLException;
@@ -24,11 +25,13 @@ import javafx.scene.chart.PieChart;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.layout.AnchorPane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
 public class DashboardController implements Initializable {
 
+    @FXML private AnchorPane rootPane;
     @FXML private Label lblEstadoFiscal;
     @FXML private Label lblVentasDia;
     @FXML private Label lblContadorVentas;
@@ -41,6 +44,12 @@ public class DashboardController implements Initializable {
     @FXML private Button btnConfiguracion;
     @FXML private Button btnReportes;
     @FXML private Button btnUsuarios;
+    @FXML private Button btnTema0;
+    @FXML private Button btnTema1;
+    @FXML private Button btnTema2;
+    @FXML private Button btnTema3;
+    @FXML private Button btnTema4;
+    @FXML private Button btnTema5;
 
     private IFiscalProvider fiscalProvider;
     private VentaDAO ventaDAO;
@@ -49,6 +58,13 @@ public class DashboardController implements Initializable {
     public void initialize(URL url, ResourceBundle rb) {
         fiscalProvider = new MockFiscalProvider();
         ventaDAO = new VentaDAO();
+
+        rootPane.setStyle(ThemeService.getInstance().getBgStyle());
+
+        Button[] botonesTema = {btnTema0, btnTema1, btnTema2, btnTema3, btnTema4, btnTema5};
+        for (int i = 0; i < botonesTema.length; i++) {
+            botonesTema[i].setUserData(i);
+        }
 
         aplicarRestriccionesPorRol();
         verificarEstadoFiscal();
@@ -160,6 +176,13 @@ public class DashboardController implements Initializable {
     @FXML
     void abrirUsuarios(ActionEvent event) {
         abrirVentana("/admin_usuarios_view.fxml", "Gestión de Usuarios", false);
+    }
+
+    @FXML
+    void cambiarTema(ActionEvent event) {
+        int idx = (int) ((Button) event.getSource()).getUserData();
+        ThemeService.getInstance().setColor(ThemeService.COLORES[idx]);
+        rootPane.setStyle(ThemeService.getInstance().getBgStyle());
     }
 
     @FXML

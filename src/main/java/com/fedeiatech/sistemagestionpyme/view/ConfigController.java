@@ -2,6 +2,7 @@ package com.fedeiatech.sistemagestionpyme.view;
 
 import com.fedeiatech.sistemagestionpyme.dao.ConfiguracionDAO;
 import com.fedeiatech.sistemagestionpyme.model.Configuracion;
+import com.fedeiatech.sistemagestionpyme.service.ThemeService;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
@@ -15,12 +16,14 @@ import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.AnchorPane;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 public class ConfigController implements Initializable {
 
+    @FXML private AnchorPane rootPane;
     @FXML private TextField txtNombreEmpresa;
     @FXML private TextField txtCuit;
     @FXML private TextField txtDireccion;
@@ -42,6 +45,7 @@ public class ConfigController implements Initializable {
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         configDAO = new ConfiguracionDAO();
+        rootPane.setStyle(ThemeService.getInstance().getBgStyle());
         cargarDatos();
     }
 

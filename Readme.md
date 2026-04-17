@@ -3,7 +3,7 @@
 **Sistema de Gestión Comercial para PyMEs argentinas.**  
 *Offline-First, orientado a comercios minoristas. Preparado para integración fiscal ARCA.*
 
-**Estado:** v0.7.0 — Estable | **Licencia:** Propietaria
+**Estado:** v0.7.2 — Estable | **Licencia:** Propietaria
 
 ![Panel de Control](Screenshots/01.jpg)
 
@@ -42,7 +42,8 @@
 - [x] **Configuración y Persistencia** — empresa, backup/restore
 - [x] **Reportes con Export Excel** — resumen diario, por producto y detalle completo filtrado por período
 - [x] **Importación Masiva Excel** — plantilla descargable, validación por fila, resumen pre-confirmación y detección de duplicados
-- [ ] **Login y Roles de Usuario** *(próximamente)*
+- [x] **Login y Roles de Usuario** — BCrypt, roles ADMIN/CAJERO, panel de gestión de usuarios, inventario read-only para cajeros
+- [x] **Temas de color** — 6 colores de fondo (3 claros + 3 saturados), persiste entre sesiones, accesible para todos los roles
 - [ ] **Conexión Fiscal ARCA** *(planificado post v1.0)*
 
 ---
@@ -87,6 +88,21 @@ La base de datos `gestion_pyme.db` se crea automáticamente en la raíz del proy
 ---
 
 ## Changelog
+
+### v0.7.2 — 2026-04-17
+
+- **Temas de color:**
+  - 6 colores de fondo seleccionables desde el dashboard: Blanco, Azul claro, Verde claro, Azul, Lavanda, Crema.
+  - Accesible para todos los roles (ADMIN y CAJERO).
+  - El color elegido persiste entre sesiones (guardado en tabla `configuracion`).
+
+### v0.7.1 — 2026-04-16
+
+- **Login y Roles:**
+  - Pantalla de login con BCrypt. Usuario por defecto: `admin` / `admin`.
+  - Roles ADMIN y CAJERO: CAJERO solo accede al POS e inventario en modo lectura.
+  - Panel de gestión de usuarios (ADMIN): crear, cambiar contraseña, cambiar rol, eliminar. Validaciones: no autoeliminar, no eliminar último admin.
+  - `LicenseService` reemplaza el flag estático por delegación a `SessionService`.
 
 ### v0.7.0 — 2026-04-16
 

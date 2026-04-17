@@ -3,6 +3,7 @@ package com.fedeiatech.sistemagestionpyme.view;
 import com.fedeiatech.sistemagestionpyme.dao.ConfiguracionDAO;
 import com.fedeiatech.sistemagestionpyme.dao.ItemDAO;
 import com.fedeiatech.sistemagestionpyme.dao.VentaDAO;
+import com.fedeiatech.sistemagestionpyme.service.ThemeService;
 import com.fedeiatech.sistemagestionpyme.model.Configuracion;
 import com.fedeiatech.sistemagestionpyme.model.DetalleVenta;
 import com.fedeiatech.sistemagestionpyme.model.ItemVenta;
@@ -36,10 +37,12 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.AnchorPane;
 import javafx.stage.Stage;
 
 public class PosController implements Initializable {
 
+    @FXML private AnchorPane rootPane;
     @FXML private TextField txtBuscador;
     @FXML private Label lblTotal;
     @FXML private Button btnCobrar;
@@ -65,6 +68,8 @@ public class PosController implements Initializable {
         ventaDAO = new VentaDAO();
         listaCarrito = FXCollections.observableArrayList();
         configDAO = new ConfiguracionDAO();
+
+        rootPane.setStyle(ThemeService.getInstance().getBgStyle());
 
         configurarTabla();
 

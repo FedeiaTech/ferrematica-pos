@@ -31,6 +31,8 @@ public class ConfiguracionDAO {
                 config.setRecargoTarjeta(rs.getDouble("recargo_tarjeta"));
                 config.setRutaBackup(rs.getString("ruta_backup"));
                 config.setRutaGuardadoTickets(rs.getString("ruta_tickets"));
+                String colorTema = rs.getString("color_tema");
+                config.setColorTema(colorTema != null ? colorTema : "#f4f6f8");
             }
         }
         return config;
@@ -94,6 +96,7 @@ public class ConfiguracionDAO {
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN recargo_tarjeta REAL DEFAULT 0.0"); } catch (SQLException e) {}
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN ruta_backup TEXT"); } catch (SQLException e) {}
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN ruta_tickets TEXT"); } catch (SQLException e) {}
+            try { stmt.execute("ALTER TABLE configuracion ADD COLUMN color_tema TEXT DEFAULT '#ffffff'"); } catch (SQLException e) {}
         } catch (SQLException e) {
             e.printStackTrace();
         }

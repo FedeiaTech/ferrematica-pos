@@ -4,6 +4,7 @@ import com.fedeiatech.sistemagestionpyme.dao.UsuarioDAO;
 import com.fedeiatech.sistemagestionpyme.model.Usuario;
 import com.fedeiatech.sistemagestionpyme.model.Usuario.Rol;
 import com.fedeiatech.sistemagestionpyme.service.SessionService;
+import com.fedeiatech.sistemagestionpyme.service.ThemeService;
 import java.net.URL;
 import java.sql.SQLException;
 import java.util.List;
@@ -24,10 +25,12 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.AnchorPane;
 import org.mindrot.jbcrypt.BCrypt;
 
 public class AdminUsuariosController implements Initializable {
 
+    @FXML private AnchorPane rootPane;
     @FXML private TableView<Usuario> tablaUsuarios;
     @FXML private TableColumn<Usuario, String> colNombre;
     @FXML private TableColumn<Usuario, Rol> colRol;
@@ -46,6 +49,8 @@ public class AdminUsuariosController implements Initializable {
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         usuarioDAO = new UsuarioDAO();
+
+        rootPane.setStyle(ThemeService.getInstance().getBgStyle());
 
         cmbRol.setItems(FXCollections.observableArrayList(Rol.values()));
         cmbRol.setValue(Rol.CAJERO);
