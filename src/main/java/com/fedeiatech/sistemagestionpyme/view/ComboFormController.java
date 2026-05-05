@@ -76,10 +76,8 @@ public class ComboFormController implements Initializable {
 
     public void cargarCombo(int idCombo) {
         try {
-            Combo combo = comboDAO.buscarPorCodigo(null);
-            // buscar por id directo
-            List<Combo> todos = comboDAO.listarTodos();
-            combo = todos.stream().filter(c -> c.getId() == idCombo).findFirst().orElse(null);
+            Combo combo = comboDAO.listarTodos().stream()
+                .filter(c -> c.getId() == idCombo).findFirst().orElse(null);
             if (combo == null) return;
 
             idComboEdicion = combo.getId();
@@ -168,6 +166,14 @@ public class ComboFormController implements Initializable {
             return;
         }
         try {
+            // Verificar código duplicado antes de insertar
+            if (idComboEdicion == 0) {
+                Combo existente = comboDAO.buscarPorCodigo(txtCodigo.getText().trim());
+                if (existente != null) {
+                    mostrarAlerta("Código duplicado", "Ya existe un combo con el código \"" + txtCodigo.getText().trim() + "\".");
+                    return;
+                }
+            }
             Combo combo = new Combo();
             combo.setId(idComboEdicion);
             combo.setCodigo(txtCodigo.getText().trim());
@@ -185,7 +191,12 @@ public class ComboFormController implements Initializable {
         } catch (NumberFormatException e) {
             mostrarAlerta("Error de formato", "El precio debe ser un número válido.");
         } catch (SQLException e) {
-            mostrarAlerta("Error DB", "No se pudo guardar: " + e.getMessage());
+            String msg = e.getMessage();
+            if (msg != null && msg.contains("UNIQUE") && msg.contains("combos.codigo")) {
+                mostrarAlerta("Código duplicado", "Ya existe un combo con el código \"" + txtCodigo.getText().trim() + "\". Usá otro código o editá el combo existente.");
+            } else {
+                mostrarAlerta("Error DB", "No se pudo guardar: " + msg);
+            }
         }
     }
 
