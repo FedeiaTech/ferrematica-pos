@@ -204,7 +204,7 @@ public class DashboardController implements Initializable {
 
     @FXML
     void abrirInventario(ActionEvent event) {
-        abrirVentana("/inventory_view.fxml", "Gestión de Inventario", false);
+        abrirVentana("/inventory_view.fxml", "Gestión de Inventario", false, this::cargarMetricas);
     }
 
     @FXML
@@ -230,7 +230,11 @@ public class DashboardController implements Initializable {
 
     @FXML
     void abrirConfiguracion(ActionEvent event) {
-        abrirVentana("/config_view.fxml", "Configuración de Empresa", false);
+        abrirVentana("/config_view.fxml", "Configuración de Empresa", false, () -> {
+            LicenseService.invalidarCache();
+            aplicarRestriccionesPorRol();
+            cargarMetricas();
+        });
     }
 
     @FXML
@@ -266,6 +270,10 @@ public class DashboardController implements Initializable {
     }
 
     private void abrirVentana(String fxmlPath, String titulo, boolean maximizar) {
+        abrirVentana(fxmlPath, titulo, maximizar, null);
+    }
+
+    private void abrirVentana(String fxmlPath, String titulo, boolean maximizar, Runnable alCerrar) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
             Parent root = loader.load();
@@ -273,6 +281,7 @@ public class DashboardController implements Initializable {
             stage.setTitle(titulo);
             stage.setScene(new Scene(root));
             if (maximizar) stage.setMaximized(true);
+            if (alCerrar != null) stage.setOnHidden(e -> alCerrar.run());
             stage.show();
         } catch (IOException e) {
             e.printStackTrace();
