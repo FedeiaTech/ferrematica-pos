@@ -119,12 +119,18 @@ public class ConfigController implements Initializable {
     void seleccionarLogo(ActionEvent event) {
         FileChooser fc = new FileChooser();
         fc.setTitle("Seleccionar Logotipo");
-        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("Imágenes", "*.png", "*.jpg", "*.jpeg"));
+        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter(
+            "Imágenes (PNG, JPG, BMP, TIFF)", "*.png", "*.jpg", "*.jpeg", "*.bmp", "*.tiff", "*.tif"));
         File file = fc.showOpenDialog(txtNombreEmpresa.getScene().getWindow());
         if (file != null) {
             archivoLogoSeleccionado = file;
             lblRutaLogo.setText(file.getAbsolutePath());
-            imgLogoPreview.setImage(new Image(file.toURI().toString()));
+            try {
+                imgLogoPreview.setImage(new Image(file.toURI().toString()));
+            } catch (Exception ex) {
+                // TIFF no tiene preview nativo en JavaFX, pero OpenPDF sí lo imprime
+                lblRutaLogo.setText(file.getAbsolutePath() + " (sin vista previa — se imprimirá correctamente)");
+            }
         }
     }
 
@@ -274,8 +280,11 @@ public class ConfigController implements Initializable {
             confirm.setContentText("Se borrarán TODOS los datos actuales. El programa se cerrará al finalizar.");
             if (confirm.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
                 try {
-                    Files.copy(origen.toPath(), new File("gestion_pyme.db").toPath(), StandardCopyOption.REPLACE_EXISTING);
-                    mostrarAlerta("Restauración Exitosa", "La base de datos ha sido restaurada. El sistema se cerrará.");
+                    File destino = new File("gestion_pyme.db").getAbsoluteFile();
+                    Files.copy(origen.toPath(), destino.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                    mostrarAlerta("Restauración Exitosa",
+                        "La base de datos fue restaurada en:\n" + destino.getAbsolutePath() +
+                        "\n\nEl sistema se cerrará para aplicar los cambios.");
                     System.exit(0);
                 } catch (IOException e) {
                     mostrarAlerta("Error", "No se pudo restaurar: " + e.getMessage());
