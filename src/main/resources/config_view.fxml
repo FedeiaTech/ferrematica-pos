@@ -10,6 +10,7 @@
 <?import javafx.scene.control.TextArea?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.image.ImageView?>
+<?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.GridPane?>
@@ -36,7 +37,8 @@
                   <!-- ===== DATOS EMPRESA ===== -->
                   <Tab text="Datos Empresa">
                      <content>
-                        <AnchorPane>
+                        <ScrollPane fitToWidth="true" style="-fx-background-color: transparent;">
+                        <content><AnchorPane minHeight="300.0">
                            <children>
                               <GridPane hgap="15.0" vgap="15.0" AnchorPane.leftAnchor="20.0" AnchorPane.topAnchor="20.0">
                                  <columnConstraints>
@@ -64,14 +66,16 @@
                                  </children>
                               </GridPane>
                            </children>
-                        </AnchorPane>
+                        </AnchorPane></content>
+                        </ScrollPane>
                      </content>
                   </Tab>
 
                   <!-- ===== PERSONALIZACIÓN ===== -->
                   <Tab text="Personalización">
                      <content>
-                        <AnchorPane>
+                        <ScrollPane fitToWidth="true" style="-fx-background-color: transparent;">
+                        <content><AnchorPane minHeight="500.0">
                            <children>
                               <VBox spacing="14.0" AnchorPane.leftAnchor="20.0" AnchorPane.topAnchor="15.0" AnchorPane.rightAnchor="20.0">
                                  <children>
@@ -130,14 +134,16 @@
                                  </children>
                               </VBox>
                            </children>
-                        </AnchorPane>
+                        </AnchorPane></content>
+                        </ScrollPane>
                      </content>
                   </Tab>
 
                   <!-- ===== SISTEMA Y SEGURIDAD ===== -->
                   <Tab text="Sistema y Seguridad">
                      <content>
-                        <AnchorPane>
+                        <ScrollPane fitToWidth="true" style="-fx-background-color: transparent;">
+                        <content><AnchorPane minHeight="600.0">
                            <children>
                               <VBox spacing="14.0" AnchorPane.leftAnchor="20.0" AnchorPane.topAnchor="15.0" AnchorPane.rightAnchor="20.0">
                                  <children>
@@ -180,6 +186,12 @@
                                     <HBox spacing="8.0">
                                        <Button text="Abrir carpeta de la base de datos" onAction="#abrirCarpetaDB" />
                                     </HBox>
+                                    <HBox spacing="8.0" alignment="CENTER_LEFT">
+                                       <Button text="Borrar todas las ventas" onAction="#borrarTodasLasVentas"
+                                               style="-fx-background-color: #c0392b; -fx-text-fill: white; -fx-font-weight: bold;" />
+                                       <Label text="Elimina el historial de ventas (datos demo o pruebas). El inventario NO se modifica. Requiere contraseña de admin."
+                                              style="-fx-text-fill: #7f8c8d; -fx-font-size: 11;" wrapText="true" maxWidth="450.0" />
+                                    </HBox>
 
                                     <Separator />
 
@@ -196,7 +208,8 @@
                                  </children>
                               </VBox>
                            </children>
-                        </AnchorPane>
+                        </AnchorPane></content>
+                        </ScrollPane>
                      </content>
                   </Tab>
 

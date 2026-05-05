@@ -1,7 +1,11 @@
 package com.fedeiatech.sistemagestionpyme.view;
 
 import com.fedeiatech.sistemagestionpyme.dao.ConfiguracionDAO;
+import com.fedeiatech.sistemagestionpyme.dao.UsuarioDAO;
+import com.fedeiatech.sistemagestionpyme.dao.VentaDAO;
 import com.fedeiatech.sistemagestionpyme.model.Configuracion;
+import com.fedeiatech.sistemagestionpyme.model.Usuario;
+import com.fedeiatech.sistemagestionpyme.service.SessionService;
 import com.fedeiatech.sistemagestionpyme.service.ThemeService;
 import java.awt.Desktop;
 import java.io.File;
@@ -277,6 +281,50 @@ public class ConfigController implements Initializable {
                     mostrarAlerta("Error", "No se pudo restaurar: " + e.getMessage());
                 }
             }
+        }
+    }
+
+    @FXML
+    void borrarTodasLasVentas(ActionEvent event) {
+        // Paso 1: solicitar contraseña del admin
+        PasswordField pfPass = new PasswordField();
+        pfPass.setPromptText("Contraseña del administrador");
+        Dialog<ButtonType> dlgPass = new Dialog<>();
+        dlgPass.setTitle("Confirmar identidad");
+        dlgPass.setHeaderText("Ingresá la contraseña del administrador para continuar.");
+        dlgPass.getDialogPane().setContent(pfPass);
+        dlgPass.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        if (dlgPass.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
+
+        try {
+            String nombreAdmin = SessionService.getInstance().getUsuarioActivo().getNombre();
+            Usuario verificado = new UsuarioDAO().autenticar(nombreAdmin, pfPass.getText());
+            if (verificado == null) {
+                mostrarAlerta("Contraseña incorrecta", "La contraseña ingresada no es válida.");
+                return;
+            }
+        } catch (Exception e) {
+            mostrarAlerta("Error", "No se pudo verificar la identidad: " + e.getMessage());
+            return;
+        }
+
+        // Paso 2: confirmar la acción destructiva
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Borrar historial de ventas");
+        confirm.setHeaderText("Esta acción es IRREVERSIBLE.");
+        confirm.setContentText(
+            "Se eliminarán TODAS las ventas y sus detalles de la base de datos.\n" +
+            "El inventario (productos y stock) NO se modificará.\n\n" +
+            "¿Confirmas el borrado completo del historial de ventas?");
+        if (confirm.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
+
+        // Paso 3: ejecutar
+        try {
+            int eliminadas = new VentaDAO().borrarTodasLasVentas();
+            mostrarAlerta("Historial borrado", eliminadas + " venta(s) eliminadas. El inventario no fue modificado.");
+        } catch (SQLException e) {
+            mostrarAlerta("Error", "No se pudo borrar el historial: " + e.getMessage());
         }
     }
 

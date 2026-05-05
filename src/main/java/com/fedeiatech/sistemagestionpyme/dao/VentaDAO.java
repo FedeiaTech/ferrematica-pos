@@ -318,6 +318,25 @@ public class VentaDAO {
         return venta;
     }
 
+    public int borrarTodasLasVentas() throws SQLException {
+        Connection conn = null;
+        try {
+            conn = ConexionDB.getConexion();
+            conn.setAutoCommit(false);
+            try (Statement stmt = conn.createStatement()) {
+                stmt.execute("DELETE FROM detalles_venta");
+                int ventas = stmt.executeUpdate("DELETE FROM ventas");
+                conn.commit();
+                return ventas;
+            }
+        } catch (SQLException e) {
+            if (conn != null) conn.rollback();
+            throw e;
+        } finally {
+            if (conn != null) conn.setAutoCommit(true);
+        }
+    }
+
     public java.util.List<String[]> obtenerVentasPorSemana() throws SQLException {
         java.util.List<String[]> resultado = new java.util.ArrayList<>();
         String sql = "SELECT strftime('%Y-W%W', fecha) as semana, " +
