@@ -318,6 +318,50 @@ public class VentaDAO {
         return venta;
     }
 
+    public java.util.List<String[]> obtenerVentasPorSemana() throws SQLException {
+        java.util.List<String[]> resultado = new java.util.ArrayList<>();
+        String sql = "SELECT strftime('%Y-W%W', fecha) as semana, " +
+                     "COUNT(*) as cant, SUM(total) as total_semana, AVG(total) as promedio " +
+                     "FROM ventas GROUP BY semana ORDER BY semana DESC LIMIT 16";
+        try (Connection conn = ConexionDB.getConexion();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                resultado.add(new String[]{
+                    rs.getString("semana"),
+                    String.valueOf(rs.getInt("cant")),
+                    String.valueOf(rs.getDouble("total_semana")),
+                    String.valueOf(rs.getDouble("promedio"))
+                });
+            }
+        }
+        java.util.Collections.reverse(resultado);
+        return resultado;
+    }
+
+    public java.util.List<String[]> obtenerVentasPorMes() throws SQLException {
+        java.util.List<String[]> resultado = new java.util.ArrayList<>();
+        String sql = "SELECT strftime('%Y-%m', fecha) as mes, " +
+                     "COUNT(*) as cant, SUM(total) as total_mes, " +
+                     "SUM(d.subtotal) as total_productos " +
+                     "FROM ventas v " +
+                     "LEFT JOIN detalles_venta d ON d.id_venta = v.id " +
+                     "GROUP BY mes ORDER BY mes DESC LIMIT 12";
+        try (Connection conn = ConexionDB.getConexion();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                resultado.add(new String[]{
+                    rs.getString("mes"),
+                    String.valueOf(rs.getInt("cant")),
+                    String.valueOf(rs.getDouble("total_mes"))
+                });
+            }
+        }
+        java.util.Collections.reverse(resultado);
+        return resultado;
+    }
+
     public java.util.List<String[]> obtenerMarketBasket() throws SQLException {
         java.util.List<String[]> resultado = new java.util.ArrayList<>();
         String sql = "SELECT a.nombre AS prod_a, b.nombre AS prod_b, COUNT(*) AS frec " +

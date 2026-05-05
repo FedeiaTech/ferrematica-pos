@@ -21,6 +21,7 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
+import java.util.List;
 
 public class StatsController implements Initializable {
 
@@ -34,6 +35,15 @@ public class StatsController implements Initializable {
     @FXML private BarChart<String, Number> chartHoras;
     @FXML private Label lblMejorHorario;
     @FXML private GridPane gridHeatmap;
+    @FXML private BarChart<String, Number> chartSemanal;
+    @FXML private BarChart<String, Number> chartMensual;
+    @FXML private Label lblResumenSemanal;
+    @FXML private Label lblResumenMensual;
+    @FXML private TableView<String[]> tablaSemanal;
+    @FXML private TableColumn<String[], String> colSemana;
+    @FXML private TableColumn<String[], String> colCantSemanal;
+    @FXML private TableColumn<String[], String> colTotalSemanal;
+    @FXML private TableColumn<String[], String> colPromedioSemanal;
 
     private static final String[] DIAS = {"Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"};
 
@@ -49,6 +59,7 @@ public class StatsController implements Initializable {
         }
 
         configurarTablaBasket();
+        configurarTablaSemanal();
         cargarDatos();
     }
 
@@ -58,15 +69,21 @@ public class StatsController implements Initializable {
         colFrecuencia.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(data.getValue()[2]));
     }
 
+    private void configurarTablaSemanal() {
+        colSemana.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(data.getValue()[0]));
+        colCantSemanal.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(data.getValue()[1]));
+        colTotalSemanal.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(
+            String.format("$ %.2f", Double.parseDouble(data.getValue()[2]))));
+        colPromedioSemanal.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(
+            String.format("$ %.2f", Double.parseDouble(data.getValue()[3]))));
+    }
+
     private void cargarDatos() {
         VentaDAO dao = new VentaDAO();
-        try {
-            cargarMarketBasket(dao);
-            cargarHorarios(dao);
-            cargarHeatmap(dao);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        try { cargarMarketBasket(dao); } catch (SQLException e) { e.printStackTrace(); }
+        try { cargarHorarios(dao); } catch (SQLException e) { e.printStackTrace(); }
+        try { cargarHeatmap(dao); } catch (SQLException e) { e.printStackTrace(); }
+        try { cargarTendencias(dao); } catch (SQLException e) { e.printStackTrace(); }
     }
 
     private void cargarMarketBasket(VentaDAO dao) throws SQLException {
@@ -100,9 +117,50 @@ public class StatsController implements Initializable {
         chartHoras.getData().add(serie);
 
         if (mejorHora >= 0) {
-            lblMejorHorario.setText(String.format("Mejor horario: %02d:00 — %02d:59  ($ %.2f acumulado)", mejorHora, mejorHora, maxTotal));
+            lblMejorHorario.setText(String.format(
+                "La franja %02d:00 — %02d:59 generó más ingresos en total: $ %.2f (suma histórica de todas las ventas en ese horario).",
+                mejorHora, mejorHora, maxTotal));
         } else {
             lblMejorHorario.setText("Sin datos de horarios aún.");
+        }
+    }
+
+    private void cargarTendencias(VentaDAO dao) throws SQLException {
+        // --- Semanal ---
+        List<String[]> semanas = dao.obtenerVentasPorSemana();
+        XYChart.Series<String, Number> serieSem = new XYChart.Series<>();
+        double totalSem = 0; int maxSemCant = 0; String mejorSem = "";
+        for (String[] row : semanas) {
+            serieSem.getData().add(new XYChart.Data<>(row[0], Double.parseDouble(row[2])));
+            totalSem += Double.parseDouble(row[2]);
+            int cant = Integer.parseInt(row[1]);
+            if (cant > maxSemCant) { maxSemCant = cant; mejorSem = row[0]; }
+        }
+        chartSemanal.getData().clear();
+        chartSemanal.getData().add(serieSem);
+        if (!semanas.isEmpty()) {
+            lblResumenSemanal.setText(String.format(
+                "%d semanas registradas — Total acumulado: $ %.2f — Semana más activa: %s (%d ventas)",
+                semanas.size(), totalSem, mejorSem, maxSemCant));
+        }
+        tablaSemanal.setItems(javafx.collections.FXCollections.observableArrayList(semanas));
+
+        // --- Mensual ---
+        List<String[]> meses = dao.obtenerVentasPorMes();
+        XYChart.Series<String, Number> serieMes = new XYChart.Series<>();
+        double totalMes = 0; String mejorMes = ""; double maxMesTotal = 0;
+        for (String[] row : meses) {
+            double t = Double.parseDouble(row[2]);
+            serieMes.getData().add(new XYChart.Data<>(row[0], t));
+            totalMes += t;
+            if (t > maxMesTotal) { maxMesTotal = t; mejorMes = row[0]; }
+        }
+        chartMensual.getData().clear();
+        chartMensual.getData().add(serieMes);
+        if (!meses.isEmpty()) {
+            lblResumenMensual.setText(String.format(
+                "%d meses registrados — Total acumulado: $ %.2f — Mejor mes: %s ($ %.2f)",
+                meses.size(), totalMes, mejorMes, maxMesTotal));
         }
     }
 

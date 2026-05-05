@@ -32,8 +32,8 @@
                         <Tab text="Canasta de productos" closable="false">
                             <content>
                                 <VBox spacing="8.0" style="-fx-padding: 10;">
-                                    <Label text="Productos que suelen aparecer juntos en el mismo ticket (mínimo 2 veces)"
-                                           style="-fx-text-fill: #7f8c8d; -fx-font-size: 11;" />
+                                    <Label text="Pares de productos que aparecen juntos en el mismo ticket con frecuencia. Útil para armar combos, promociones o ubicar productos cercanos en el local."
+                                           style="-fx-text-fill: #7f8c8d; -fx-font-size: 11;" wrapText="true" />
                                     <TableView fx:id="tablaBasket" VBox.vgrow="ALWAYS">
                                         <columns>
                                             <TableColumn fx:id="colProdA" text="Producto A" prefWidth="230.0" />
@@ -51,11 +51,13 @@
                         <Tab text="Mejor horario" closable="false">
                             <content>
                                 <VBox spacing="8.0" style="-fx-padding: 10;">
-                                    <Label fx:id="lblMejorHorario" text="Mejor horario: calculando..."
+                                    <Label text="Suma de ingresos por franja horaria en toda la historia de ventas. Útil para saber cuándo abrir o reforzar atención."
+                                           style="-fx-text-fill: #7f8c8d; -fx-font-size: 11;" wrapText="true" />
+                                    <Label fx:id="lblMejorHorario" text="Calculando..."
                                            style="-fx-font-weight: bold; -fx-font-size: 14; -fx-text-fill: #27ae60;" />
                                     <BarChart fx:id="chartHoras" VBox.vgrow="ALWAYS" animated="false" legendVisible="false">
                                         <xAxis><CategoryAxis label="Hora del día" /></xAxis>
-                                        <yAxis><NumberAxis label="Total vendido ($)" /></yAxis>
+                                        <yAxis><NumberAxis label="Ingresos totales históricos ($)" /></yAxis>
                                     </BarChart>
                                 </VBox>
                             </content>
@@ -66,9 +68,54 @@
                                 <ScrollPane fitToWidth="true" style="-fx-padding: 10;">
                                     <content>
                                         <VBox spacing="6.0" style="-fx-padding: 10;">
-                                            <Label text="Intensidad de ventas por día y hora (más oscuro = más ventas)"
-                                                   style="-fx-text-fill: #7f8c8d; -fx-font-size: 11;" />
+                                            <Label text="Cantidad de ventas según día de la semana y hora. Más oscuro = más tickets en esa franja. Útil para detectar picos y valles de demanda."
+                                                   style="-fx-text-fill: #7f8c8d; -fx-font-size: 11;" wrapText="true" />
                                             <GridPane fx:id="gridHeatmap" hgap="3.0" vgap="3.0" />
+                                        </VBox>
+                                    </content>
+                                </ScrollPane>
+                            </content>
+                        </Tab>
+
+                        <Tab text="Tendencias" closable="false">
+                            <content>
+                                <ScrollPane fitToWidth="true">
+                                    <content>
+                                        <VBox spacing="14.0" style="-fx-padding: 10;">
+                                            <Label text="Evolución de ventas por semana y por mes. Permite identificar tendencias de crecimiento o caída en el tiempo."
+                                                   style="-fx-text-fill: #7f8c8d; -fx-font-size: 11;" wrapText="true" />
+
+                                            <Label text="Ventas por semana (últimas 16 semanas)"
+                                                   style="-fx-font-weight: bold; -fx-font-size: 13;" />
+                                            <Label fx:id="lblResumenSemanal" text=""
+                                                   style="-fx-font-size: 11; -fx-text-fill: #27ae60;" />
+                                            <BarChart fx:id="chartSemanal" prefHeight="200.0" animated="false" legendVisible="false">
+                                                <xAxis><CategoryAxis label="Semana" /></xAxis>
+                                                <yAxis><NumberAxis label="Total ($)" /></yAxis>
+                                            </BarChart>
+
+                                            <Label text="Ventas por mes (último año)"
+                                                   style="-fx-font-weight: bold; -fx-font-size: 13;" />
+                                            <Label fx:id="lblResumenMensual" text=""
+                                                   style="-fx-font-size: 11; -fx-text-fill: #2980b9;" />
+                                            <BarChart fx:id="chartMensual" prefHeight="200.0" animated="false" legendVisible="false">
+                                                <xAxis><CategoryAxis label="Mes" /></xAxis>
+                                                <yAxis><NumberAxis label="Total ($)" /></yAxis>
+                                            </BarChart>
+
+                                            <Label text="Tabla semanal detallada"
+                                                   style="-fx-font-weight: bold; -fx-font-size: 13;" />
+                                            <TableView fx:id="tablaSemanal" prefHeight="200.0">
+                                                <columns>
+                                                    <TableColumn fx:id="colSemana" text="Semana" prefWidth="120.0" />
+                                                    <TableColumn fx:id="colCantSemanal" text="Ventas" prefWidth="70.0" />
+                                                    <TableColumn fx:id="colTotalSemanal" text="Total ($)" prefWidth="130.0" />
+                                                    <TableColumn fx:id="colPromedioSemanal" text="Ticket promedio ($)" prefWidth="150.0" />
+                                                </columns>
+                                                <columnResizePolicy>
+                                                    <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                                                </columnResizePolicy>
+                                            </TableView>
                                         </VBox>
                                     </content>
                                 </ScrollPane>

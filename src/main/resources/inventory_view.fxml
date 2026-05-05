@@ -27,7 +27,7 @@
                         </Label>
 
                         <!-- Grupo Excel -->
-                        <Button onAction="#descargarPlantilla" text="⬇ Plantilla"
+                        <Button onAction="#descargarPlantilla" text="Crear Plantilla Excel"
                                 style="-fx-background-color: #2980b9; -fx-text-fill: white; -fx-font-size: 11px; -fx-padding: 7 13; -fx-cursor: hand; -fx-background-radius: 6 0 0 6; -fx-border-color: #2472a4; -fx-border-width: 0 1 0 0;" />
                         <Button onAction="#importarExcel" text="Importar Excel"
                                 style="-fx-background-color: #2980b9; -fx-text-fill: white; -fx-font-size: 11px; -fx-padding: 7 13; -fx-cursor: hand; -fx-background-radius: 0; -fx-border-color: #2472a4; -fx-border-width: 0 1 0 0;" />

@@ -27,8 +27,8 @@
                             <font><Font name="System Bold" size="26.0" /></font>
                         </Label>
                         <Label fx:id="lblEstadoFiscal"
-                               style="-fx-background-color: #eec528; -fx-text-fill: white; -fx-background-radius: 15; -fx-padding: 5 15;"
-                               text="Verificando...">
+                               style="-fx-background-color: #bdc3c7; -fx-text-fill: #7f8c8d; -fx-background-radius: 15; -fx-padding: 5 15;"
+                               text="ARCA (sin configurar)">
                             <font><Font name="System Bold" size="12.0" /></font>
                         </Label>
                         <Region HBox.hgrow="ALWAYS" />
@@ -125,7 +125,7 @@
                         <VBox spacing="8.0" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS"
                               style="-fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.06), 8, 0, 0, 2); -fx-padding: 15;">
                             <children>
-                                <Label text="Top 5 Productos Más Vendidos" textFill="#7f8c8d">
+                                <Label text="Top 5 Más Vendidos (histórico, por unidades)" textFill="#7f8c8d">
                                     <font><Font size="13.0" /></font>
                                 </Label>
                                 <PieChart fx:id="chartTop5" animated="false" labelsVisible="true"
@@ -149,7 +149,7 @@
                         <Button fx:id="btnConfiguracion" mnemonicParsing="false" onAction="#abrirConfiguracion"
                                 prefHeight="60.0" HBox.hgrow="ALWAYS" maxWidth="Infinity"
                                 style="-fx-background-color: white; -fx-text-fill: #7f8c8d; -fx-font-weight: bold; -fx-font-size: 15; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 5, 0, 0, 2); -fx-cursor: hand;"
-                                text="Configuración ⚙️" />
+                                text="Configuración" />
                         <Button fx:id="btnReportes" mnemonicParsing="false" onAction="#abrirReportes"
                                 prefHeight="60.0" HBox.hgrow="ALWAYS" maxWidth="Infinity"
                                 style="-fx-background-color: #9b59b6; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 15; -fx-background-radius: 10; -fx-cursor: hand;"

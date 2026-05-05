@@ -186,13 +186,8 @@ public class DashboardController implements Initializable {
     }
 
     private void verificarEstadoFiscal() {
-        if (fiscalProvider != null && fiscalProvider.isServicioDisponible()) {
-            lblEstadoFiscal.setText("🟢 ARCA Online");
-            lblEstadoFiscal.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-background-radius: 15; -fx-padding: 5 15;");
-        } else {
-            lblEstadoFiscal.setText("🔴 Sin Conexión");
-            lblEstadoFiscal.setStyle("-fx-background-color: #c0392b; -fx-text-fill: white; -fx-background-radius: 15; -fx-padding: 5 15;");
-        }
+        lblEstadoFiscal.setText("ARCA (sin configurar)");
+        lblEstadoFiscal.setStyle("-fx-background-color: #bdc3c7; -fx-text-fill: #7f8c8d; -fx-background-radius: 15; -fx-padding: 5 15;");
     }
 
     @FXML

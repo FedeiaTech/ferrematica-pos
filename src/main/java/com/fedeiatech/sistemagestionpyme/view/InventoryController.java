@@ -166,14 +166,17 @@ public class InventoryController implements Initializable {
             protected void updateItem(String nombre, boolean empty) {
                 super.updateItem(nombre, empty);
                 if (empty || nombre == null) { setText(null); setStyle(""); return; }
-                ItemVenta row = getTableRow().getItem();
-                if (row != null && row.isEsCombo()) {
-                    setText("COMBO: " + nombre);
-                    setStyle("-fx-font-weight: bold; -fx-text-fill: #8e44ad;");
-                } else {
-                    setText(nombre);
-                    setStyle("");
+                int idx = getIndex();
+                if (idx >= 0 && idx < getTableView().getItems().size()) {
+                    ItemVenta row = getTableView().getItems().get(idx);
+                    if (row != null && row.isEsCombo()) {
+                        setText("COMBO: " + nombre);
+                        setStyle("-fx-font-weight: bold; -fx-text-fill: #8e44ad;");
+                        return;
+                    }
                 }
+                setText(nombre);
+                setStyle("");
             }
         });
 
@@ -226,10 +229,8 @@ public class InventoryController implements Initializable {
     private void cargarDatos() {
         try {
             java.util.List<ItemVenta> lista = new java.util.ArrayList<>(itemDAO.listarTodos());
-            if (LicenseService.esPremium()) {
-                for (Combo c : comboDAO.listarTodos()) {
-                    lista.add(ItemVenta.desdeCombo(c));
-                }
+            for (Combo c : comboDAO.listarTodos()) {
+                lista.add(ItemVenta.desdeCombo(c));
             }
             listaItems = FXCollections.observableArrayList(lista);
             tablaItems.setItems(listaItems);
