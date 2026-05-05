@@ -263,7 +263,7 @@ public class DashboardController implements Initializable {
             "IATech — Soluciones de software para PyMEs argentinas\n\n" +
             "© 2026 IATech. Todos los derechos reservados.\n\n" +
             "Contacto: iaconofede@gmail.com\n" +
-            "Web: fedeiatech.com  (próximamente)"
+            "Instagram: iatech.dev"
         );
         dlg.showAndWait();
     }

@@ -41,7 +41,7 @@ public class LeerMeService {
         agregarP(doc, "PRIMER USO", fSub, Element.ALIGN_LEFT);
         agregarP(doc, "Al iniciar por primera vez, el sistema crea automáticamente un usuario administrador:", fNormal, Element.ALIGN_LEFT);
         agregarP(doc, "   Usuario: admin     Contraseña: admin", fVerde, Element.ALIGN_LEFT);
-        agregarP(doc, "Se recomienda cambiar la contraseña desde Configuración → Gestión de Usuarios antes de operar.", fGris, Element.ALIGN_LEFT);
+        agregarP(doc, "Se recomienda cambiar la contraseña desde el botón Usuarios en el dashboard antes de operar.", fGris, Element.ALIGN_LEFT);
         agregarLinea(doc);
 
         // Premium
@@ -77,7 +77,7 @@ public class LeerMeService {
         agregarP(doc, "SOPORTE Y CONTACTO", fSub, Element.ALIGN_LEFT);
         agregarP(doc, "IATech  —  Federico Iacono", fNormal, Element.ALIGN_LEFT);
         agregarP(doc, "iaconofede@gmail.com", fAccent, Element.ALIGN_LEFT);
-        agregarP(doc, "Sitio web: fedeiatech.com  (próximamente)", fGris, Element.ALIGN_LEFT);
+        agregarP(doc, "Instagram: iatech.dev", fAccent, Element.ALIGN_LEFT);
 
         doc.close();
         return archivo;
