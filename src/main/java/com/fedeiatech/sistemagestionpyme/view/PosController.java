@@ -1,8 +1,11 @@
 package com.fedeiatech.sistemagestionpyme.view;
 
+import com.fedeiatech.sistemagestionpyme.dao.ComboDAO;
 import com.fedeiatech.sistemagestionpyme.dao.ConfiguracionDAO;
 import com.fedeiatech.sistemagestionpyme.dao.ItemDAO;
 import com.fedeiatech.sistemagestionpyme.dao.VentaDAO;
+import com.fedeiatech.sistemagestionpyme.model.Combo;
+import com.fedeiatech.sistemagestionpyme.service.LicenseService;
 import com.fedeiatech.sistemagestionpyme.service.ThemeService;
 import com.fedeiatech.sistemagestionpyme.model.Configuracion;
 import com.fedeiatech.sistemagestionpyme.model.DetalleVenta;
@@ -57,6 +60,7 @@ public class PosController implements Initializable {
     @FXML private TableColumn<DetalleVenta, Double> colSubtotal;
 
     private ItemDAO itemDAO;
+    private ComboDAO comboDAO;
     private VentaDAO ventaDAO;
     private ObservableList<DetalleVenta> listaCarrito;
     private double totalVenta = 0.0;
@@ -65,6 +69,7 @@ public class PosController implements Initializable {
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         itemDAO = new ItemDAO();
+        comboDAO = new ComboDAO();
         ventaDAO = new VentaDAO();
         listaCarrito = FXCollections.observableArrayList();
         configDAO = new ConfiguracionDAO();
@@ -141,7 +146,7 @@ public class PosController implements Initializable {
                     return;
                 }
                 DetalleVenta d = getTableRow().getItem();
-                String unidad = d.getItem().getUnidad();
+                String unidad = d.esCombo() ? "u" : d.getItem().getUnidad();
                 setText(valor % 1 == 0
                         ? (int) valor.doubleValue() + " " + unidad
                         : valor + " " + unidad);
@@ -168,18 +173,42 @@ public class PosController implements Initializable {
         if (termino.isEmpty()) return;
 
         try {
-            List<ItemVenta> resultados = itemDAO.listarTodos().stream()
+            List<ItemVenta> items = itemDAO.listarTodos().stream()
                 .filter(p -> p.getCodigo().equalsIgnoreCase(termino) ||
                              p.getNombre().toLowerCase().contains(termino.toLowerCase()))
                 .collect(Collectors.toList());
 
-            if (resultados.isEmpty()) {
+            List<Combo> combos = LicenseService.esPremium()
+                ? comboDAO.listarTodos().stream()
+                    .filter(c -> c.getCodigo().equalsIgnoreCase(termino) ||
+                                 c.getNombre().toLowerCase().contains(termino.toLowerCase()))
+                    .collect(Collectors.toList())
+                : java.util.Collections.emptyList();
+
+            int total = items.size() + combos.size();
+
+            if (total == 0) {
                 mostrarAlerta(Alert.AlertType.WARNING, "No encontrado", "No existe producto con ese criterio.");
-            } else if (resultados.size() == 1) {
-                agregarAlCarrito(resultados.get(0));
+            } else if (total == 1) {
+                if (!items.isEmpty()) agregarAlCarrito(items.get(0));
+                else agregarComboAlCarrito(combos.get(0));
                 txtBuscador.clear();
             } else {
-                seleccionarDeLista(resultados);
+                List<ItemVenta> todos = new java.util.ArrayList<>(items);
+                combos.forEach(c -> todos.add(ItemVenta.desdeCombo(c)));
+                ChoiceDialog<ItemVenta> dialog = new ChoiceDialog<>(todos.get(0), todos);
+                dialog.setTitle("Seleccionar Producto");
+                dialog.setHeaderText("Múltiples coincidencias encontradas");
+                dialog.setContentText("Elige el correcto:");
+                dialog.showAndWait().ifPresent(iv -> {
+                    if (iv.isEsCombo()) {
+                        combos.stream().filter(c -> c.getId() == iv.getIdCombo()).findFirst()
+                              .ifPresent(this::agregarComboAlCarrito);
+                    } else {
+                        agregarAlCarrito(iv);
+                    }
+                    txtBuscador.clear();
+                });
             }
 
         } catch (SQLException e) {
@@ -187,17 +216,18 @@ public class PosController implements Initializable {
         }
     }
 
-    private void seleccionarDeLista(List<ItemVenta> opciones) {
-        ChoiceDialog<ItemVenta> dialog = new ChoiceDialog<>(opciones.get(0), opciones);
-        dialog.setTitle("Seleccionar Producto");
-        dialog.setHeaderText("Múltiples coincidencias encontradas");
-        dialog.setContentText("Elige el correcto:");
-
-        Optional<ItemVenta> result = dialog.showAndWait();
-        result.ifPresent(item -> {
-            agregarAlCarrito(item);
-            txtBuscador.clear();
-        });
+    private void agregarComboAlCarrito(Combo combo) {
+        for (DetalleVenta d : listaCarrito) {
+            if (d.esCombo() && d.getCombo().getId() == combo.getId()) {
+                d.setCantidad(d.getCantidad() + 1);
+                tablaDetalles.refresh();
+                recalcularTotal();
+                return;
+            }
+        }
+        listaCarrito.add(new DetalleVenta(combo, 1));
+        tablaDetalles.refresh();
+        recalcularTotal();
     }
 
     private void agregarAlCarrito(ItemVenta item) {
@@ -228,7 +258,7 @@ public class PosController implements Initializable {
 
         boolean encontrado = false;
         for (DetalleVenta d : listaCarrito) {
-            if (d.getItem().getId() == item.getId()) {
+            if (!d.esCombo() && d.getItem().getId() == item.getId()) {
                 d.setCantidad(d.getCantidad() + cantidad);
                 encontrado = true;
                 break;
@@ -260,7 +290,7 @@ public class PosController implements Initializable {
     }
 
     private void ajustarCantidad(DetalleVenta detalle) {
-        String unidad = detalle.getItem().getUnidad();
+        String unidad = detalle.esCombo() ? "u" : detalle.getItem().getUnidad();
         String cantidadActual = detalle.getCantidad() % 1 == 0
                 ? String.valueOf((int) detalle.getCantidad())
                 : String.valueOf(detalle.getCantidad());
@@ -372,17 +402,17 @@ public class PosController implements Initializable {
 
     private boolean verificarProblemaStock(DetalleVenta detalle) {
         try {
-            if (detalle.getItem().isEsServicio()) return false;
-
             Configuracion config = configDAO.obtenerConfiguracion();
             boolean permitirNegativo = (config != null) && config.isPermitirStockNegativo();
-
             if (permitirNegativo) return false;
 
-            double stockReal = detalle.getItem().getStock();
-            double cantidadSolicitada = detalle.getCantidad();
+            if (detalle.esCombo()) {
+                int stockCombo = comboDAO.calcularStock(detalle.getCombo().getId());
+                return detalle.getCantidad() > stockCombo;
+            }
 
-            return cantidadSolicitada > stockReal;
+            if (detalle.getItem().isEsServicio()) return false;
+            return detalle.getCantidad() > detalle.getItem().getStock();
 
         } catch (SQLException e) {
             return true;

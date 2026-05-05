@@ -14,6 +14,7 @@ public class Configuracion {
     private String rutaBackup;
     private String rutaGuardadoTickets;
     private String colorTema = "#f4f6f8";
+    private boolean premiumDesbloqueado = false;
 
     public Configuracion() {
     }
@@ -69,4 +70,7 @@ public class Configuracion {
 
     public String getColorTema() { return colorTema; }
     public void setColorTema(String colorTema) { this.colorTema = colorTema; }
+
+    public boolean isPremiumDesbloqueado() { return premiumDesbloqueado; }
+    public void setPremiumDesbloqueado(boolean premiumDesbloqueado) { this.premiumDesbloqueado = premiumDesbloqueado; }
 }

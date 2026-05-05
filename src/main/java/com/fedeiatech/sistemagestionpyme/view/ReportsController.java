@@ -29,9 +29,13 @@ import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
 import javafx.stage.FileChooser;
+import javafx.stage.Stage;
 import javafx.util.Callback;
 
 public class ReportsController implements Initializable {
@@ -191,6 +195,20 @@ public class ReportsController implements Initializable {
         } catch (Exception e) {
             e.printStackTrace();
             mostrarAlerta("Error Crítico", "Fallo al reimprimir: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    void abrirEstadisticas(ActionEvent event) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/stats_view.fxml"));
+            Parent root = loader.load();
+            Stage stage = new Stage();
+            stage.setTitle("Estadísticas Avanzadas");
+            stage.setScene(new Scene(root));
+            stage.show();
+        } catch (Exception e) {
+            mostrarAlerta("Error", "No se pudo abrir estadísticas: " + e.getMessage());
         }
     }
 

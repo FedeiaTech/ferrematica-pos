@@ -1,10 +1,13 @@
 package com.fedeiatech.sistemagestionpyme.view;
 
+import com.fedeiatech.sistemagestionpyme.dao.ComboDAO;
 import com.fedeiatech.sistemagestionpyme.dao.ItemDAO;
+import com.fedeiatech.sistemagestionpyme.model.Combo;
 import com.fedeiatech.sistemagestionpyme.model.ItemVenta;
 import com.fedeiatech.sistemagestionpyme.service.ExportService;
 import com.fedeiatech.sistemagestionpyme.service.ImportService;
 import com.fedeiatech.sistemagestionpyme.service.ImportService.ImportResult;
+import com.fedeiatech.sistemagestionpyme.service.LicenseService;
 import com.fedeiatech.sistemagestionpyme.service.SessionService;
 import com.fedeiatech.sistemagestionpyme.service.ThemeService;
 import java.io.File;
@@ -28,6 +31,7 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
@@ -35,7 +39,12 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.stage.FileChooser;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
 
 public class InventoryController implements Initializable {
 
@@ -59,12 +68,14 @@ public class InventoryController implements Initializable {
     @FXML private Label lblFormTitulo;
 
     private ItemDAO itemDAO;
+    private ComboDAO comboDAO;
     private ObservableList<ItemVenta> listaItems;
     private ItemVenta itemEnEdicion = null;
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         itemDAO = new ItemDAO();
+        comboDAO = new ComboDAO();
 
         rootPane.setStyle(ThemeService.getInstance().getBgStyle());
 
@@ -83,7 +94,11 @@ public class InventoryController implements Initializable {
 
         tablaItems.getSelectionModel().selectedItemProperty().addListener((obs, anterior, seleccionado) -> {
             if (seleccionado != null && SessionService.getInstance().esAdmin()) {
-                entrarModoEdicion(seleccionado);
+                if (seleccionado.isEsCombo()) {
+                    abrirFormCombo(seleccionado.getIdCombo());
+                } else {
+                    entrarModoEdicion(seleccionado);
+                }
             }
         });
 
@@ -136,6 +151,32 @@ public class InventoryController implements Initializable {
         colPrecio.setCellValueFactory(new PropertyValueFactory<>("precioVenta"));
         colStock.setCellValueFactory(new PropertyValueFactory<>("stock"));
 
+        tablaItems.setRowFactory(tv -> new TableRow<ItemVenta>() {
+            @Override
+            protected void updateItem(ItemVenta item, boolean empty) {
+                super.updateItem(item, empty);
+                if (item == null || empty) { setStyle(""); }
+                else if (item.isEsCombo()) { setStyle("-fx-font-weight: bold;"); }
+                else { setStyle(""); }
+            }
+        });
+
+        colNombre.setCellFactory(col -> new TableCell<ItemVenta, String>() {
+            @Override
+            protected void updateItem(String nombre, boolean empty) {
+                super.updateItem(nombre, empty);
+                if (empty || nombre == null) { setText(null); setStyle(""); return; }
+                ItemVenta row = getTableRow().getItem();
+                if (row != null && row.isEsCombo()) {
+                    setText("COMBO: " + nombre);
+                    setStyle("-fx-font-weight: bold; -fx-text-fill: #8e44ad;");
+                } else {
+                    setText(nombre);
+                    setStyle("");
+                }
+            }
+        });
+
         colStock.setCellFactory(column -> new TableCell<ItemVenta, Double>() {
             @Override
             protected void updateItem(Double item, boolean empty) {
@@ -184,10 +225,38 @@ public class InventoryController implements Initializable {
 
     private void cargarDatos() {
         try {
-            listaItems = FXCollections.observableArrayList(itemDAO.listarTodos());
+            java.util.List<ItemVenta> lista = new java.util.ArrayList<>(itemDAO.listarTodos());
+            if (LicenseService.esPremium()) {
+                for (Combo c : comboDAO.listarTodos()) {
+                    lista.add(ItemVenta.desdeCombo(c));
+                }
+            }
+            listaItems = FXCollections.observableArrayList(lista);
             tablaItems.setItems(listaItems);
         } catch (SQLException e) {
             mostrarAlerta(Alert.AlertType.ERROR, "Error DB", "No se pudo cargar la lista: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    void nuevoCombo(ActionEvent event) {
+        abrirFormCombo(0);
+    }
+
+    private void abrirFormCombo(int idCombo) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/combo_form_view.fxml"));
+            Parent root = loader.load();
+            ComboFormController ctrl = loader.getController();
+            if (idCombo > 0) ctrl.cargarCombo(idCombo);
+            Stage stage = new Stage();
+            stage.setTitle(idCombo > 0 ? "Editar Combo" : "Nuevo Combo");
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.setScene(new Scene(root));
+            stage.setOnHidden(e -> { cargarDatos(); tablaItems.getSelectionModel().clearSelection(); });
+            stage.show();
+        } catch (Exception e) {
+            mostrarAlerta(Alert.AlertType.ERROR, "Error", "No se pudo abrir el formulario de combo: " + e.getMessage());
         }
     }
 
@@ -251,6 +320,11 @@ public class InventoryController implements Initializable {
         Optional<ButtonType> resultado = confirmacion.showAndWait();
         if (resultado.isPresent() && resultado.get() == ButtonType.OK) {
             try {
+                if (comboDAO.esComponenteDeAlgunCombo(itemSeleccionado.getId())) {
+                    mostrarAlerta(Alert.AlertType.WARNING, "No se puede eliminar",
+                        "Este producto es componente de un combo. Eliminá primero el combo.");
+                    return;
+                }
                 itemDAO.eliminar(itemSeleccionado.getId());
                 cargarDatos();
                 mostrarAlerta(Alert.AlertType.INFORMATION, "Eliminado", "Producto eliminado.");

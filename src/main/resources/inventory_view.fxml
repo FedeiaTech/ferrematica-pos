@@ -20,17 +20,26 @@
               AnchorPane.rightAnchor="15.0" AnchorPane.topAnchor="15.0">
             <children>
 
-                <HBox alignment="CENTER_LEFT" spacing="0.0">
+                <HBox alignment="CENTER_LEFT" spacing="10.0">
                     <children>
                         <Label text="Gestión de Inventario" textFill="#2c3e50" HBox.hgrow="ALWAYS">
                             <font><Font name="System Bold" size="24.0" /></font>
                         </Label>
+
+                        <!-- Grupo Excel -->
                         <Button onAction="#descargarPlantilla" text="⬇ Plantilla"
-                                style="-fx-background-color: #2980b9; -fx-text-fill: white; -fx-font-size: 11px; -fx-padding: 6 12; -fx-cursor: hand; -fx-background-radius: 6 0 0 6;" />
-                        <Button onAction="#importarExcel" text="📂 Importar Excel"
-                                style="-fx-background-color: #8e44ad; -fx-text-fill: white; -fx-font-size: 11px; -fx-padding: 6 12; -fx-cursor: hand; -fx-background-radius: 0;" />
+                                style="-fx-background-color: #2980b9; -fx-text-fill: white; -fx-font-size: 11px; -fx-padding: 7 13; -fx-cursor: hand; -fx-background-radius: 6 0 0 6; -fx-border-color: #2472a4; -fx-border-width: 0 1 0 0;" />
+                        <Button onAction="#importarExcel" text="Importar Excel"
+                                style="-fx-background-color: #2980b9; -fx-text-fill: white; -fx-font-size: 11px; -fx-padding: 7 13; -fx-cursor: hand; -fx-background-radius: 0; -fx-border-color: #2472a4; -fx-border-width: 0 1 0 0;" />
                         <Button onAction="#mostrarInfoImport" text="?"
-                                style="-fx-background-color: #7f8c8d; -fx-text-fill: white; -fx-font-size: 11px; -fx-padding: 6 10; -fx-cursor: hand; -fx-background-radius: 0 6 6 0;" />
+                                style="-fx-background-color: #2980b9; -fx-text-fill: white; -fx-font-size: 11px; -fx-padding: 7 10; -fx-cursor: hand; -fx-background-radius: 0 6 6 0;" />
+
+                        <!-- Separador visual -->
+                        <javafx.scene.layout.Region prefWidth="6.0" />
+
+                        <!-- Combo -->
+                        <Button onAction="#nuevoCombo" text="＋ Crear Combo"
+                                style="-fx-background-color: #8e44ad; -fx-text-fill: white; -fx-font-size: 11px; -fx-font-weight: bold; -fx-padding: 7 16; -fx-cursor: hand; -fx-background-radius: 6;" />
                     </children>
                 </HBox>
 

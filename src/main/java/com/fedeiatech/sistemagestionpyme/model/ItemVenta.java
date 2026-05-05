@@ -11,6 +11,8 @@ public class ItemVenta {
     private double stock;
     private boolean esServicio;
     private String unidad;
+    private boolean esCombo = false;
+    private int idCombo = 0;
 
     public ItemVenta() {
         this.unidad = "u";
@@ -54,6 +56,27 @@ public class ItemVenta {
 
     public String getUnidad() { return unidad != null ? unidad : "u"; }
     public void setUnidad(String unidad) { this.unidad = unidad; }
+
+    public boolean isEsCombo() { return esCombo; }
+    public void setEsCombo(boolean esCombo) { this.esCombo = esCombo; }
+
+    public int getIdCombo() { return idCombo; }
+    public void setIdCombo(int idCombo) { this.idCombo = idCombo; }
+
+    public static ItemVenta desdeCombo(Combo combo) {
+        ItemVenta iv = new ItemVenta();
+        iv.setId(combo.getId());
+        iv.setIdCombo(combo.getId());
+        iv.setCodigo(combo.getCodigo());
+        iv.setNombre(combo.getNombre());
+        iv.setDescripcion(combo.getDescripcion());
+        iv.setPrecioVenta(combo.getPrecioVenta());
+        iv.setStock(combo.getStockCalculado());
+        iv.setEsServicio(false);
+        iv.setUnidad("u");
+        iv.setEsCombo(true);
+        return iv;
+    }
 
     public boolean esPorPeso() {
         String u = getUnidad();

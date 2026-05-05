@@ -97,7 +97,7 @@ public class TicketService {
 
             DecimalFormat df = new DecimalFormat("$ #,##0.00");
             for (DetalleVenta d : venta.getDetalles()) {
-                Paragraph pNombre = new Paragraph(d.getItem().getNombre(), fontRegular);
+                Paragraph pNombre = new Paragraph(d.getNombreItem(), fontRegular);
                 pNombre.setAlignment(Element.ALIGN_LEFT);
                 document.add(pNombre);
 

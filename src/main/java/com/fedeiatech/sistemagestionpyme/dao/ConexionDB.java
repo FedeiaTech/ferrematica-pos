@@ -61,6 +61,65 @@ public class ConexionDB {
                 + "FOREIGN KEY(id_venta) REFERENCES ventas(id)"
                 + ");";
         stmt.execute(sqlDetalles);
+
+        try { migrarDetallesVenta(stmt); } catch (SQLException e) {
+            System.err.println("Migración detalles_venta omitida: " + e.getMessage());
+        }
+
+        stmt.execute("CREATE TABLE IF NOT EXISTS combos ("
+                + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                + "codigo TEXT UNIQUE NOT NULL,"
+                + "nombre TEXT NOT NULL,"
+                + "descripcion TEXT,"
+                + "precio_venta REAL NOT NULL"
+                + ");");
+
+        stmt.execute("CREATE TABLE IF NOT EXISTS combo_componentes ("
+                + "id_combo INTEGER NOT NULL,"
+                + "id_item INTEGER NOT NULL,"
+                + "cantidad REAL NOT NULL,"
+                + "PRIMARY KEY (id_combo, id_item),"
+                + "FOREIGN KEY(id_combo) REFERENCES combos(id),"
+                + "FOREIGN KEY(id_item) REFERENCES items(id)"
+                + ");");
+    }
+
+    private static void migrarDetallesVenta(Statement stmt) throws SQLException {
+        boolean tieneIdCombo = false;
+        try (java.sql.ResultSet rs = stmt.executeQuery("PRAGMA table_info(detalles_venta)")) {
+            while (rs.next()) {
+                if ("id_combo".equals(rs.getString("name"))) {
+                    tieneIdCombo = true;
+                    break;
+                }
+            }
+        }
+        if (tieneIdCombo) return;
+
+        conexion.setAutoCommit(false);
+        try {
+            stmt.execute("DROP TABLE IF EXISTS detalles_venta_new");
+            stmt.execute("CREATE TABLE detalles_venta_new ("
+                    + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                    + "id_venta INTEGER NOT NULL,"
+                    + "id_item INTEGER,"
+                    + "id_combo INTEGER,"
+                    + "cantidad REAL NOT NULL,"
+                    + "precio_unitario REAL NOT NULL,"
+                    + "subtotal REAL NOT NULL,"
+                    + "FOREIGN KEY(id_venta) REFERENCES ventas(id)"
+                    + ")");
+            stmt.execute("INSERT INTO detalles_venta_new (id, id_venta, id_item, cantidad, precio_unitario, subtotal) "
+                    + "SELECT id, id_venta, id_item, cantidad, precio_unitario, subtotal FROM detalles_venta");
+            stmt.execute("DROP TABLE detalles_venta");
+            stmt.execute("ALTER TABLE detalles_venta_new RENAME TO detalles_venta");
+            conexion.commit();
+        } catch (SQLException e) {
+            conexion.rollback();
+            throw e;
+        } finally {
+            conexion.setAutoCommit(true);
+        }
     }
 
 }

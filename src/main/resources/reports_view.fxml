@@ -28,6 +28,8 @@
             <HBox alignment="CENTER_RIGHT">
                <children>
                   <Region HBox.hgrow="ALWAYS" />
+                  <Button onAction="#abrirEstadisticas" text="📈 Estadísticas ▸"
+                          style="-fx-background-color: #2980b9; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8 18; -fx-cursor: hand; -fx-background-radius: 6;" />
                   <Button fx:id="btnExportar" onAction="#exportarExcel" text="📊 Exportar Excel"
                           style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8 18; -fx-cursor: hand; -fx-background-radius: 6;" />
                </children>

@@ -3,7 +3,9 @@
 **Sistema de Gestión Comercial para PyMEs argentinas.**  
 *Offline-First, orientado a comercios minoristas. Preparado para integración fiscal ARCA.*
 
-**Estado:** v0.7.2 — Estable | **Licencia:** Propietaria
+**Estado:** v0.8.0 — Estable | **Licencia:** Propietaria
+
+**Descarga:** [fedeiatech.com/descargas](https://fedeiatech.com/descargas) *(próximamente)*
 
 ![Panel de Control](Screenshots/01.jpg)
 
@@ -44,23 +46,32 @@
 - [x] **Importación Masiva Excel** — plantilla descargable, validación por fila, resumen pre-confirmación y detección de duplicados
 - [x] **Login y Roles de Usuario** — BCrypt, roles ADMIN/CAJERO, panel de gestión de usuarios, inventario read-only para cajeros
 - [x] **Temas de color** — 6 colores de fondo (3 claros + 3 saturados), persiste entre sesiones, accesible para todos los roles
-- [ ] **Conexión Fiscal ARCA** *(planificado post v1.0)*
+- [x] **Sistema de Combos** — combos basados en inventario con stock calculado automáticamente, visibles en negrita en inventario y vendibles desde POS
+- [x] **Estadísticas Avanzadas** — canasta de productos (market basket), mejores horarios de venta, mapa de demanda día/hora
+- [x] **Modelo Freemium/Premium** — unlock por contraseña única, reportes y stats bloqueados en free, botón PREMIUM en dashboard
+- [ ] **Conexión Fiscal ARCA** *(planificado post comercialización)*
 
 ---
 
 ## Niveles de Licencia
 
-| Feature | Community (Free) | Professional (Paid) |
+El sistema funciona en modo **FREE** desde el primer arranque. Para activar el modo **PREMIUM**, ingresar la clave de activación desde el botón "PREMIUM 🔒" en el dashboard (unlock único, permanente).
+
+| Feature | FREE | PREMIUM |
 | --- | --- | --- |
-| POS | ✓ | ✓ |
-| Inventario ilimitado | ✓ | ✓ |
-| Tickets PDF temporales | ✓ | ✓ |
-| Historial de ventas | — | ✓ |
-| Tickets archivados permanentes | — | ✓ |
-| Dashboard métricas y gráficos | — | ✓ |
-| Importación Excel | — | ✓ |
-| Cuenta Corriente / Clientes | — | ✓ |
-| Conexión Fiscal ARCA | — | ✓ |
+| Punto de Venta (POS) | ✓ | ✓ |
+| Inventario (solo lectura para CAJERO) | ✓ | ✓ |
+| Tickets PDF | ✓ | ✓ |
+| Dashboard con KPIs y gráficos | ✓ | ✓ |
+| Temas de color | ✓ | ✓ |
+| Gestión de Inventario completa (ADMIN) | ✓ | ✓ |
+| Reportes e historial de ventas | — | ✓ |
+| Export Excel (3 formatos) | — | ✓ |
+| Import masivo desde Excel | — | ✓ |
+| Sistema de Combos | — | ✓ |
+| Estadísticas Avanzadas (canasta, horarios, heatmap) | — | ✓ |
+| Gestión de Usuarios (panel admin) | — | ✓ |
+| Conexión Fiscal ARCA | — | ✓ *(próximo)* |
 
 ---
 
@@ -88,6 +99,13 @@ La base de datos `gestion_pyme.db` se crea automáticamente en la raíz del proy
 ---
 
 ## Changelog
+
+### v0.8.0 — 2026-05-04
+
+- **Sistema de Combos:** combos compuestos por ítems del inventario. Stock calculado automáticamente como mínimo de componentes disponibles. Visible en inventario en negrita/púrpura. Vendible desde POS igual que productos. Al vender un combo se descuenta el stock de cada componente.
+- **Estadísticas Avanzadas:** nueva ventana con 3 pestañas: canasta de productos (market basket, pares co-ocurrentes en tickets), mejor horario de venta (BarChart por hora), mapa de demanda (grilla 7×24 horas coloreada por intensidad).
+- **Modelo Freemium/Premium:** reportes, estadísticas, combos y gestión de usuarios son funciones PREMIUM. Unlock único por contraseña desde botón en dashboard. Estado persiste en DB entre sesiones.
+- **Clave de activación:** `fedeiatech2024` *(cambiar antes de distribución comercial)*
 
 ### v0.7.2 — 2026-04-17
 

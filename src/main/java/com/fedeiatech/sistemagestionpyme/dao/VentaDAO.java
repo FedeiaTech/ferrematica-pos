@@ -1,5 +1,6 @@
 package com.fedeiatech.sistemagestionpyme.dao;
 
+import com.fedeiatech.sistemagestionpyme.model.ComponenteCombo;
 import com.fedeiatech.sistemagestionpyme.model.DetalleVenta;
 import com.fedeiatech.sistemagestionpyme.model.Venta;
 import java.sql.Connection;
@@ -14,11 +15,11 @@ public class VentaDAO {
 
     public void registrarVenta(Venta venta) throws SQLException {
         String sqlVenta = "INSERT INTO ventas (fecha, total) VALUES (?, ?)";
-        String sqlDetalle = "INSERT INTO detalles_venta (id_venta, id_item, cantidad, precio_unitario, subtotal) VALUES (?, ?, ?, ?, ?)";
+        String sqlDetalleItem  = "INSERT INTO detalles_venta (id_venta, id_item, id_combo, cantidad, precio_unitario, subtotal) VALUES (?, ?, NULL, ?, ?, ?)";
+        String sqlDetalleCombo = "INSERT INTO detalles_venta (id_venta, id_item, id_combo, cantidad, precio_unitario, subtotal) VALUES (?, NULL, ?, ?, ?, ?)";
         String sqlStock = "UPDATE items SET stock = stock - ? WHERE id = ? AND es_servicio = 0";
 
         Connection conn = null;
-
         try {
             conn = ConexionDB.getConexion();
             conn.setAutoCommit(false);
@@ -27,49 +28,52 @@ public class VentaDAO {
                 pstVenta.setString(1, venta.getFecha());
                 pstVenta.setDouble(2, venta.getTotal());
                 pstVenta.executeUpdate();
-
                 try (ResultSet rs = pstVenta.getGeneratedKeys()) {
-                    if (rs.next()) {
-                        venta.setId(rs.getInt(1));
-                    }
+                    if (rs.next()) venta.setId(rs.getInt(1));
                 }
             }
 
-            try (PreparedStatement pstDetalle = conn.prepareStatement(sqlDetalle); PreparedStatement pstStock = conn.prepareStatement(sqlStock)) {
+            try (PreparedStatement pstItem  = conn.prepareStatement(sqlDetalleItem);
+                 PreparedStatement pstCombo = conn.prepareStatement(sqlDetalleCombo);
+                 PreparedStatement pstStock = conn.prepareStatement(sqlStock)) {
 
                 for (DetalleVenta detalle : venta.getDetalles()) {
-                    pstDetalle.setInt(1, venta.getId());
-                    pstDetalle.setInt(2, detalle.getItem().getId());
-                    pstDetalle.setDouble(3, detalle.getCantidad());
-                    pstDetalle.setDouble(4, detalle.getPrecioUnitario());
-                    pstDetalle.setDouble(5, detalle.getSubtotal());
-                    pstDetalle.executeUpdate();
+                    if (detalle.esCombo()) {
+                        pstCombo.setInt(1, venta.getId());
+                        pstCombo.setInt(2, detalle.getCombo().getId());
+                        pstCombo.setDouble(3, detalle.getCantidad());
+                        pstCombo.setDouble(4, detalle.getPrecioUnitario());
+                        pstCombo.setDouble(5, detalle.getSubtotal());
+                        pstCombo.executeUpdate();
 
-                    if (!detalle.getItem().isEsServicio()) {
-                        pstStock.setDouble(1, detalle.getCantidad());
-                        pstStock.setInt(2, detalle.getItem().getId());
-                        pstStock.executeUpdate();
+                        for (ComponenteCombo comp : detalle.getCombo().getComponentes()) {
+                            pstStock.setDouble(1, comp.getCantidad() * detalle.getCantidad());
+                            pstStock.setInt(2, comp.getIdItem());
+                            pstStock.executeUpdate();
+                        }
+                    } else {
+                        pstItem.setInt(1, venta.getId());
+                        pstItem.setInt(2, detalle.getItem().getId());
+                        pstItem.setDouble(3, detalle.getCantidad());
+                        pstItem.setDouble(4, detalle.getPrecioUnitario());
+                        pstItem.setDouble(5, detalle.getSubtotal());
+                        pstItem.executeUpdate();
+
+                        if (!detalle.getItem().isEsServicio()) {
+                            pstStock.setDouble(1, detalle.getCantidad());
+                            pstStock.setInt(2, detalle.getItem().getId());
+                            pstStock.executeUpdate();
+                        }
                     }
                 }
             }
 
             conn.commit();
-            System.out.println("Venta registrada con éxito. ID: " + venta.getId());
-
         } catch (SQLException e) {
-            if (conn != null) {
-                try {
-                    System.err.println("Error en transacción. Deshaciendo cambios...");
-                    conn.rollback();
-                } catch (SQLException ex) {
-                    ex.printStackTrace();
-                }
-            }
+            if (conn != null) { try { conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); } }
             throw e;
         } finally {
-            if (conn != null) {
-                conn.setAutoCommit(true);
-            }
+            if (conn != null) conn.setAutoCommit(true);
         }
     }
 
@@ -127,7 +131,7 @@ public class VentaDAO {
                      "FROM detalles_venta d " +
                      "JOIN items i ON d.id_item = i.id " +
                      "JOIN ventas v ON d.id_venta = v.id " +
-                     "WHERE v.fecha LIKE ? AND i.es_servicio = 0";
+                     "WHERE v.fecha LIKE ? AND i.es_servicio = 0 AND d.id_item IS NOT NULL";
         try (Connection conn = ConexionDB.getConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, fechaHoy + "%");
@@ -165,10 +169,11 @@ public class VentaDAO {
 
     public Map<String, Double> obtenerTop5ProductosMasVendidos() throws SQLException {
         Map<String, Double> resultado = new LinkedHashMap<>();
-        String sql = "SELECT i.nombre, SUM(d.cantidad) as total_vendido " +
+        String sql = "SELECT COALESCE(i.nombre, c.nombre) as nombre, SUM(d.cantidad) as total_vendido " +
                      "FROM detalles_venta d " +
-                     "JOIN items i ON d.id_item = i.id " +
-                     "GROUP BY d.id_item, i.nombre " +
+                     "LEFT JOIN items i ON d.id_item = i.id " +
+                     "LEFT JOIN combos c ON d.id_combo = c.id " +
+                     "GROUP BY d.id_item, d.id_combo, nombre " +
                      "ORDER BY total_vendido DESC " +
                      "LIMIT 5";
         try (Connection conn = ConexionDB.getConexion();
@@ -205,12 +210,14 @@ public class VentaDAO {
 
     public java.util.List<String[]> obtenerVentasPorProducto(String desde, String hasta) throws SQLException {
         java.util.List<String[]> resultado = new java.util.ArrayList<>();
-        String sql = "SELECT i.nombre, i.unidad, SUM(d.cantidad) as cant, SUM(d.subtotal) as total " +
+        String sql = "SELECT COALESCE(i.nombre, c.nombre) as nombre, COALESCE(i.unidad, 'u') as unidad, " +
+                     "SUM(d.cantidad) as cant, SUM(d.subtotal) as total " +
                      "FROM detalles_venta d " +
-                     "JOIN items i ON d.id_item = i.id " +
+                     "LEFT JOIN items i ON d.id_item = i.id " +
+                     "LEFT JOIN combos c ON d.id_combo = c.id " +
                      "JOIN ventas v ON d.id_venta = v.id " +
                      "WHERE DATE(v.fecha) BETWEEN ? AND ? " +
-                     "GROUP BY d.id_item, i.nombre, i.unidad " +
+                     "GROUP BY d.id_item, d.id_combo, nombre, unidad " +
                      "ORDER BY cant DESC";
         try (Connection conn = ConexionDB.getConexion();
              PreparedStatement pst = conn.prepareStatement(sql)) {
@@ -232,9 +239,12 @@ public class VentaDAO {
 
     public java.util.List<String[]> obtenerDetalleCompleto(String desde, String hasta) throws SQLException {
         java.util.List<String[]> resultado = new java.util.ArrayList<>();
-        String sql = "SELECT DATE(v.fecha) as dia, v.id, i.nombre, d.cantidad, i.unidad, d.precio_unitario, d.subtotal " +
+        String sql = "SELECT DATE(v.fecha) as dia, v.id, " +
+                     "COALESCE(i.nombre, c.nombre || ' (COMBO)') as nombre, " +
+                     "d.cantidad, COALESCE(i.unidad, 'u') as unidad, d.precio_unitario, d.subtotal " +
                      "FROM detalles_venta d " +
-                     "JOIN items i ON d.id_item = i.id " +
+                     "LEFT JOIN items i ON d.id_item = i.id " +
+                     "LEFT JOIN combos c ON d.id_combo = c.id " +
                      "JOIN ventas v ON d.id_venta = v.id " +
                      "WHERE DATE(v.fecha) BETWEEN ? AND ? " +
                      "ORDER BY v.fecha ASC, v.id ASC";
@@ -262,9 +272,12 @@ public class VentaDAO {
     public Venta obtenerVentaCompleta(int idVenta) throws SQLException {
         Venta venta = null;
         String sqlVenta = "SELECT * FROM ventas WHERE id = ?";
-        String sqlDetalles = "SELECT d.cantidad, d.precio_unitario, i.codigo, i.nombre " +
+        String sqlDetalles = "SELECT d.cantidad, d.precio_unitario, d.id_item, d.id_combo, " +
+                             "COALESCE(i.codigo, c.codigo) as codigo, " +
+                             "COALESCE(i.nombre, c.nombre) as nombre " +
                              "FROM detalles_venta d " +
-                             "JOIN items i ON d.id_item = i.id " +
+                             "LEFT JOIN items i ON d.id_item = i.id " +
+                             "LEFT JOIN combos c ON d.id_combo = c.id " +
                              "WHERE d.id_venta = ?";
 
         try (Connection conn = ConexionDB.getConexion()) {
@@ -284,15 +297,18 @@ public class VentaDAO {
                     pstmt.setInt(1, idVenta);
                     ResultSet rs = pstmt.executeQuery();
                     while (rs.next()) {
-                        com.fedeiatech.sistemagestionpyme.model.ItemVenta item = new com.fedeiatech.sistemagestionpyme.model.ItemVenta();
-                        item.setCodigo(rs.getString("codigo"));
-                        item.setNombre(rs.getString("nombre"));
-
-                        com.fedeiatech.sistemagestionpyme.model.DetalleVenta detalle = new com.fedeiatech.sistemagestionpyme.model.DetalleVenta(
-                            item,
-                            rs.getDouble("cantidad")
-                        );
-
+                        com.fedeiatech.sistemagestionpyme.model.DetalleVenta detalle;
+                        if (rs.getObject("id_combo") != null) {
+                            com.fedeiatech.sistemagestionpyme.model.Combo combo = new com.fedeiatech.sistemagestionpyme.model.Combo();
+                            combo.setCodigo(rs.getString("codigo"));
+                            combo.setNombre(rs.getString("nombre"));
+                            detalle = new com.fedeiatech.sistemagestionpyme.model.DetalleVenta(combo, rs.getDouble("cantidad"));
+                        } else {
+                            com.fedeiatech.sistemagestionpyme.model.ItemVenta item = new com.fedeiatech.sistemagestionpyme.model.ItemVenta();
+                            item.setCodigo(rs.getString("codigo"));
+                            item.setNombre(rs.getString("nombre"));
+                            detalle = new com.fedeiatech.sistemagestionpyme.model.DetalleVenta(item, rs.getDouble("cantidad"));
+                        }
                         detalle.setPrecioUnitario(rs.getDouble("precio_unitario"));
                         venta.agregarDetalle(detalle);
                     }
@@ -300,5 +316,56 @@ public class VentaDAO {
             }
         }
         return venta;
+    }
+
+    public java.util.List<String[]> obtenerMarketBasket() throws SQLException {
+        java.util.List<String[]> resultado = new java.util.ArrayList<>();
+        String sql = "SELECT a.nombre AS prod_a, b.nombre AS prod_b, COUNT(*) AS frec " +
+                     "FROM detalles_venta da " +
+                     "JOIN detalles_venta db ON da.id_venta = db.id_venta AND da.id_item < db.id_item " +
+                     "JOIN items a ON da.id_item = a.id " +
+                     "JOIN items b ON db.id_item = b.id " +
+                     "WHERE da.id_item IS NOT NULL AND db.id_item IS NOT NULL " +
+                     "GROUP BY da.id_item, db.id_item " +
+                     "HAVING frec >= 2 " +
+                     "ORDER BY frec DESC LIMIT 20";
+        try (Connection conn = ConexionDB.getConexion();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                resultado.add(new String[]{ rs.getString("prod_a"), rs.getString("prod_b"), String.valueOf(rs.getInt("frec")) });
+            }
+        }
+        return resultado;
+    }
+
+    public Map<Integer, Double> obtenerTotalesPorHora() throws SQLException {
+        Map<Integer, Double> resultado = new LinkedHashMap<>();
+        String sql = "SELECT CAST(strftime('%H', fecha) AS INTEGER) as hora, SUM(total) as total_hora " +
+                     "FROM ventas GROUP BY hora ORDER BY hora ASC";
+        try (Connection conn = ConexionDB.getConexion();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                resultado.put(rs.getInt("hora"), rs.getDouble("total_hora"));
+            }
+        }
+        return resultado;
+    }
+
+    public Map<String, Double> obtenerHeatmapDiaHora() throws SQLException {
+        Map<String, Double> resultado = new LinkedHashMap<>();
+        String sql = "SELECT CAST(strftime('%w', fecha) AS INTEGER) as dia, " +
+                     "CAST(strftime('%H', fecha) AS INTEGER) as hora, " +
+                     "COUNT(*) as cant " +
+                     "FROM ventas GROUP BY dia, hora ORDER BY dia, hora";
+        try (Connection conn = ConexionDB.getConexion();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                resultado.put(rs.getInt("dia") + "-" + rs.getInt("hora"), rs.getDouble("cant"));
+            }
+        }
+        return resultado;
     }
 }

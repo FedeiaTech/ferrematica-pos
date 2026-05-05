@@ -24,7 +24,7 @@ public class App extends Application {
 
         Scene scene = new Scene(root);
         stage.setScene(scene);
-        stage.setTitle("Sistema FedeiaTech - Pyme v0.7");
+        stage.setTitle("Sistema FedeiaTech - Pyme v0.8");
         stage.show();
     }
 

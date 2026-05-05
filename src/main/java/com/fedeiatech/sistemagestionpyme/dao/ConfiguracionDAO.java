@@ -33,6 +33,7 @@ public class ConfiguracionDAO {
                 config.setRutaGuardadoTickets(rs.getString("ruta_tickets"));
                 String colorTema = rs.getString("color_tema");
                 config.setColorTema(colorTema != null ? colorTema : "#f4f6f8");
+                config.setPremiumDesbloqueado(rs.getInt("premium_desbloqueado") == 1);
             }
         }
         return config;
@@ -97,8 +98,17 @@ public class ConfiguracionDAO {
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN ruta_backup TEXT"); } catch (SQLException e) {}
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN ruta_tickets TEXT"); } catch (SQLException e) {}
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN color_tema TEXT DEFAULT '#ffffff'"); } catch (SQLException e) {}
+            try { stmt.execute("ALTER TABLE configuracion ADD COLUMN premium_desbloqueado INTEGER DEFAULT 0"); } catch (SQLException e) {}
         } catch (SQLException e) {
             e.printStackTrace();
+        }
+    }
+
+    public void desbloquearPremium() throws SQLException {
+        String sql = "UPDATE configuracion SET premium_desbloqueado = 1 WHERE id = 1";
+        try (Connection conn = ConexionDB.getConexion();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.executeUpdate();
         }
     }
 }
