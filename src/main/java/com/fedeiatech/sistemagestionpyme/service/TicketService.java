@@ -20,7 +20,11 @@ import java.time.format.DateTimeFormatter;
 
 public class TicketService {
 
-    private static final Rectangle TICKET_SIZE = new Rectangle(226, 800);
+    private static Rectangle ticketSizePara(int mm) {
+        // 58mm ≈ 164pt, 80mm ≈ 226pt (a 72pt/in)
+        float ancho = mm == 58 ? 164f : 226f;
+        return new Rectangle(ancho, 800);
+    }
 
     public File generarTicketPDF(Venta venta) {
         File archivoDestino = null;
@@ -50,7 +54,12 @@ public class TicketService {
                 archivoDestino.deleteOnExit();
             }
 
-            Document document = new Document(TICKET_SIZE, 10, 10, 10, 10);
+            int anchoMm = (config != null) ? config.getAnchoTicketMm() : 80;
+            boolean mostrarDir = (config == null) || config.isTicketMostrarDireccion();
+            boolean mostrarCuit = (config == null) || config.isTicketMostrarCuit();
+            boolean usarEnteros = (config != null) && config.isUsarEnteros();
+
+            Document document = new Document(ticketSizePara(anchoMm), 10, 10, 10, 10);
             PdfWriter.getInstance(document, new FileOutputStream(archivoDestino));
 
             document.open();
@@ -74,10 +83,10 @@ public class TicketService {
             Font fontChica = new Font(Font.HELVETICA, 7, Font.NORMAL);
 
             agregarParrafo(document, nombreEmpresa, fontTitulo);
-            agregarParrafo(document, direccion, fontRegular);
+            if (mostrarDir) agregarParrafo(document, direccion, fontRegular);
             if (config != null) {
                 agregarParrafo(document, config.getCondicionIva(), fontChica);
-                agregarParrafo(document, "CUIT: " + config.getCuit(), fontChica);
+                if (mostrarCuit) agregarParrafo(document, "CUIT: " + config.getCuit(), fontChica);
             }
             agregarParrafo(document, "--------------------------------", fontRegular);
 
@@ -95,14 +104,16 @@ public class TicketService {
 
             agregarParrafo(document, "--------------------------------", fontRegular);
 
-            DecimalFormat df = new DecimalFormat("$ #,##0.00");
+            DecimalFormat df = usarEnteros ? new DecimalFormat("$ #,##0") : new DecimalFormat("$ #,##0.00");
             for (DetalleVenta d : venta.getDetalles()) {
                 Paragraph pNombre = new Paragraph(d.getNombreItem(), fontRegular);
                 pNombre.setAlignment(Element.ALIGN_LEFT);
                 document.add(pNombre);
 
-                String lineaNumeros = d.getCantidad() + " x " + df.format(d.getPrecioUnitario()) +
-                                      " = " + df.format(d.getSubtotal());
+                double precioUnit = usarEnteros ? Math.round(d.getPrecioUnitario()) : d.getPrecioUnitario();
+                double subtotal = usarEnteros ? Math.round(d.getSubtotal()) : d.getSubtotal();
+                String lineaNumeros = d.getCantidad() + " x " + df.format(precioUnit) +
+                                      " = " + df.format(subtotal);
                 Paragraph pNumeros = new Paragraph(lineaNumeros, fontRegular);
                 pNumeros.setAlignment(Element.ALIGN_RIGHT);
                 document.add(pNumeros);

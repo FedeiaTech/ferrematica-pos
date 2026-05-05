@@ -15,6 +15,11 @@ public class Configuracion {
     private String rutaGuardadoTickets;
     private String colorTema = "#f4f6f8";
     private boolean premiumDesbloqueado = false;
+    private int anchoTicketMm = 80;
+    private boolean ticketMostrarDireccion = true;
+    private boolean ticketMostrarCuit = true;
+    private boolean usarEnteros = false;
+    private double margenGananciaPct = 0.0;
 
     public Configuracion() {
     }
@@ -73,4 +78,19 @@ public class Configuracion {
 
     public boolean isPremiumDesbloqueado() { return premiumDesbloqueado; }
     public void setPremiumDesbloqueado(boolean premiumDesbloqueado) { this.premiumDesbloqueado = premiumDesbloqueado; }
+
+    public int getAnchoTicketMm() { return anchoTicketMm; }
+    public void setAnchoTicketMm(int v) { this.anchoTicketMm = v; }
+
+    public boolean isTicketMostrarDireccion() { return ticketMostrarDireccion; }
+    public void setTicketMostrarDireccion(boolean v) { this.ticketMostrarDireccion = v; }
+
+    public boolean isTicketMostrarCuit() { return ticketMostrarCuit; }
+    public void setTicketMostrarCuit(boolean v) { this.ticketMostrarCuit = v; }
+
+    public boolean isUsarEnteros() { return usarEnteros; }
+    public void setUsarEnteros(boolean v) { this.usarEnteros = v; }
+
+    public double getMargenGananciaPct() { return margenGananciaPct; }
+    public void setMargenGananciaPct(double v) { this.margenGananciaPct = v; }
 }

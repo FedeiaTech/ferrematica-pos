@@ -2,12 +2,13 @@
 
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ChoiceBox?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.Tab?>
 <?import javafx.scene.control.TabPane?>
 <?import javafx.scene.control.TextArea?>
 <?import javafx.scene.control.TextField?>
-<?import javafx.scene.control.Tooltip?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.ColumnConstraints?>
@@ -17,33 +18,37 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<AnchorPane fx:id="rootPane" id="AnchorPane" prefHeight="600.0" prefWidth="800.0" style="-fx-background-color: #f4f6f8;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.fedeiatech.sistemagestionpyme.view.ConfigController">
+<AnchorPane fx:id="rootPane" prefHeight="640.0" prefWidth="820.0" style="-fx-background-color: #f4f6f8;"
+            xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.fedeiatech.sistemagestionpyme.view.ConfigController">
    <children>
-      <VBox spacing="15.0" AnchorPane.bottomAnchor="20.0" AnchorPane.leftAnchor="20.0" AnchorPane.rightAnchor="20.0" AnchorPane.topAnchor="20.0">
+      <VBox spacing="15.0" AnchorPane.bottomAnchor="20.0" AnchorPane.leftAnchor="20.0"
+            AnchorPane.rightAnchor="20.0" AnchorPane.topAnchor="20.0">
          <children>
             <Label text="Configuración del Sistema" textFill="#2c3e50">
-               <font>
-                  <Font name="System Bold" size="24.0" />
-               </font>
+               <font><Font name="System Bold" size="24.0" /></font>
             </Label>
 
-            <TabPane tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS" style="-fx-background-color: white; -fx-background-radius: 5; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 5, 0, 0, 2);">
+            <TabPane tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS"
+                     style="-fx-background-color: white; -fx-background-radius: 5; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 5, 0, 0, 2);">
                <tabs>
-                  <Tab text="🏢 Datos Empresa">
+
+                  <!-- ===== DATOS EMPRESA ===== -->
+                  <Tab text="Datos Empresa">
                      <content>
-                        <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+                        <AnchorPane>
                            <children>
                               <GridPane hgap="15.0" vgap="15.0" AnchorPane.leftAnchor="20.0" AnchorPane.topAnchor="20.0">
                                  <columnConstraints>
-                                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="150.0" />
-                                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="300.0" />
+                                    <ColumnConstraints minWidth="180.0" prefWidth="180.0" />
+                                    <ColumnConstraints hgrow="ALWAYS" prefWidth="320.0" />
                                  </columnConstraints>
                                  <rowConstraints>
-                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                    <RowConstraints prefHeight="32.0" />
+                                    <RowConstraints prefHeight="32.0" />
+                                    <RowConstraints prefHeight="32.0" />
+                                    <RowConstraints prefHeight="32.0" />
+                                    <RowConstraints prefHeight="32.0" />
                                  </rowConstraints>
                                  <children>
                                     <Label text="Nombre Fantasía:" />
@@ -63,23 +68,65 @@
                      </content>
                   </Tab>
 
-                  <Tab text="🎨 Personalización">
+                  <!-- ===== PERSONALIZACIÓN ===== -->
+                  <Tab text="Personalización">
                      <content>
-                        <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+                        <AnchorPane>
                            <children>
-                              <VBox spacing="15.0" AnchorPane.leftAnchor="20.0" AnchorPane.topAnchor="20.0">
+                              <VBox spacing="14.0" AnchorPane.leftAnchor="20.0" AnchorPane.topAnchor="15.0" AnchorPane.rightAnchor="20.0">
                                  <children>
-                                    <Label text="Logotipo del Ticket:" style="-fx-font-weight: bold;" />
-                                    <HBox spacing="10.0" alignment="CENTER_LEFT">
-                                       <children>
-                                          <ImageView fx:id="imgLogoPreview" fitHeight="80.0" fitWidth="80.0" pickOnBounds="true" preserveRatio="true" style="-fx-effect: dropshadow(three-pass-box, gray, 5, 0, 0, 0);" />
-                                          <Button text="Seleccionar Imagen..." onAction="#seleccionarLogo" />
-                                          <Label fx:id="lblRutaLogo" text="Sin imagen seleccionada" textFill="GRAY" wrapText="true" maxWidth="300" />
-                                       </children>
+
+                                    <!-- Logo -->
+                                    <Label text="Logotipo del Ticket" style="-fx-font-weight: bold; -fx-font-size: 13;" />
+                                    <HBox spacing="12.0" alignment="CENTER_LEFT">
+                                       <ImageView fx:id="imgLogoPreview" fitHeight="70.0" fitWidth="70.0" preserveRatio="true"
+                                                  style="-fx-effect: dropshadow(three-pass-box, gray, 4, 0, 0, 0);" />
+                                       <VBox spacing="6.0">
+                                          <Button text="Seleccionar imagen..." onAction="#seleccionarLogo" />
+                                          <Label fx:id="lblRutaLogo" text="Sin imagen seleccionada" textFill="GRAY" wrapText="true" maxWidth="380.0" />
+                                       </VBox>
                                     </HBox>
-                                    
-                                    <Label text="Mensaje al Pie del Ticket:" style="-fx-font-weight: bold;" />
-                                    <TextArea fx:id="txtMensajeTicket" prefHeight="80.0" prefWidth="400.0" promptText="Ej: Gracias por su compra. No se aceptan cambios los domingos." />
+
+                                    <!-- Mensaje pie -->
+                                    <Label text="Mensaje al pie del Ticket" style="-fx-font-weight: bold; -fx-font-size: 13;" />
+                                    <TextArea fx:id="txtMensajeTicket" prefHeight="60.0"
+                                             promptText="Ej: Gracias por su compra. Seguinos en Instagram @local" />
+
+                                    <Separator />
+
+                                    <!-- Ancho ticket -->
+                                    <Label text="Formato de Impresión" style="-fx-font-weight: bold; -fx-font-size: 13;" />
+                                    <HBox spacing="15.0" alignment="CENTER_LEFT">
+                                       <Label text="Ancho de impresora térmica:" />
+                                       <ChoiceBox fx:id="cmbAnchoTicket" prefWidth="100.0" />
+                                       <Label text="(58mm y 80mm son los estándares más comunes)" style="-fx-text-fill: #7f8c8d; -fx-font-size: 11;" />
+                                    </HBox>
+
+                                    <!-- Datos en ticket -->
+                                    <Label text="Datos visibles en el ticket" style="-fx-font-weight: bold;" />
+                                    <HBox spacing="20.0">
+                                       <CheckBox fx:id="chkMostrarDireccion" text="Mostrar Dirección" />
+                                       <CheckBox fx:id="chkMostrarCuit" text="Mostrar CUIT" />
+                                    </HBox>
+
+                                    <!-- Decimales -->
+                                    <HBox spacing="10.0" alignment="CENTER_LEFT">
+                                       <CheckBox fx:id="chkUsarEnteros" text="Redondear precios a enteros (sin centavos)" />
+                                       <Label text="— recomendado para kioscos y locales de ropa" style="-fx-text-fill: #7f8c8d; -fx-font-size: 11;" />
+                                    </HBox>
+
+                                    <Separator />
+
+                                    <!-- Margen ganancia -->
+                                    <Label text="Ganancia Estimada" style="-fx-font-weight: bold; -fx-font-size: 13;" />
+                                    <Label text="Porcentaje estimado de ganancia sobre el total de ventas. Si está en 0, el sistema usa precio_venta − precio_costo por producto."
+                                           style="-fx-text-fill: #7f8c8d; -fx-font-size: 11;" wrapText="true" />
+                                    <HBox spacing="10.0" alignment="CENTER_LEFT">
+                                       <Label text="Margen de ganancia estimada (%):" />
+                                       <TextField fx:id="txtMargenGanancia" prefWidth="70.0" promptText="Ej: 30" />
+                                       <Label text="(dejar vacío para calcular desde precio de costo)" style="-fx-text-fill: #7f8c8d; -fx-font-size: 11;" />
+                                    </HBox>
+
                                  </children>
                               </VBox>
                            </children>
@@ -87,59 +134,81 @@
                      </content>
                   </Tab>
 
-                  <Tab text="🛡️ Sistema y Seguridad">
+                  <!-- ===== SISTEMA Y SEGURIDAD ===== -->
+                  <Tab text="Sistema y Seguridad">
                      <content>
-                        <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+                        <AnchorPane>
                            <children>
-                              <VBox spacing="20.0" AnchorPane.leftAnchor="20.0" AnchorPane.topAnchor="20.0">
+                              <VBox spacing="14.0" AnchorPane.leftAnchor="20.0" AnchorPane.topAnchor="15.0" AnchorPane.rightAnchor="20.0">
                                  <children>
-                                    <Label text="Reglas de Negocio" style="-fx-font-weight: bold; -fx-font-size: 14;" />
-                                    <CheckBox fx:id="chkStockNegativo" text="Permitir ventas con Stock Negativo (Recomendado para empezar)" />
-                                    
-                                    <HBox spacing="10.0" alignment="CENTER_LEFT">
-                                       <children>
-                                          <Label text="Recargo por pago con Tarjeta (%):" />
-                                          <TextField fx:id="txtRecargo" prefWidth="60.0" text="0.0" />
-                                       </children>
-                                    </HBox>
-                                    
-                                    <Label text="Almacenamiento de Tickets PDF:" style="-fx-font-weight: bold; -fx-padding: 10 0 0 0;" />
-                                    <HBox spacing="10.0" alignment="CENTER_LEFT">
-                                       <children>
-                                          <TextField fx:id="txtRutaTickets" promptText="Si está vacío, los tickets son temporales" HBox.hgrow="ALWAYS" editable="false" />
-                                          <Button text="Seleccionar Carpeta 📂" onAction="#seleccionarCarpetaTickets" />
-                                          <Button text="❌" onAction="#borrarRutaTickets" style="-fx-background-color: #e74c3c; -fx-text-fill: white;">
-                                             <tooltip>
-                                                <Tooltip text="Volver a modo temporal" />
-                                             </tooltip>
-                                          </Button>
-                                       </children>
-                                    </HBox>
-                                    <Label text="Si seleccionas una carpeta, todos los tickets se guardarán allí permanentemente." textFill="GRAY" />
 
-                                    <Label text="Copia de Seguridad (Backup)" style="-fx-font-weight: bold; -fx-font-size: 14;" />
+                                    <!-- Reglas de negocio -->
+                                    <Label text="Reglas de Negocio" style="-fx-font-weight: bold; -fx-font-size: 13;" />
+                                    <CheckBox fx:id="chkStockNegativo" text="Permitir ventas con Stock Negativo (recomendado para empezar)" />
                                     <HBox spacing="10.0" alignment="CENTER_LEFT">
-                                       <children>
-                                          <Button text="Generar Copia de Seguridad Ahora 💾" onAction="#generarBackup" style="-fx-background-color: #e67e22; -fx-text-fill: white; -fx-font-weight: bold;" />
-                                          <Button text="Restaurar Copia Antigua ⚠️" onAction="#restaurarBackup" style="-fx-background-color: #c0392b; -fx-text-fill: white; -fx-font-weight: bold;" />
-                                       </children>
+                                       <Label text="Recargo por pago con Tarjeta (%):" />
+                                       <TextField fx:id="txtRecargo" prefWidth="60.0" text="0.0" />
                                     </HBox>
-                                    <Label text="Guarda una copia de tu base de datos en un lugar seguro (Pendrive o Nube)." textFill="GRAY" />
+
+                                    <Separator />
+
+                                    <!-- Tickets PDF -->
+                                    <Label text="Almacenamiento de Tickets PDF" style="-fx-font-weight: bold; -fx-font-size: 13;" />
+                                    <Label text="Los datos de ventas se guardan siempre en la base de datos. Los PDFs son solo para impresión — si no hay carpeta configurada, son temporales."
+                                           style="-fx-text-fill: #7f8c8d; -fx-font-size: 11;" wrapText="true" />
+                                    <HBox spacing="8.0" alignment="CENTER_LEFT">
+                                       <TextField fx:id="txtRutaTickets" promptText="Sin configurar → tickets temporales" HBox.hgrow="ALWAYS" editable="false" />
+                                       <Button text="Seleccionar carpeta" onAction="#seleccionarCarpetaTickets" />
+                                       <Button text="Limpiar" onAction="#borrarRutaTickets"
+                                               style="-fx-background-color: #7f8c8d; -fx-text-fill: white;" />
+                                       <Button text="Abrir carpeta" onAction="#abrirCarpetaTickets" />
+                                    </HBox>
+                                    <Label fx:id="lblInfoTickets" text="" wrapText="true" maxWidth="700.0" />
+                                    <HBox spacing="8.0">
+                                       <Button text="Vaciar tickets de esta carpeta" onAction="#vaciarTicketsTemporales"
+                                               style="-fx-background-color: #e67e22; -fx-text-fill: white;" />
+                                       <Button text="Eliminar temporales de +30 días" onAction="#limpiarTemporalesAntiguos"
+                                               style="-fx-background-color: #7f8c8d; -fx-text-fill: white;" />
+                                    </HBox>
+
+                                    <Separator />
+
+                                    <!-- Base de datos -->
+                                    <Label text="Base de Datos" style="-fx-font-weight: bold; -fx-font-size: 13;" />
+                                    <Label text="Todos los datos de ventas, productos y configuración se almacenan en el archivo gestion_pyme.db en la carpeta del programa."
+                                           style="-fx-text-fill: #7f8c8d; -fx-font-size: 11;" wrapText="true" />
+                                    <HBox spacing="8.0">
+                                       <Button text="Abrir carpeta de la base de datos" onAction="#abrirCarpetaDB" />
+                                    </HBox>
+
+                                    <Separator />
+
+                                    <!-- Backup -->
+                                    <Label text="Copia de Seguridad" style="-fx-font-weight: bold; -fx-font-size: 13;" />
+                                    <HBox spacing="10.0" alignment="CENTER_LEFT">
+                                       <Button text="Generar Backup ahora" onAction="#generarBackup"
+                                               style="-fx-background-color: #e67e22; -fx-text-fill: white; -fx-font-weight: bold;" />
+                                       <Button text="Restaurar Backup..." onAction="#restaurarBackup"
+                                               style="-fx-background-color: #c0392b; -fx-text-fill: white; -fx-font-weight: bold;" />
+                                    </HBox>
+                                    <Label text="Guarda una copia del archivo .db en un pendrive o nube. Se recomienda hacer backup semanal." textFill="GRAY" />
+
                                  </children>
                               </VBox>
                            </children>
                         </AnchorPane>
                      </content>
                   </Tab>
+
                </tabs>
             </TabPane>
 
             <HBox alignment="CENTER_RIGHT" spacing="15.0">
-               <children>
-                  <Button onAction="#cerrarVentana" text="Cancelar" />
-                  <Button onAction="#guardarCambios" text="GUARDAR TODO ✅" style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10 20;" />
-               </children>
+               <Button onAction="#cerrarVentana" text="Cancelar" />
+               <Button onAction="#guardarCambios" text="GUARDAR TODO"
+                       style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10 20;" />
             </HBox>
+
          </children>
       </VBox>
    </children>

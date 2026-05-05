@@ -1,5 +1,7 @@
 package com.fedeiatech.sistemagestionpyme.view;
 
+import com.fedeiatech.sistemagestionpyme.dao.ConfiguracionDAO;
+import com.fedeiatech.sistemagestionpyme.model.Configuracion;
 import com.fedeiatech.sistemagestionpyme.dao.VentaDAO;
 import com.fedeiatech.sistemagestionpyme.model.Usuario;
 import com.fedeiatech.sistemagestionpyme.service.IFiscalProvider;
@@ -147,7 +149,17 @@ public class DashboardController implements Initializable {
             int cantVentas = ventaDAO.contarVentasDelDia();
             lblContadorVentas.setText(cantVentas + " transacciones hoy");
 
-            double ganancia = ventaDAO.obtenerGananciaEstimadaDelDia();
+            double ganancia;
+            try {
+                Configuracion cfg = new ConfiguracionDAO().obtenerConfiguracion();
+                if (cfg != null && cfg.getMargenGananciaPct() > 0) {
+                    ganancia = totalHoy * (cfg.getMargenGananciaPct() / 100.0);
+                } else {
+                    ganancia = ventaDAO.obtenerGananciaEstimadaDelDia();
+                }
+            } catch (Exception ex) {
+                ganancia = ventaDAO.obtenerGananciaEstimadaDelDia();
+            }
             lblGananciaDia.setText(String.format("ARS %.2f", ganancia));
 
             int critico = ventaDAO.contarItemsStockCritico();
