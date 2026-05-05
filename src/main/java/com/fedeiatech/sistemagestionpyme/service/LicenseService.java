@@ -1,29 +1,46 @@
 package com.fedeiatech.sistemagestionpyme.service;
 
-/**
- * Servicio de control de licencias.
- * Gestiona qué características están activas según el plan.
- */
+import com.fedeiatech.sistemagestionpyme.dao.ConfiguracionDAO;
+import com.fedeiatech.sistemagestionpyme.model.Configuracion;
+import org.mindrot.jbcrypt.BCrypt;
+
 public class LicenseService {
 
-    // CAMBIAR A 'false' PARA PROBAR EL BLOQUEO, 'true' PARA DESARROLLAR
-    private static boolean ES_PREMIUM = true; 
+    private static final String HASH_CLAVE = "$2a$12$gn2XODzzLKiJ9EpPim9af.5oiQ9lQInTlpit0ZCNcXWi71R356oJG";
+
+    private static Boolean premiumCache = null;
 
     public static boolean esPremium() {
-        return ES_PREMIUM;
+        if (premiumCache != null) return premiumCache;
+        try {
+            Configuracion c = new ConfiguracionDAO().obtenerConfiguracion();
+            premiumCache = (c != null && c.isPremiumDesbloqueado());
+        } catch (Exception e) {
+            premiumCache = false;
+        }
+        return premiumCache;
     }
-    
-    public static void setPremium(boolean estado) {
-        ES_PREMIUM = estado;
+
+    public static void invalidarCache() {
+        premiumCache = null;
     }
-    
-    // [PREMIUM] Reportes Avanzados
-    public static boolean permiteReportes() {
-        return ES_PREMIUM;
+
+    public static boolean verificarYDesbloquear(String clave) {
+        if (clave == null || clave.isBlank()) return false;
+        if (!BCrypt.checkpw(clave, HASH_CLAVE)) return false;
+        try {
+            new ConfiguracionDAO().desbloquearPremium();
+            invalidarCache();
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
-    
-    // [PREMIUM] Conexión ARCA
-    public static boolean permiteModuloFiscal() {
-        return ES_PREMIUM;
-    }
+
+    public static boolean permiteReportes() { return esPremium(); }
+    public static boolean permiteEstadisticas() { return esPremium(); }
+    public static boolean permiteExports() { return esPremium(); }
+    public static boolean permiteGestionCombos() { return esPremium() && SessionService.getInstance().esAdmin(); }
+    public static boolean permiteGestionUsuarios() { return esPremium() && SessionService.getInstance().esAdmin(); }
+    public static boolean permiteModuloFiscal() { return esPremium() && SessionService.getInstance().esAdmin(); }
 }

@@ -2,59 +2,47 @@ package com.fedeiatech.sistemagestionpyme.model;
 
 public class DetalleVenta {
     private ItemVenta item;
-    private double cantidad; // Ahora usamos double para permitir 1.5 kg, etc.
-    private double precioUnitario; // IMPORTANTE: Guardamos el precio histórico aquí
+    private Combo combo;
+    private double cantidad;
+    private double precioUnitario;
 
-    // Constructor vacío
-    public DetalleVenta() {
-    }
+    public DetalleVenta() {}
 
-    // Constructor para Venta Nueva (toma el precio actual del item)
     public DetalleVenta(ItemVenta item, double cantidad) {
         this.item = item;
         this.cantidad = cantidad;
-        this.precioUnitario = item.getPrecioVenta(); // Congelamos el precio al momento de crear
+        this.precioUnitario = item.getPrecioVenta();
     }
 
-    // --- GETTERS Y SETTERS ---
-
-    public ItemVenta getItem() {
-        return item;
-    }
-
-    public void setItem(ItemVenta item) {
-        this.item = item;
-    }
-
-    public double getCantidad() {
-        return cantidad;
-    }
-
-    public void setCantidad(double cantidad) {
+    public DetalleVenta(Combo combo, double cantidad) {
+        this.combo = combo;
         this.cantidad = cantidad;
+        this.precioUnitario = combo.getPrecioVenta();
     }
 
-    public double getPrecioUnitario() {
-        return precioUnitario;
-    }
+    public boolean esCombo() { return combo != null; }
 
-    // Usado para cargar ventas viejas con precios viejos
-    public void setPrecioUnitario(double precioUnitario) {
-        this.precioUnitario = precioUnitario;
-    }
+    public ItemVenta getItem() { return item; }
+    public void setItem(ItemVenta item) { this.item = item; }
 
-    // --- SUBTOTAL CALCULADO (Sin Setter) ---
-    // El subtotal siempre es el resultado de la matemática, no se asigna manualmente.
-    public double getSubtotal() {
-        return this.cantidad * this.precioUnitario;
-    }
-    
-    // Getters auxiliares para la Tabla (TableView usa PropertyValueFactory busca "nombreItem")
+    public Combo getCombo() { return combo; }
+    public void setCombo(Combo combo) { this.combo = combo; }
+
+    public double getCantidad() { return cantidad; }
+    public void setCantidad(double cantidad) { this.cantidad = cantidad; }
+
+    public double getPrecioUnitario() { return precioUnitario; }
+    public void setPrecioUnitario(double precioUnitario) { this.precioUnitario = precioUnitario; }
+
+    public double getSubtotal() { return cantidad * precioUnitario; }
+
     public String getCodigoItem() {
+        if (esCombo()) return combo.getCodigo();
         return item != null ? item.getCodigo() : "";
     }
-    
+
     public String getNombreItem() {
+        if (esCombo()) return combo.getNombre();
         return item != null ? item.getNombre() : "";
     }
 }

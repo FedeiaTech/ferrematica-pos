@@ -1,7 +1,7 @@
 package com.fedeiatech.sistemagestionpyme.model;
 
 public class ItemVenta {
-    
+
     private int id;
     private String codigo;
     private String nombre;
@@ -10,12 +10,14 @@ public class ItemVenta {
     private double precioVenta;
     private double stock;
     private boolean esServicio;
+    private String unidad;
+    private boolean esCombo = false;
+    private int idCombo = 0;
 
-    // 1. Constructor Vacio (Necesario para herramientas y buenas prácticas)
     public ItemVenta() {
+        this.unidad = "u";
     }
 
-    // 2. Constructor Completo (Para crear objetos rápido en el Main)
     public ItemVenta(int id, String codigo, String nombre, String descripcion, double precioCosto, double precioVenta, double stock, boolean esServicio) {
         this.id = id;
         this.codigo = codigo;
@@ -25,9 +27,9 @@ public class ItemVenta {
         this.precioVenta = precioVenta;
         this.stock = stock;
         this.esServicio = esServicio;
+        this.unidad = "u";
     }
 
-    // 3. Getters y Setters (Lo que Lombok falló en crear)
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
 
@@ -52,12 +54,39 @@ public class ItemVenta {
     public boolean isEsServicio() { return esServicio; }
     public void setEsServicio(boolean esServicio) { this.esServicio = esServicio; }
 
-    // Lógica de negocio
+    public String getUnidad() { return unidad != null ? unidad : "u"; }
+    public void setUnidad(String unidad) { this.unidad = unidad; }
+
+    public boolean isEsCombo() { return esCombo; }
+    public void setEsCombo(boolean esCombo) { this.esCombo = esCombo; }
+
+    public int getIdCombo() { return idCombo; }
+    public void setIdCombo(int idCombo) { this.idCombo = idCombo; }
+
+    public static ItemVenta desdeCombo(Combo combo) {
+        ItemVenta iv = new ItemVenta();
+        iv.setId(combo.getId());
+        iv.setIdCombo(combo.getId());
+        iv.setCodigo(combo.getCodigo());
+        iv.setNombre(combo.getNombre());
+        iv.setDescripcion(combo.getDescripcion());
+        iv.setPrecioVenta(combo.getPrecioVenta());
+        iv.setStock(combo.getStockCalculado());
+        iv.setEsServicio(false);
+        iv.setUnidad("u");
+        iv.setEsCombo(true);
+        return iv;
+    }
+
+    public boolean esPorPeso() {
+        String u = getUnidad();
+        return u.equals("kg") || u.equals("g") || u.equals("lt");
+    }
+
     public double calcularGanancia() {
         return precioVenta - precioCosto;
     }
-    
-    // Esto hace que los cuadros de diálogo muestren el nombre bonito
+
     @Override
     public String toString() {
         return codigo + " | " + nombre + " ($ " + precioVenta + ")";

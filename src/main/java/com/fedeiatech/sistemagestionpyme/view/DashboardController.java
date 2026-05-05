@@ -1,152 +1,308 @@
 package com.fedeiatech.sistemagestionpyme.view;
 
+import com.fedeiatech.sistemagestionpyme.dao.ConfiguracionDAO;
+import com.fedeiatech.sistemagestionpyme.model.Configuracion;
 import com.fedeiatech.sistemagestionpyme.dao.VentaDAO;
+import com.fedeiatech.sistemagestionpyme.model.Usuario;
 import com.fedeiatech.sistemagestionpyme.service.IFiscalProvider;
 import com.fedeiatech.sistemagestionpyme.service.LicenseService;
 import com.fedeiatech.sistemagestionpyme.service.MockFiscalProvider;
+import com.fedeiatech.sistemagestionpyme.service.SessionService;
+import com.fedeiatech.sistemagestionpyme.service.LeerMeService;
+import com.fedeiatech.sistemagestionpyme.service.ThemeService;
 import java.io.IOException;
 import java.net.URL;
 import java.sql.SQLException;
+import java.util.Map;
 import java.util.ResourceBundle;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.chart.BarChart;
+import javafx.scene.chart.PieChart;
+import javafx.scene.chart.XYChart;
 import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
+import javafx.scene.control.PasswordField;
+import javafx.scene.layout.AnchorPane;
+import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
 public class DashboardController implements Initializable {
 
-    @FXML
-    private Label lblEstadoFiscal;
-    @FXML 
-    private Label lblVentasDia;
+    @FXML private AnchorPane rootPane;
+    @FXML private Label lblEstadoFiscal;
+    @FXML private Label lblVentasDia;
+    @FXML private Label lblContadorVentas;
+    @FXML private Label lblGananciaDia;
+    @FXML private Label lblStockCritico;
+    @FXML private Label lblUsuario;
+    @FXML private BarChart<String, Number> chartVentas7Dias;
+    @FXML private PieChart chartTop5;
+    @FXML private Button btnInventario;
+    @FXML private Button btnConfiguracion;
+    @FXML private Button btnReportes;
+    @FXML private Button btnUsuarios;
+    @FXML private Button btnTema0;
+    @FXML private Button btnTema1;
+    @FXML private Button btnTema2;
+    @FXML private Button btnTema3;
+    @FXML private Button btnTema4;
+    @FXML private Button btnTema5;
+    @FXML private Button btnPremium;
+    @FXML private Button btnEstadisticas;
 
     private IFiscalProvider fiscalProvider;
     private VentaDAO ventaDAO;
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
-        // Inicializamos el proveedor fiscal (Simulado por ahora)
         fiscalProvider = new MockFiscalProvider();
         ventaDAO = new VentaDAO();
-        
+
+        rootPane.setStyle(ThemeService.getInstance().getBgStyle());
+
+        Button[] botonesTema = {btnTema0, btnTema1, btnTema2, btnTema3, btnTema4, btnTema5};
+        for (int i = 0; i < botonesTema.length; i++) {
+            botonesTema[i].setUserData(i);
+        }
+
+        aplicarRestriccionesPorRol();
         verificarEstadoFiscal();
         cargarMetricas();
     }
-    
-    private void cargarMetricas() {
-        try {
-            double totalHoy = ventaDAO.sumarVentasDelDia();
-            // Formateamos a 2 decimales
-            lblVentasDia.setText(String.format("ARS %.2f", totalHoy));
-        } catch (SQLException e) {
-            lblVentasDia.setText("Error");
-            e.printStackTrace();
-        }
-    }
 
-    private void verificarEstadoFiscal() {
-        if (fiscalProvider != null && fiscalProvider.isServicioDisponible()) {
-            lblEstadoFiscal.setText("🟢 ARCA Online");
-            lblEstadoFiscal.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-background-radius: 15; -fx-padding: 5 15;");
-        } else {
-            lblEstadoFiscal.setText("🔴 Sin Conexión");
-            lblEstadoFiscal.setStyle("-fx-background-color: #c0392b; -fx-text-fill: white; -fx-background-radius: 15; -fx-padding: 5 15;");
+    private void aplicarRestriccionesPorRol() {
+        Usuario usuario = SessionService.getInstance().getUsuarioActivo();
+        if (usuario == null) return;
+
+        lblUsuario.setText(usuario.getNombre() + "  ·  " + usuario.getRol());
+
+        boolean esAdmin = usuario.esAdmin();
+        boolean esPremium = LicenseService.esPremium();
+
+        btnInventario.setDisable(!esAdmin);
+        btnConfiguracion.setDisable(!esAdmin);
+        btnReportes.setDisable(!esPremium);
+        if (btnEstadisticas != null) btnEstadisticas.setDisable(!esPremium);
+        btnUsuarios.setVisible(esAdmin && esPremium);
+        btnUsuarios.setManaged(esAdmin && esPremium);
+
+        if (btnPremium != null) {
+            if (esPremium) {
+                btnPremium.setText("PREMIUM ✓");
+                btnPremium.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-size: 11; -fx-cursor: hand; -fx-background-radius: 5; -fx-padding: 5 12;");
+            } else {
+                btnPremium.setText("PREMIUM 🔒");
+                btnPremium.setStyle("-fx-background-color: #f39c12; -fx-text-fill: white; -fx-font-size: 11; -fx-cursor: hand; -fx-background-radius: 5; -fx-padding: 5 12;");
+            }
         }
     }
 
     @FXML
-    void abrirInventario(ActionEvent event) {
-        try {
-            // CAMBIO: Ahora apunta a inventory_view.fxml
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/inventory_view.fxml"));
-            Parent root = loader.load();
-            
-            Stage stage = new Stage();
-            stage.setTitle("Gestión de Inventario");
-            stage.setScene(new Scene(root));
-            stage.show();
-            
-        } catch (IOException e) {
-            e.printStackTrace();
-            System.err.println("Error al abrir inventario: " + e.getMessage());
+    void abrirDialogoPremium(ActionEvent event) {
+        if (LicenseService.esPremium()) {
+            Alert a = new Alert(Alert.AlertType.INFORMATION);
+            a.setTitle("Premium activo");
+            a.setContentText("El modo Premium ya está activado en esta instalación.");
+            a.showAndWait();
+            return;
         }
+
+        PasswordField pf = new PasswordField();
+        pf.setPromptText("Clave de activación");
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Activar Premium");
+        dialog.setHeaderText("Ingresá la clave de activación");
+        dialog.getDialogPane().setContent(pf);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        dialog.showAndWait().ifPresent(bt -> {
+            if (bt == ButtonType.OK) {
+                if (LicenseService.verificarYDesbloquear(pf.getText())) {
+                    aplicarRestriccionesPorRol();
+                    Alert ok = new Alert(Alert.AlertType.INFORMATION);
+                    ok.setTitle("Activación exitosa");
+                    ok.setContentText("¡Modo Premium activado correctamente!");
+                    ok.showAndWait();
+                } else {
+                    Alert err = new Alert(Alert.AlertType.ERROR);
+                    err.setTitle("Clave incorrecta");
+                    err.setContentText("La clave de activación no es válida.");
+                    err.showAndWait();
+                }
+            }
+        });
     }
-    
+
+    private void cargarMetricas() {
+        try {
+            double totalHoy = ventaDAO.sumarVentasDelDia();
+            lblVentasDia.setText(String.format("ARS %.2f", totalHoy));
+
+            int cantVentas = ventaDAO.contarVentasDelDia();
+            lblContadorVentas.setText(cantVentas + " transacciones hoy");
+
+            double ganancia;
+            try {
+                Configuracion cfg = new ConfiguracionDAO().obtenerConfiguracion();
+                if (cfg != null && cfg.getMargenGananciaPct() > 0) {
+                    ganancia = totalHoy * (cfg.getMargenGananciaPct() / 100.0);
+                } else {
+                    ganancia = ventaDAO.obtenerGananciaEstimadaDelDia();
+                }
+            } catch (Exception ex) {
+                ganancia = ventaDAO.obtenerGananciaEstimadaDelDia();
+            }
+            lblGananciaDia.setText(String.format("ARS %.2f", ganancia));
+
+            int critico = ventaDAO.contarItemsStockCritico();
+            lblStockCritico.setText(String.valueOf(critico));
+            lblStockCritico.setTextFill(
+                critico == 0 ? Color.web("#27ae60") :
+                critico <= 3 ? Color.web("#f39c12") : Color.web("#e74c3c")
+            );
+
+        } catch (SQLException e) {
+            lblVentasDia.setText("Error");
+            e.printStackTrace();
+        }
+        try { cargarGraficoVentas7Dias(); } catch (Exception e) { e.printStackTrace(); }
+        try { cargarGraficoTop5(); } catch (Exception e) { e.printStackTrace(); }
+    }
+
+    private void cargarGraficoVentas7Dias() throws SQLException {
+        Map<String, Double> datos = ventaDAO.obtenerVentasUltimos7Dias();
+        XYChart.Series<String, Number> serie = new XYChart.Series<>();
+        for (Map.Entry<String, Double> entry : datos.entrySet()) {
+            String dia = entry.getKey().substring(5);
+            serie.getData().add(new XYChart.Data<>(dia, entry.getValue()));
+        }
+        chartVentas7Dias.getData().clear();
+        chartVentas7Dias.getData().add(serie);
+    }
+
+    private void cargarGraficoTop5() throws SQLException {
+        Map<String, Double> datos = ventaDAO.obtenerTop5ProductosMasVendidos();
+        ObservableList<PieChart.Data> pieData = FXCollections.observableArrayList();
+        for (Map.Entry<String, Double> entry : datos.entrySet()) {
+            pieData.add(new PieChart.Data(entry.getKey(), entry.getValue()));
+        }
+        chartTop5.setData(pieData);
+    }
+
+    private void verificarEstadoFiscal() {
+        lblEstadoFiscal.setText("ARCA (sin configurar)");
+        lblEstadoFiscal.setStyle("-fx-background-color: #bdc3c7; -fx-text-fill: #7f8c8d; -fx-background-radius: 15; -fx-padding: 5 15;");
+    }
+
+    @FXML
+    void abrirInventario(ActionEvent event) {
+        abrirVentana("/inventory_view.fxml", "Gestión de Inventario", false, this::cargarMetricas);
+    }
+
     @FXML
     void abrirPOS(ActionEvent event) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/pos_view.fxml"));
             Parent root = loader.load();
-            
             Stage stage = new Stage();
             stage.setTitle("Punto de Venta");
             stage.setMaximized(true);
             stage.setScene(new Scene(root));
-            
-            stage.setOnHidden(e -> cargarMetricas()); 
-            
+            stage.setOnHidden(e -> cargarMetricas());
             stage.show();
-            
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
-    
+
     @FXML
     void abrirReportes(ActionEvent event) {
-        // VERIFICACIÓN DE LICENCIA (FEATURE FLAG)
-        if (LicenseService.permiteReportes()) {
-            try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/reports_view.fxml"));
-                Parent root = loader.load();
-                Stage stage = new Stage();
-                stage.setTitle("Reportes Avanzados (PRO)");
-                stage.setScene(new Scene(root));
-                stage.show();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        } else {
-            // MENSAJE DE UPSELL (VENTA)
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("Característica Premium");
-            alert.setHeaderText("¡Desbloquea los Reportes!");
-            alert.setContentText("Esta función es exclusiva de la versión PRO.\n\n"
-                    + "Adquiere tu licencia para acceder al historial completo, "
-                    + "exportación a Excel y métricas avanzadas.");
-            alert.showAndWait();
-        }
+        abrirVentana("/reports_view.fxml", "Reportes Avanzados", false);
     }
-    
-    @FXML
-    void cambiarModoDev(ActionEvent event) {
-        // 1. Invertir el estado actual
-        boolean nuevoEstado = !LicenseService.esPremium();
-        LicenseService.setPremium(nuevoEstado);
-        
-        // 2. Avisar al desarrollador (Tú)
-        String modo = nuevoEstado ? "PREMIUM (PRO)" : "FREE (Community)";
-        
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Modo Desarrollador");
-        alert.setHeaderText("Licencia Cambiada");
-        alert.setContentText("El sistema ahora simula ser versión: " + modo + "\n\nPrueba los botones bloqueados ahora.");
-        alert.showAndWait();
-    }
-    
+
     @FXML
     void abrirConfiguracion(ActionEvent event) {
+        abrirVentana("/config_view.fxml", "Configuración de Empresa", false, () -> {
+            LicenseService.invalidarCache();
+            aplicarRestriccionesPorRol();
+            cargarMetricas();
+        });
+    }
+
+    @FXML
+    void abrirUsuarios(ActionEvent event) {
+        abrirVentana("/admin_usuarios_view.fxml", "Gestión de Usuarios", false);
+    }
+
+    @FXML
+    void abrirEstadisticasDashboard(ActionEvent event) {
+        abrirVentana("/stats_view.fxml", "Estadísticas Avanzadas", false);
+    }
+
+    @FXML
+    void abrirLeerMe(ActionEvent event) {
+        LeerMeService.abrirLeerMe();
+    }
+
+    @FXML
+    void abrirAcercaDe(ActionEvent event) {
+        Alert dlg = new Alert(Alert.AlertType.INFORMATION);
+        dlg.setTitle("Acerca de");
+        dlg.setHeaderText("Sistema de Gestión PyME  —  v0.8.0");
+        dlg.setContentText(
+            "Desarrollado por Federico Iacono\n" +
+            "IATech — Soluciones de software para PyMEs argentinas\n\n" +
+            "© 2026 IATech. Todos los derechos reservados.\n\n" +
+            "Contacto: iaconofede@gmail.com\n" +
+            "Web: fedeiatech.com  (próximamente)"
+        );
+        dlg.showAndWait();
+    }
+
+    @FXML
+    void cambiarTema(ActionEvent event) {
+        int idx = (int) ((Button) event.getSource()).getUserData();
+        ThemeService.getInstance().setColor(ThemeService.COLORES[idx]);
+        rootPane.setStyle(ThemeService.getInstance().getBgStyle());
+    }
+
+    @FXML
+    void cerrarSesion(ActionEvent event) {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/config_view.fxml"));
+            SessionService.getInstance().cerrarSesion();
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/login_view.fxml"));
+            Parent root = loader.load();
+            Stage stage = (Stage) lblUsuario.getScene().getWindow();
+            stage.setScene(new Scene(root));
+            stage.setMaximized(false);
+            stage.setTitle("Sistema FedeiaTech - Pyme v0.7");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void abrirVentana(String fxmlPath, String titulo, boolean maximizar) {
+        abrirVentana(fxmlPath, titulo, maximizar, null);
+    }
+
+    private void abrirVentana(String fxmlPath, String titulo, boolean maximizar, Runnable alCerrar) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
             Parent root = loader.load();
             Stage stage = new Stage();
-            stage.setTitle("Configuración de Empresa");
+            stage.setTitle(titulo);
             stage.setScene(new Scene(root));
+            if (maximizar) stage.setMaximized(true);
+            if (alCerrar != null) stage.setOnHidden(e -> alCerrar.run());
             stage.show();
         } catch (IOException e) {
             e.printStackTrace();

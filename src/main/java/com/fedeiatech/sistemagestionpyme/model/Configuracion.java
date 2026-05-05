@@ -13,12 +13,17 @@ public class Configuracion {
     private double recargoTarjeta;
     private String rutaBackup;
     private String rutaGuardadoTickets;
+    private String colorTema = "#f4f6f8";
+    private boolean premiumDesbloqueado = false;
+    private int anchoTicketMm = 80;
+    private boolean ticketMostrarDireccion = true;
+    private boolean ticketMostrarCuit = true;
+    private boolean usarEnteros = false;
+    private double margenGananciaPct = 0.0;
 
-    // Constructor vacío
     public Configuracion() {
     }
 
-    // Constructor completo
     public Configuracion(String nombreEmpresa, String cuit, String direccion, String condicionIva, int puntoVenta) {
         this.nombreEmpresa = nombreEmpresa;
         this.cuit = cuit;
@@ -27,7 +32,6 @@ public class Configuracion {
         this.puntoVenta = puntoVenta;
     }
 
-    // --- GETTERS Y SETTERS ---
     public String getNombreEmpresa() { return nombreEmpresa; }
     public void setNombreEmpresa(String nombreEmpresa) { this.nombreEmpresa = nombreEmpresa; }
 
@@ -45,7 +49,7 @@ public class Configuracion {
 
     public String getCertificadoRuta() { return certificadoRuta; }
     public void setCertificadoRuta(String certificadoRuta) { this.certificadoRuta = certificadoRuta; }
-    
+
     public String getRutaLogo() { return rutaLogo; }
     public void setRutaLogo(String rutaLogo) { this.rutaLogo = rutaLogo; }
 
@@ -57,10 +61,10 @@ public class Configuracion {
 
     public double getRecargoTarjeta() { return recargoTarjeta; }
     public void setRecargoTarjeta(double recargoTarjeta) { this.recargoTarjeta = recargoTarjeta; }
-    
+
     public String getRutaBackup() { return rutaBackup; }
     public void setRutaBackup(String rutaBackup) { this.rutaBackup = rutaBackup; }
-    
+
     public String getRutaGuardadoTickets() {
         return rutaGuardadoTickets;
     }
@@ -68,4 +72,25 @@ public class Configuracion {
     public void setRutaGuardadoTickets(String rutaGuardadoTickets) {
         this.rutaGuardadoTickets = rutaGuardadoTickets;
     }
+
+    public String getColorTema() { return colorTema; }
+    public void setColorTema(String colorTema) { this.colorTema = colorTema; }
+
+    public boolean isPremiumDesbloqueado() { return premiumDesbloqueado; }
+    public void setPremiumDesbloqueado(boolean premiumDesbloqueado) { this.premiumDesbloqueado = premiumDesbloqueado; }
+
+    public int getAnchoTicketMm() { return anchoTicketMm; }
+    public void setAnchoTicketMm(int v) { this.anchoTicketMm = v; }
+
+    public boolean isTicketMostrarDireccion() { return ticketMostrarDireccion; }
+    public void setTicketMostrarDireccion(boolean v) { this.ticketMostrarDireccion = v; }
+
+    public boolean isTicketMostrarCuit() { return ticketMostrarCuit; }
+    public void setTicketMostrarCuit(boolean v) { this.ticketMostrarCuit = v; }
+
+    public boolean isUsarEnteros() { return usarEnteros; }
+    public void setUsarEnteros(boolean v) { this.usarEnteros = v; }
+
+    public double getMargenGananciaPct() { return margenGananciaPct; }
+    public void setMargenGananciaPct(double v) { this.margenGananciaPct = v; }
 }

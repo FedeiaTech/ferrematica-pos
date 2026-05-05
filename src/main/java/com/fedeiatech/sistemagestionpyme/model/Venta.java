@@ -7,20 +7,18 @@ public class Venta {
     private int id;
     private String fecha;
     private double total;
-    private List<DetalleVenta> detalles; // Lista de productos en esta venta
+    private List<DetalleVenta> detalles;
 
     public Venta() {
         this.detalles = new ArrayList<>();
         this.total = 0.0;
     }
 
-    // Método para agregar producto al "carrito"
     public void agregarDetalle(DetalleVenta detalle) {
         this.detalles.add(detalle);
         calcularTotal();
     }
-    
-    // Recalcular el total sumando los subtotales
+
     public void calcularTotal() {
         this.total = 0;
         for (DetalleVenta d : detalles) {
@@ -28,7 +26,6 @@ public class Venta {
         }
     }
 
-    // Getters y Setters
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
 
@@ -36,11 +33,10 @@ public class Venta {
     public void setFecha(String fecha) { this.fecha = fecha; }
 
     public double getTotal() { return total; }
-    
+
     public void setTotal(double total) {
         this.total = total;
     }
-
 
     public List<DetalleVenta> getDetalles() { return detalles; }
 }

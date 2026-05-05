@@ -9,7 +9,6 @@ import java.sql.Statement;
 
 public class ConfiguracionDAO {
 
-    // LEER CONFIGURACIÓN (SELECT)
     public Configuracion obtenerConfiguracion() throws SQLException {
         String sql = "SELECT * FROM configuracion WHERE id = 1";
         Configuracion config = null;
@@ -20,108 +19,113 @@ public class ConfiguracionDAO {
 
             if (rs.next()) {
                 config = new Configuracion();
-                
-                // Campos básicos (Tab 1)
                 config.setNombreEmpresa(rs.getString("nombre_empresa"));
                 config.setCuit(rs.getString("cuit"));
                 config.setDireccion(rs.getString("direccion"));
                 config.setCondicionIva(rs.getString("condicion_iva"));
                 config.setPuntoVenta(rs.getInt("punto_venta"));
                 config.setCertificadoRuta(rs.getString("certificado_ruta"));
-
-                // --- NUEVOS CAMPOS (Tab 2 y 3) ---
                 config.setRutaLogo(rs.getString("ruta_logo"));
                 config.setMensajeTicket(rs.getString("mensaje_ticket"));
-                
-                // SQLite guarda booleans como 1 (true) o 0 (false)
                 config.setPermitirStockNegativo(rs.getInt("permitir_stock_negativo") == 1);
-                
                 config.setRecargoTarjeta(rs.getDouble("recargo_tarjeta"));
                 config.setRutaBackup(rs.getString("ruta_backup"));
-                
-                // NUEVO: Ruta de guardado de tickets
                 config.setRutaGuardadoTickets(rs.getString("ruta_tickets"));
+                String colorTema = rs.getString("color_tema");
+                config.setColorTema(colorTema != null ? colorTema : "#f4f6f8");
+                config.setPremiumDesbloqueado(rs.getInt("premium_desbloqueado") == 1);
+                config.setAnchoTicketMm(rs.getInt("ancho_ticket_mm") == 0 ? 80 : rs.getInt("ancho_ticket_mm"));
+                config.setTicketMostrarDireccion(rs.getInt("ticket_mostrar_direccion") != 0);
+                config.setTicketMostrarCuit(rs.getInt("ticket_mostrar_cuit") != 0);
+                config.setUsarEnteros(rs.getInt("usar_enteros") == 1);
+                config.setMargenGananciaPct(rs.getDouble("margen_ganancia_pct"));
             }
         }
         return config;
     }
 
-    // GUARDAR CONFIGURACIÓN (UPDATE)
     public void guardarConfiguracion(Configuracion config) throws SQLException {
-        // Actualizamos TODOS los campos
         String sql = "UPDATE configuracion SET "
                    + "nombre_empresa=?, cuit=?, direccion=?, condicion_iva=?, punto_venta=?, "
-                   + "ruta_logo=?, mensaje_ticket=?, permitir_stock_negativo=?, recargo_tarjeta=?, ruta_backup=?, "
-                   + "ruta_tickets=? " // <--- NUEVO CAMPO (Index 11)
+                   + "certificado_ruta=?, "
+                   + "ruta_logo=?, mensaje_ticket=?, permitir_stock_negativo=?, recargo_tarjeta=?, "
+                   + "ruta_backup=?, ruta_tickets=?, "
+                   + "ancho_ticket_mm=?, ticket_mostrar_direccion=?, ticket_mostrar_cuit=?, "
+                   + "usar_enteros=?, margen_ganancia_pct=? "
                    + "WHERE id=1";
 
         try (Connection conn = ConexionDB.getConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            // Tab 1
             pstmt.setString(1, config.getNombreEmpresa());
             pstmt.setString(2, config.getCuit());
             pstmt.setString(3, config.getDireccion());
             pstmt.setString(4, config.getCondicionIva());
             pstmt.setInt(5, config.getPuntoVenta());
-            
-            // Tab 2
-            pstmt.setString(6, config.getRutaLogo());
-            pstmt.setString(7, config.getMensajeTicket());
-            
-            // Tab 3 (Convertir boolean a int)
-            pstmt.setInt(8, config.isPermitirStockNegativo() ? 1 : 0);
-            
-            pstmt.setDouble(9, config.getRecargoTarjeta());
-            pstmt.setString(10, config.getRutaBackup());
-            
-            // NUEVO: Guardar ruta de tickets
-            pstmt.setString(11, config.getRutaGuardadoTickets());
-            
+            pstmt.setString(6, config.getCertificadoRuta());
+            pstmt.setString(7, config.getRutaLogo());
+            pstmt.setString(8, config.getMensajeTicket());
+            pstmt.setInt(9, config.isPermitirStockNegativo() ? 1 : 0);
+            pstmt.setDouble(10, config.getRecargoTarjeta());
+            pstmt.setString(11, config.getRutaBackup());
+            pstmt.setString(12, config.getRutaGuardadoTickets());
+            pstmt.setInt(13, config.getAnchoTicketMm());
+            pstmt.setInt(14, config.isTicketMostrarDireccion() ? 1 : 0);
+            pstmt.setInt(15, config.isTicketMostrarCuit() ? 1 : 0);
+            pstmt.setInt(16, config.isUsarEnteros() ? 1 : 0);
+            pstmt.setDouble(17, config.getMargenGananciaPct());
+
             pstmt.executeUpdate();
         }
     }
-    
-    // MIGRACIÓN Y CREACIÓN DE TABLA
+
     public void inicializarTabla() {
-        // Estructura básica original
         String sqlCreate = "CREATE TABLE IF NOT EXISTS configuracion ("
                          + "id INTEGER PRIMARY KEY CHECK (id = 1), "
                          + "nombre_empresa TEXT, cuit TEXT, direccion TEXT, "
                          + "condicion_iva TEXT, punto_venta INTEGER DEFAULT 1, "
                          + "certificado_ruta TEXT)";
-        
-        // Fila por defecto
+
         String sqlInsert = "INSERT OR IGNORE INTO configuracion (id, nombre_empresa, cuit, direccion, condicion_iva) "
                          + "VALUES (1, 'Mi Negocio', '20-00000000-0', 'Sin Dirección', 'Consumidor Final')";
-        
+
         try (Connection conn = ConexionDB.getConexion();
              Statement stmt = conn.createStatement()) {
-            
+
             stmt.execute(sqlCreate);
             stmt.execute(sqlInsert);
-            
-            // IMPORTANTE: Llamamos a la actualización para crear las columnas nuevas
             actualizarTabla(conn);
-            
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
-    // Método para agregar columnas nuevas si no existen (Migración)
     private void actualizarTabla(Connection conn) {
         try (Statement stmt = conn.createStatement()) {
-            // Intentamos agregar cada columna nueva. Si ya existe, SQLite ignorará el error o lanzará uno controlable.
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN ruta_logo TEXT"); } catch (SQLException e) {}
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN mensaje_ticket TEXT"); } catch (SQLException e) {}
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN permitir_stock_negativo INTEGER DEFAULT 1"); } catch (SQLException e) {}
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN recargo_tarjeta REAL DEFAULT 0.0"); } catch (SQLException e) {}
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN ruta_backup TEXT"); } catch (SQLException e) {}
-            // NUEVO:
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN ruta_tickets TEXT"); } catch (SQLException e) {}
+            try { stmt.execute("ALTER TABLE configuracion ADD COLUMN color_tema TEXT DEFAULT '#ffffff'"); } catch (SQLException e) {}
+            try { stmt.execute("ALTER TABLE configuracion ADD COLUMN premium_desbloqueado INTEGER DEFAULT 0"); } catch (SQLException e) {}
+            try { stmt.execute("ALTER TABLE configuracion ADD COLUMN ancho_ticket_mm INTEGER DEFAULT 80"); } catch (SQLException e) {}
+            try { stmt.execute("ALTER TABLE configuracion ADD COLUMN ticket_mostrar_direccion INTEGER DEFAULT 1"); } catch (SQLException e) {}
+            try { stmt.execute("ALTER TABLE configuracion ADD COLUMN ticket_mostrar_cuit INTEGER DEFAULT 1"); } catch (SQLException e) {}
+            try { stmt.execute("ALTER TABLE configuracion ADD COLUMN usar_enteros INTEGER DEFAULT 0"); } catch (SQLException e) {}
+            try { stmt.execute("ALTER TABLE configuracion ADD COLUMN margen_ganancia_pct REAL DEFAULT 0.0"); } catch (SQLException e) {}
         } catch (SQLException e) {
             e.printStackTrace();
+        }
+    }
+
+    public void desbloquearPremium() throws SQLException {
+        String sql = "UPDATE configuracion SET premium_desbloqueado = 1 WHERE id = 1";
+        try (Connection conn = ConexionDB.getConexion();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.executeUpdate();
         }
     }
 }

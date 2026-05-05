@@ -2,6 +2,7 @@
 
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
@@ -11,17 +12,39 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<AnchorPane id="AnchorPane" prefHeight="600.0" prefWidth="900.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.fedeiatech.sistemagestionpyme.view.InventoryController">
+<AnchorPane fx:id="rootPane" prefHeight="600.0" prefWidth="900.0"
+            xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.fedeiatech.sistemagestionpyme.view.InventoryController">
     <children>
-        <VBox spacing="15.0" AnchorPane.bottomAnchor="15.0" AnchorPane.leftAnchor="15.0" AnchorPane.rightAnchor="15.0" AnchorPane.topAnchor="15.0">
+        <VBox spacing="15.0" AnchorPane.bottomAnchor="15.0" AnchorPane.leftAnchor="15.0"
+              AnchorPane.rightAnchor="15.0" AnchorPane.topAnchor="15.0">
             <children>
-                <Label text="Gestión de Inventario" textFill="#2c3e50">
-                    <font>
-                        <Font name="System Bold" size="24.0" />
-                    </font>
-                </Label>
 
-                <TableView fx:id="tablaItems" VBox.vgrow="ALWAYS" style="-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 5, 0, 0, 2);">
+                <HBox alignment="CENTER_LEFT" spacing="10.0">
+                    <children>
+                        <Label text="Gestión de Inventario" textFill="#2c3e50" HBox.hgrow="ALWAYS">
+                            <font><Font name="System Bold" size="24.0" /></font>
+                        </Label>
+
+                        <!-- Grupo Excel -->
+                        <Button onAction="#descargarPlantilla" text="Crear Plantilla Excel"
+                                style="-fx-background-color: #2980b9; -fx-text-fill: white; -fx-font-size: 11px; -fx-padding: 7 13; -fx-cursor: hand; -fx-background-radius: 6 0 0 6; -fx-border-color: #2472a4; -fx-border-width: 0 1 0 0;" />
+                        <Button onAction="#importarExcel" text="Importar Excel"
+                                style="-fx-background-color: #2980b9; -fx-text-fill: white; -fx-font-size: 11px; -fx-padding: 7 13; -fx-cursor: hand; -fx-background-radius: 0; -fx-border-color: #2472a4; -fx-border-width: 0 1 0 0;" />
+                        <Button onAction="#mostrarInfoImport" text="?"
+                                style="-fx-background-color: #2980b9; -fx-text-fill: white; -fx-font-size: 11px; -fx-padding: 7 10; -fx-cursor: hand; -fx-background-radius: 0 6 6 0;" />
+
+                        <!-- Separador visual -->
+                        <javafx.scene.layout.Region prefWidth="6.0" />
+
+                        <!-- Combo -->
+                        <Button onAction="#nuevoCombo" text="＋ Crear Combo"
+                                style="-fx-background-color: #8e44ad; -fx-text-fill: white; -fx-font-size: 11px; -fx-font-weight: bold; -fx-padding: 7 16; -fx-cursor: hand; -fx-background-radius: 6;" />
+                    </children>
+                </HBox>
+
+                <TableView fx:id="tablaItems" VBox.vgrow="ALWAYS"
+                           style="-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 5, 0, 0, 2);">
                     <columns>
                         <TableColumn fx:id="colId" prefWidth="50.0" text="ID" />
                         <TableColumn fx:id="colCodigo" prefWidth="80.0" text="Código" />
@@ -34,23 +57,69 @@
                     </columnResizePolicy>
                 </TableView>
 
-                <Label text="Nuevo Producto / Servicio:" textFill="#7f8c8d">
-                    <font>
-                        <Font name="System Bold" size="14.0" />
-                    </font>
+                <Label fx:id="lblFormTitulo" text="Nuevo Producto / Servicio:" textFill="#7f8c8d">
+                    <font><Font name="System Bold" size="14.0" /></font>
                 </Label>
-            
-                <HBox spacing="10.0" alignment="CENTER_LEFT" style="-fx-background-color: #ecf0f1; -fx-padding: 10; -fx-background-radius: 5;">
+
+                <HBox fx:id="formHBox" spacing="10.0" alignment="BOTTOM_LEFT"
+                      style="-fx-background-color: #ecf0f1; -fx-padding: 12; -fx-background-radius: 5;">
                     <children>
-                        <TextField fx:id="txtCodigo" promptText="Cód (ej. A01)" prefWidth="100.0" />
-                        <TextField fx:id="txtNombre" promptText="Nombre del producto" HBox.hgrow="ALWAYS" />
-                        <TextField fx:id="txtPrecio" promptText="Precio $" prefWidth="100.0" />
-                        <TextField fx:id="txtStock" promptText="Stock" prefWidth="80.0" />
-                        <CheckBox fx:id="chkServicio" text="Es Servicio" />
-                        <Button mnemonicParsing="false" onAction="#guardarItem" text="AGREGAR" style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold;" />
-                        <Button mnemonicParsing="false" onAction="#eliminarItem" text="ELIMINAR" style="-fx-background-color: #c0392b; -fx-text-fill: white; -fx-font-weight: bold;" />
+
+                        <VBox spacing="4.0">
+                            <children>
+                                <Label text="Código" style="-fx-font-size: 11; -fx-text-fill: #7f8c8d;" />
+                                <TextField fx:id="txtCodigo" promptText="Ej: A001" prefWidth="100.0" />
+                            </children>
+                        </VBox>
+
+                        <VBox spacing="4.0" HBox.hgrow="ALWAYS">
+                            <children>
+                                <Label text="Nombre / Descripción" style="-fx-font-size: 11; -fx-text-fill: #7f8c8d;" />
+                                <TextField fx:id="txtNombre" promptText="Nombre del producto" />
+                            </children>
+                        </VBox>
+
+                        <VBox spacing="4.0">
+                            <children>
+                                <Label text="Precio de Venta ($)" style="-fx-font-size: 11; -fx-text-fill: #7f8c8d;" />
+                                <TextField fx:id="txtPrecio" promptText="0.00" prefWidth="115.0" />
+                            </children>
+                        </VBox>
+
+                        <VBox spacing="4.0">
+                            <children>
+                                <Label text="Stock" style="-fx-font-size: 11; -fx-text-fill: #7f8c8d;" />
+                                <TextField fx:id="txtStock" promptText="Ej: 2.5" prefWidth="90.0" />
+                            </children>
+                        </VBox>
+
+                        <VBox spacing="4.0">
+                            <children>
+                                <Label text="Unidad" style="-fx-font-size: 11; -fx-text-fill: #7f8c8d;" />
+                                <ComboBox fx:id="cmbUnidad" prefWidth="75.0" />
+                            </children>
+                        </VBox>
+
+                        <VBox spacing="4.0" alignment="BOTTOM_LEFT">
+                            <children>
+                                <Label text=" " style="-fx-font-size: 11;" />
+                                <CheckBox fx:id="chkServicio" text="Es Servicio" />
+                            </children>
+                        </VBox>
+
+                        <Button fx:id="btnGuardar" mnemonicParsing="false" onAction="#guardarItem"
+                                text="AGREGAR"
+                                style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;" />
+                        <Button fx:id="btnCancelar" mnemonicParsing="false" onAction="#cancelarEdicion"
+                                text="CANCELAR" visible="false" managed="false"
+                                style="-fx-background-color: #7f8c8d; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;" />
+                        <Button mnemonicParsing="false" onAction="#eliminarItem"
+                                text="ELIMINAR"
+                                style="-fx-background-color: #c0392b; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;" />
+
                     </children>
                 </HBox>
+
             </children>
         </VBox>
     </children>
