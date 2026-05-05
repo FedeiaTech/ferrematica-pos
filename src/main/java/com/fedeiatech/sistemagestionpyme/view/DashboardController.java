@@ -8,6 +8,7 @@ import com.fedeiatech.sistemagestionpyme.service.IFiscalProvider;
 import com.fedeiatech.sistemagestionpyme.service.LicenseService;
 import com.fedeiatech.sistemagestionpyme.service.MockFiscalProvider;
 import com.fedeiatech.sistemagestionpyme.service.SessionService;
+import com.fedeiatech.sistemagestionpyme.service.LeerMeService;
 import com.fedeiatech.sistemagestionpyme.service.ThemeService;
 import java.io.IOException;
 import java.net.URL;
@@ -245,6 +246,26 @@ public class DashboardController implements Initializable {
     @FXML
     void abrirEstadisticasDashboard(ActionEvent event) {
         abrirVentana("/stats_view.fxml", "Estadísticas Avanzadas", false);
+    }
+
+    @FXML
+    void abrirLeerMe(ActionEvent event) {
+        LeerMeService.abrirLeerMe();
+    }
+
+    @FXML
+    void abrirAcercaDe(ActionEvent event) {
+        Alert dlg = new Alert(Alert.AlertType.INFORMATION);
+        dlg.setTitle("Acerca de");
+        dlg.setHeaderText("Sistema de Gestión PyME  —  v0.8.0");
+        dlg.setContentText(
+            "Desarrollado por Federico Iacono\n" +
+            "IATech — Soluciones de software para PyMEs argentinas\n\n" +
+            "© 2026 IATech. Todos los derechos reservados.\n\n" +
+            "Contacto: iaconofede@gmail.com\n" +
+            "Web: fedeiatech.com  (próximamente)"
+        );
+        dlg.showAndWait();
     }
 
     @FXML

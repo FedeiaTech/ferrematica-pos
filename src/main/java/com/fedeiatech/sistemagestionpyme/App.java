@@ -18,6 +18,11 @@ public class App extends Application {
         } catch (Exception e) {
             System.err.println("Error en inicialización: " + e.getMessage());
         }
+        // Generar LEEME.pdf si no existe
+        try {
+            java.io.File leeme = new java.io.File("LEEME.pdf");
+            if (!leeme.exists()) com.fedeiatech.sistemagestionpyme.service.LeerMeService.generarLeerMe();
+        } catch (Exception ignored) {}
 
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/login_view.fxml"));
         Parent root = loader.load();

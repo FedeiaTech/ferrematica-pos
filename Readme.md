@@ -3,7 +3,9 @@
 **Sistema de Gestión Comercial para PyMEs argentinas.**  
 *Offline-First, orientado a comercios minoristas. Preparado para integración fiscal ARCA.*
 
-**Estado:** v0.8.0 — Estable | **Licencia:** Propietaria
+**Estado:** v0.8.1 — Producción | **Licencia:** Propietaria  
+**Autor:** Federico Iacono — IATech  
+**Contacto:** iaconofede@gmail.com
 
 **Descarga:** [fedeiatech.com/descargas](https://fedeiatech.com/descargas) *(próximamente)*
 
@@ -99,6 +101,16 @@ La base de datos `gestion_pyme.db` se crea automáticamente en la raíz del proy
 ---
 
 ## Changelog
+
+### v0.8.1 — 2026-05-05
+- Diálogo "Acerca de" con autoría, versión y contacto en el dashboard
+- LEEME.pdf generado automáticamente al primer arranque (fondo negro, instrucciones básicas)
+- Botones "Leeme" y "Acerca de" en el header del dashboard
+- Configuración: logo acepta PNG, JPG, BMP y TIFF; restauración muestra ruta exacta
+- Borrar ventas con confirmación de contraseña admin
+- ScrollPane en cada pestaña de configuración
+- Dashboard se refresca automáticamente al cerrar Configuración e Inventario
+- Config avanzada: ancho de ticket 58/80mm, mostrar/ocultar dirección y CUIT, redondeo a enteros, margen de ganancia % configurable, limpieza de tickets PDF, ubicación de DB
 
 ### v0.8.0 — 2026-05-04
 
