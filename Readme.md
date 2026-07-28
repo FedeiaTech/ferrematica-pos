@@ -42,7 +42,7 @@
 - [x] **Punto de Venta (POS)** — transacción atómica, stock, ticket PDF, ajuste de cantidades en carrito
 - [x] **Motor de Tickets PDF** — logo, datos empresa, guardado permanente/temporal
 - [x] **Dashboard con KPIs y Gráficos** — ventas del día, ganancia estimada, stock crítico, BarChart 7 días, PieChart top 5
-- [x] **Gestión de Inventario** — CRUD completo con unidades por ítem (u/kg/g/lt)
+- [x] **Gestión de Inventario** — CRUD completo con unidades (u/kg/g/lt) y categoría por ítem (taxonomía libre con sugerencias por perfil de negocio)
 - [x] **Configuración y Persistencia** — empresa, backup/restore
 - [x] **Reportes con Export Excel** — resumen diario, por producto y detalle completo filtrado por período
 - [x] **Importación Masiva Excel** — plantilla descargable, validación por fila, resumen pre-confirmación y detección de duplicados
@@ -51,6 +51,7 @@
 - [x] **Sistema de Combos** — combos basados en inventario con stock calculado automáticamente, visibles en negrita en inventario y vendibles desde POS
 - [x] **Estadísticas Avanzadas** — canasta de productos (market basket), mejores horarios de venta, mapa de demanda día/hora
 - [x] **Modelo Freemium/Premium** — unlock por contraseña única, reportes y stats bloqueados en free, botón PREMIUM en dashboard
+- [x] **Perfil de Negocio** — kiosco, tienda, ferretería o genérico; define categorías sugeridas en Inventario
 - [ ] **Conexión Fiscal ARCA** *(planificado post comercialización)*
 
 ---
@@ -103,7 +104,13 @@ La base de datos `gestion_pyme.db` se crea automáticamente en la raíz del proy
 ## Changelog
 
 ### v0.9.0 — 2026-07-28
-- *(en progreso — se completa al cerrar la versión)*
+
+- **Logging centralizado:** reemplaza los `printStackTrace()`/catch silenciosos reales por un logger a archivo (`logs/app.log`), para poder diagnosticar fallos en instalaciones de clientes.
+- **Diálogos de alerta centralizados:** `AlertUtil` reemplaza 5 implementaciones casi idénticas de `mostrarAlerta` repartidas en distintos controllers. Dashboard y Estadísticas ahora avisan al usuario cuando falla la carga de un gráfico (antes quedaba en silencio).
+- **`ConexionDB` thread-safe:** `getConexion()` sincronizado para eliminar una carrera check-then-act.
+- **Primeros tests automatizados:** JUnit 5 contra SQLite real (sin mocks), cubriendo CRUD de inventario, la transacción atómica de venta (descuento de stock) y la idempotencia de la migración de configuración.
+- **Categoría de producto:** campo libre con sugerencias, para clasificar el inventario por rubro sin imponer una taxonomía rígida.
+- **Perfil de Negocio:** kiosco, tienda, ferretería o genérico, configurable desde Configuración. Define qué categorías se sugieren en Inventario — no cambia el modelo de datos ni la lógica de negocio.
 
 ### v0.8.1 — 2026-05-05
 - Diálogo "Acerca de" con autoría, versión y contacto en el dashboard
