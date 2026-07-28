@@ -13,6 +13,8 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -39,6 +41,8 @@ import javafx.stage.Stage;
 import javafx.util.Callback;
 
 public class ReportsController implements Initializable {
+
+    private static final Logger LOGGER = Logger.getLogger(ReportsController.class.getName());
 
     @FXML private AnchorPane rootPane;
     @FXML private TableView<Venta> tablaVentas;
@@ -99,7 +103,7 @@ public class ReportsController implements Initializable {
             List<Venta> historial = dao.listarVentasHistoricas();
             tablaVentas.setItems(FXCollections.observableArrayList(historial));
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error al cargar el historial de ventas", e);
             mostrarAlerta("Error BD", "No se pudo cargar el historial.");
         }
     }
@@ -193,7 +197,7 @@ public class ReportsController implements Initializable {
                 mostrarAlerta("Error PDF", "El archivo PDF no se pudo generar.");
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error al reimprimir ticket", e);
             mostrarAlerta("Error Crítico", "Fallo al reimprimir: " + e.getMessage());
         }
     }

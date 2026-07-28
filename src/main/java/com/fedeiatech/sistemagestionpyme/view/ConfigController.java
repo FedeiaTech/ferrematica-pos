@@ -15,6 +15,8 @@ import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.sql.SQLException;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -27,6 +29,8 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 public class ConfigController implements Initializable {
+
+    private static final Logger LOGGER = Logger.getLogger(ConfigController.class.getName());
 
     @FXML private AnchorPane rootPane;
     @FXML private TextField txtNombreEmpresa;
@@ -100,7 +104,7 @@ public class ConfigController implements Initializable {
                     config.getMargenGananciaPct() > 0 ? String.valueOf(config.getMargenGananciaPct()) : "");
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error al cargar la configuración", e);
         }
     }
 

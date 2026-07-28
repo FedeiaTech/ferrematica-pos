@@ -18,8 +18,12 @@ import org.apache.poi.xssf.usermodel.XSSFFont;
 import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class ExportService {
+
+    private static final Logger LOGGER = Logger.getLogger(ExportService.class.getName());
 
     public File exportarResumenDiario(List<String[]> datos, File destino) throws IOException {
         String[] headers = {"Fecha", "Cant. Ventas", "Total ARS"};
@@ -155,7 +159,8 @@ public class ExportService {
             if (java.awt.Desktop.isDesktopSupported()) {
                 java.awt.Desktop.getDesktop().open(archivo);
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "No se pudo abrir el archivo exportado", e);
         }
     }
 }

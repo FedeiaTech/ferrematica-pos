@@ -17,8 +17,12 @@ import java.io.FileOutputStream;
 import java.text.DecimalFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class TicketService {
+
+    private static final Logger LOGGER = Logger.getLogger(TicketService.class.getName());
 
     private static Rectangle ticketSizePara(int mm) {
         // 58mm ≈ 164pt, 80mm ≈ 226pt (a 72pt/in)
@@ -133,7 +137,7 @@ public class TicketService {
             document.close();
 
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error al generar el ticket PDF", e);
             return null;
         }
         return archivoDestino;
@@ -151,7 +155,7 @@ public class TicketService {
                 Desktop.getDesktop().open(file);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error al abrir el archivo de ticket", e);
         }
     }
 }

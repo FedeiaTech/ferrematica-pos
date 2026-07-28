@@ -22,8 +22,12 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class StatsController implements Initializable {
+
+    private static final Logger LOGGER = Logger.getLogger(StatsController.class.getName());
 
     @FXML private AnchorPane rootPane;
     @FXML private Label lblPremiumLock;
@@ -80,10 +84,10 @@ public class StatsController implements Initializable {
 
     private void cargarDatos() {
         VentaDAO dao = new VentaDAO();
-        try { cargarMarketBasket(dao); } catch (SQLException e) { e.printStackTrace(); }
-        try { cargarHorarios(dao); } catch (SQLException e) { e.printStackTrace(); }
-        try { cargarHeatmap(dao); } catch (SQLException e) { e.printStackTrace(); }
-        try { cargarTendencias(dao); } catch (SQLException e) { e.printStackTrace(); }
+        try { cargarMarketBasket(dao); } catch (SQLException e) { LOGGER.log(Level.SEVERE, "Error al cargar market basket", e); }
+        try { cargarHorarios(dao); } catch (SQLException e) { LOGGER.log(Level.SEVERE, "Error al cargar horarios", e); }
+        try { cargarHeatmap(dao); } catch (SQLException e) { LOGGER.log(Level.SEVERE, "Error al cargar heatmap", e); }
+        try { cargarTendencias(dao); } catch (SQLException e) { LOGGER.log(Level.SEVERE, "Error al cargar tendencias", e); }
     }
 
     private void cargarMarketBasket(VentaDAO dao) throws SQLException {

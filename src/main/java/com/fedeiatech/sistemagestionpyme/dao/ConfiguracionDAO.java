@@ -6,8 +6,12 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class ConfiguracionDAO {
+
+    private static final Logger LOGGER = Logger.getLogger(ConfiguracionDAO.class.getName());
 
     public Configuracion obtenerConfiguracion() throws SQLException {
         String sql = "SELECT * FROM configuracion WHERE id = 1";
@@ -97,7 +101,7 @@ public class ConfiguracionDAO {
             actualizarTabla(conn);
 
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error al inicializar la tabla configuracion", e);
         }
     }
 
@@ -117,7 +121,7 @@ public class ConfiguracionDAO {
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN usar_enteros INTEGER DEFAULT 0"); } catch (SQLException e) {}
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN margen_ganancia_pct REAL DEFAULT 0.0"); } catch (SQLException e) {}
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error al migrar columnas de configuracion", e);
         }
     }
 

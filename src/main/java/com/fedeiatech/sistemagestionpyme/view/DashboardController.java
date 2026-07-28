@@ -15,6 +15,8 @@ import java.net.URL;
 import java.sql.SQLException;
 import java.util.Map;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -37,6 +39,8 @@ import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
 public class DashboardController implements Initializable {
+
+    private static final Logger LOGGER = Logger.getLogger(DashboardController.class.getName());
 
     @FXML private AnchorPane rootPane;
     @FXML private Label lblEstadoFiscal;
@@ -172,10 +176,10 @@ public class DashboardController implements Initializable {
 
         } catch (SQLException e) {
             lblVentasDia.setText("Error");
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error al cargar métricas del dashboard", e);
         }
-        try { cargarGraficoVentas7Dias(); } catch (Exception e) { e.printStackTrace(); }
-        try { cargarGraficoTop5(); } catch (Exception e) { e.printStackTrace(); }
+        try { cargarGraficoVentas7Dias(); } catch (Exception e) { LOGGER.log(Level.SEVERE, "Error al cargar gráfico de 7 días", e); }
+        try { cargarGraficoTop5(); } catch (Exception e) { LOGGER.log(Level.SEVERE, "Error al cargar gráfico top 5", e); }
     }
 
     private void cargarGraficoVentas7Dias() throws SQLException {
@@ -220,7 +224,7 @@ public class DashboardController implements Initializable {
             stage.setOnHidden(e -> cargarMetricas());
             stage.show();
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error al abrir el POS", e);
         }
     }
 
@@ -284,9 +288,9 @@ public class DashboardController implements Initializable {
             Stage stage = (Stage) lblUsuario.getScene().getWindow();
             stage.setScene(new Scene(root));
             stage.setMaximized(false);
-            stage.setTitle("Sistema FedeiaTech - Pyme v0.7");
+            stage.setTitle("Sistema FedeiaTech - Pyme v0.9.0");
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error al cerrar sesión", e);
         }
     }
 
@@ -305,7 +309,7 @@ public class DashboardController implements Initializable {
             if (alCerrar != null) stage.setOnHidden(e -> alCerrar.run());
             stage.show();
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error al abrir ventana: " + fxmlPath, e);
         }
     }
 }

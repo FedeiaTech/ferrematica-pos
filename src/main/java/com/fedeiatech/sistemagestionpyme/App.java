@@ -6,17 +6,22 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class App extends Application {
 
+    private static final Logger LOGGER = Logger.getLogger(App.class.getName());
+
     @Override
     public void start(Stage stage) throws IOException {
+        com.fedeiatech.sistemagestionpyme.service.LoggingConfig.inicializar();
         try {
             new com.fedeiatech.sistemagestionpyme.dao.ConfiguracionDAO().inicializarTabla();
             new com.fedeiatech.sistemagestionpyme.dao.UsuarioDAO().inicializarTabla();
             com.fedeiatech.sistemagestionpyme.dao.DataSeeder.sembrarDemoSiVacio();
         } catch (Exception e) {
-            System.err.println("Error en inicialización: " + e.getMessage());
+            LOGGER.log(Level.SEVERE, "Error en inicialización", e);
         }
         // Generar LEEME.pdf si no existe
         try {

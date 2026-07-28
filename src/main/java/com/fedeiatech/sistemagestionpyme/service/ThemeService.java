@@ -5,8 +5,12 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class ThemeService {
+
+    private static final Logger LOGGER = Logger.getLogger(ThemeService.class.getName());
 
     public static final String[] COLORES = {"#ffffff", "#c9cfd4", "#c9d3cd", "#b3cad6", "#cbafd4", "#d6c9b3"};
     public static final String[] NOMBRES  = {"Blanco", "Azul claro", "Verde claro", "Azul", "Lavanda", "Crema"};
@@ -47,7 +51,7 @@ public class ThemeService {
             pstmt.setString(1, color);
             pstmt.executeUpdate();
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error al guardar el color de tema", e);
         }
     }
 }

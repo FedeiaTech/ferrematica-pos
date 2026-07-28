@@ -5,10 +5,14 @@ import com.lowagie.text.pdf.*;
 import java.awt.Color;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class LeerMeService {
 
-    private static final String VERSION = "v0.8.0";
+    private static final Logger LOGGER = Logger.getLogger(LeerMeService.class.getName());
+
+    private static final String VERSION = "v0.9.0";
     private static final String AUTOR   = "Federico Iacono — IATech";
     private static final String DERECHOS = "© 2026 IATech. Todos los derechos reservados.";
 
@@ -112,7 +116,7 @@ public class LeerMeService {
             if (!f.exists()) f = generarLeerMe();
             if (java.awt.Desktop.isDesktopSupported()) java.awt.Desktop.getDesktop().open(f);
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error al abrir LEEME.pdf", e);
         }
     }
 }
