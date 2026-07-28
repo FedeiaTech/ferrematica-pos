@@ -272,7 +272,7 @@ public class DashboardController implements Initializable {
     void abrirAcercaDe(ActionEvent event) {
         Alert dlg = new Alert(Alert.AlertType.INFORMATION);
         dlg.setTitle("Acerca de");
-        dlg.setHeaderText("Sistema de Gestión PyME  —  v0.8.0");
+        dlg.setHeaderText("Sistema de Gestión PyME  —  v0.9.0");
         dlg.setContentText(
             "Desarrollado por Federico Iacono\n" +
             "IATech — Soluciones de software para PyMEs argentinas\n\n" +
