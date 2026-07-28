@@ -177,7 +177,7 @@ public class VentaDAO {
                      "FROM detalles_venta d " +
                      "LEFT JOIN items i ON d.id_item = i.id " +
                      "LEFT JOIN combos c ON d.id_combo = c.id " +
-                     "GROUP BY d.id_item, d.id_combo, nombre " +
+                     "GROUP BY d.id_item, d.id_combo " +
                      "ORDER BY total_vendido DESC " +
                      "LIMIT 5";
         try (Connection conn = ConexionDB.getConexion();
