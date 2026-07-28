@@ -3,7 +3,7 @@
 **Sistema de Gestión Comercial para PyMEs argentinas.**  
 *Offline-First, orientado a comercios minoristas. Preparado para integración fiscal ARCA.*
 
-**Estado:** v0.8.1 — Producción | **Licencia:** Propietaria  
+**Estado:** v0.9.0 — Producción | **Licencia:** Propietaria  
 **Autor:** Federico Iacono — IATech  
 **Contacto:** iaconofede@gmail.com
 
@@ -101,6 +101,9 @@ La base de datos `gestion_pyme.db` se crea automáticamente en la raíz del proy
 ---
 
 ## Changelog
+
+### v0.9.0 — 2026-07-28
+- *(en progreso — se completa al cerrar la versión)*
 
 ### v0.8.1 — 2026-05-05
 - Diálogo "Acerca de" con autoría, versión y contacto en el dashboard
