@@ -7,14 +7,17 @@ import java.sql.Statement;
 
 public class ConexionDB {
 
-    private static final String URL = "jdbc:sqlite:" + System.getProperty("db.path", "gestion_pyme.db");
     private static Connection conexion = null;
+
+    private static String urlActual() {
+        return "jdbc:sqlite:" + System.getProperty("db.path", "gestion_pyme.db");
+    }
 
     public static synchronized Connection getConexion() throws SQLException {
         if (conexion == null || conexion.isClosed()) {
             try {
                 Class.forName("org.sqlite.JDBC");
-                conexion = DriverManager.getConnection(URL);
+                conexion = DriverManager.getConnection(urlActual());
                 System.out.println("Conexión a SQLite establecida.");
                 inicializarTablas();
             } catch (ClassNotFoundException e) {
