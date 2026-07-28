@@ -7,10 +7,10 @@ import java.sql.Statement;
 
 public class ConexionDB {
 
-    private static final String URL = "jdbc:sqlite:gestion_pyme.db";
+    private static final String URL = "jdbc:sqlite:" + System.getProperty("db.path", "gestion_pyme.db");
     private static Connection conexion = null;
 
-    public static Connection getConexion() throws SQLException {
+    public static synchronized Connection getConexion() throws SQLException {
         if (conexion == null || conexion.isClosed()) {
             try {
                 Class.forName("org.sqlite.JDBC");
@@ -22,6 +22,11 @@ public class ConexionDB {
             }
         }
         return conexion;
+    }
+
+    static synchronized void resetParaTests() throws SQLException {
+        if (conexion != null && !conexion.isClosed()) conexion.close();
+        conexion = null;
     }
 
     private static void inicializarTablas() throws SQLException {
