@@ -49,6 +49,8 @@ import javafx.stage.Stage;
 
 public class InventoryController implements Initializable {
 
+    private static final java.util.logging.Logger LOGGER = java.util.logging.Logger.getLogger(InventoryController.class.getName());
+
     @FXML private AnchorPane rootPane;
     @FXML private HBox formHBox;
     @FXML private TableView<ItemVenta> tablaItems;
@@ -87,6 +89,7 @@ public class InventoryController implements Initializable {
 
         cmbCategoria.setEditable(true);
         cmbCategoria.getItems().add("General");
+        cargarCategoriasSugeridasDelPerfil();
         cmbCategoria.setValue("General");
 
         configurarColumnas();
@@ -246,6 +249,21 @@ public class InventoryController implements Initializable {
             actualizarSugerenciasCategoria(lista);
         } catch (SQLException e) {
             AlertUtil.mostrar(Alert.AlertType.ERROR, "Error DB", "No se pudo cargar la lista: " + e.getMessage());
+        }
+    }
+
+    private void cargarCategoriasSugeridasDelPerfil() {
+        try {
+            com.fedeiatech.sistemagestionpyme.model.Configuracion config =
+                new com.fedeiatech.sistemagestionpyme.dao.ConfiguracionDAO().obtenerConfiguracion();
+            if (config == null) return;
+            com.fedeiatech.sistemagestionpyme.model.PerfilNegocio perfil =
+                com.fedeiatech.sistemagestionpyme.model.PerfilNegocio.desdeNombre(config.getPerfilNegocio());
+            for (String sugerida : perfil.categoriasSugeridas()) {
+                if (!cmbCategoria.getItems().contains(sugerida)) cmbCategoria.getItems().add(sugerida);
+            }
+        } catch (SQLException e) {
+            LOGGER.log(java.util.logging.Level.WARNING, "No se pudieron cargar las categorías sugeridas del perfil", e);
         }
     }
 

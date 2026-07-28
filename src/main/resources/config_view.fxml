@@ -131,6 +131,17 @@
                                        <Label text="(dejar vacío para calcular desde precio de costo)" style="-fx-text-fill: #7f8c8d; -fx-font-size: 11;" />
                                     </HBox>
 
+                                    <Separator />
+
+                                    <!-- Perfil de negocio -->
+                                    <Label text="Perfil de Negocio" style="-fx-font-weight: bold; -fx-font-size: 13;" />
+                                    <Label text="Define las categorías de producto sugeridas en Inventario. No cambia el funcionamiento del sistema."
+                                           style="-fx-text-fill: #7f8c8d; -fx-font-size: 11;" wrapText="true" />
+                                    <HBox spacing="15.0" alignment="CENTER_LEFT">
+                                       <Label text="Rubro:" />
+                                       <ChoiceBox fx:id="cmbPerfilNegocio" prefWidth="150.0" />
+                                    </HBox>
+
                                  </children>
                               </VBox>
                            </children>

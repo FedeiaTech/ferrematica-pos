@@ -20,6 +20,7 @@ public class Configuracion {
     private boolean ticketMostrarCuit = true;
     private boolean usarEnteros = false;
     private double margenGananciaPct = 0.0;
+    private String perfilNegocio = PerfilNegocio.GENERICO.name();
 
     public Configuracion() {
     }
@@ -93,4 +94,7 @@ public class Configuracion {
 
     public double getMargenGananciaPct() { return margenGananciaPct; }
     public void setMargenGananciaPct(double v) { this.margenGananciaPct = v; }
+
+    public String getPerfilNegocio() { return perfilNegocio; }
+    public void setPerfilNegocio(String perfilNegocio) { this.perfilNegocio = perfilNegocio; }
 }
