@@ -10,6 +10,7 @@ import com.fedeiatech.sistemagestionpyme.service.MockFiscalProvider;
 import com.fedeiatech.sistemagestionpyme.service.SessionService;
 import com.fedeiatech.sistemagestionpyme.service.LeerMeService;
 import com.fedeiatech.sistemagestionpyme.service.ThemeService;
+import com.fedeiatech.sistemagestionpyme.view.util.AlertUtil;
 import java.io.IOException;
 import java.net.URL;
 import java.sql.SQLException;
@@ -177,9 +178,16 @@ public class DashboardController implements Initializable {
         } catch (SQLException e) {
             lblVentasDia.setText("Error");
             LOGGER.log(Level.SEVERE, "Error al cargar métricas del dashboard", e);
+            AlertUtil.mostrarError("Error al cargar dashboard", "No se pudieron cargar las métricas: " + e.getMessage());
         }
-        try { cargarGraficoVentas7Dias(); } catch (Exception e) { LOGGER.log(Level.SEVERE, "Error al cargar gráfico de 7 días", e); }
-        try { cargarGraficoTop5(); } catch (Exception e) { LOGGER.log(Level.SEVERE, "Error al cargar gráfico top 5", e); }
+        try { cargarGraficoVentas7Dias(); } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error al cargar gráfico de 7 días", e);
+            AlertUtil.mostrarError("Error al cargar gráfico", "No se pudo cargar el gráfico de ventas: " + e.getMessage());
+        }
+        try { cargarGraficoTop5(); } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error al cargar gráfico top 5", e);
+            AlertUtil.mostrarError("Error al cargar gráfico", "No se pudo cargar el gráfico de productos: " + e.getMessage());
+        }
     }
 
     private void cargarGraficoVentas7Dias() throws SQLException {

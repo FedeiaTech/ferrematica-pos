@@ -3,6 +3,7 @@ package com.fedeiatech.sistemagestionpyme.view;
 import com.fedeiatech.sistemagestionpyme.dao.VentaDAO;
 import com.fedeiatech.sistemagestionpyme.service.LicenseService;
 import com.fedeiatech.sistemagestionpyme.service.ThemeService;
+import com.fedeiatech.sistemagestionpyme.view.util.AlertUtil;
 import java.net.URL;
 import java.sql.SQLException;
 import java.util.List;
@@ -84,10 +85,22 @@ public class StatsController implements Initializable {
 
     private void cargarDatos() {
         VentaDAO dao = new VentaDAO();
-        try { cargarMarketBasket(dao); } catch (SQLException e) { LOGGER.log(Level.SEVERE, "Error al cargar market basket", e); }
-        try { cargarHorarios(dao); } catch (SQLException e) { LOGGER.log(Level.SEVERE, "Error al cargar horarios", e); }
-        try { cargarHeatmap(dao); } catch (SQLException e) { LOGGER.log(Level.SEVERE, "Error al cargar heatmap", e); }
-        try { cargarTendencias(dao); } catch (SQLException e) { LOGGER.log(Level.SEVERE, "Error al cargar tendencias", e); }
+        try { cargarMarketBasket(dao); } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error al cargar market basket", e);
+            AlertUtil.mostrarError("Error en estadísticas", "No se pudo cargar la canasta de productos: " + e.getMessage());
+        }
+        try { cargarHorarios(dao); } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error al cargar horarios", e);
+            AlertUtil.mostrarError("Error en estadísticas", "No se pudieron cargar los horarios: " + e.getMessage());
+        }
+        try { cargarHeatmap(dao); } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error al cargar heatmap", e);
+            AlertUtil.mostrarError("Error en estadísticas", "No se pudo cargar el mapa de demanda: " + e.getMessage());
+        }
+        try { cargarTendencias(dao); } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error al cargar tendencias", e);
+            AlertUtil.mostrarError("Error en estadísticas", "No se pudieron cargar las tendencias: " + e.getMessage());
+        }
     }
 
     private void cargarMarketBasket(VentaDAO dao) throws SQLException {

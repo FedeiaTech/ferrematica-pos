@@ -7,6 +7,7 @@ import com.fedeiatech.sistemagestionpyme.model.Configuracion;
 import com.fedeiatech.sistemagestionpyme.model.Usuario;
 import com.fedeiatech.sistemagestionpyme.service.SessionService;
 import com.fedeiatech.sistemagestionpyme.service.ThemeService;
+import com.fedeiatech.sistemagestionpyme.view.util.AlertUtil;
 import java.awt.Desktop;
 import java.io.File;
 import java.io.IOException;
@@ -162,7 +163,7 @@ public class ConfigController implements Initializable {
         try {
             if (carpeta.exists() && Desktop.isDesktopSupported()) Desktop.getDesktop().open(carpeta);
         } catch (IOException e) {
-            mostrarAlerta("Error", "No se pudo abrir la carpeta: " + e.getMessage());
+            AlertUtil.mostrarInfo("Error", "No se pudo abrir la carpeta: " + e.getMessage());
         }
     }
 
@@ -181,7 +182,7 @@ public class ConfigController implements Initializable {
         if (archivos != null) {
             for (File f : archivos) { if (f.delete()) eliminados++; }
         }
-        mostrarAlerta("Limpieza completada", eliminados + " ticket(s) eliminados de " + carpeta.getAbsolutePath());
+        AlertUtil.mostrarInfo("Limpieza completada", eliminados + " ticket(s) eliminados de " + carpeta.getAbsolutePath());
     }
 
     @FXML
@@ -190,7 +191,7 @@ public class ConfigController implements Initializable {
         try {
             if (Desktop.isDesktopSupported()) Desktop.getDesktop().open(db.getParentFile());
         } catch (IOException e) {
-            mostrarAlerta("Ubicación de la base de datos", db.getAbsolutePath());
+            AlertUtil.mostrarInfo("Ubicación de la base de datos", db.getAbsolutePath());
         }
     }
 
@@ -202,7 +203,7 @@ public class ConfigController implements Initializable {
             (name.startsWith("ticket_venta_") || name.startsWith("Ticket_")) && new File(d, name).lastModified() < limite);
         int eliminados = 0;
         if (viejos != null) { for (File f : viejos) { if (f.delete()) eliminados++; } }
-        mostrarAlerta("Limpieza completada", eliminados + " ticket(s) temporales eliminados (antiguos de +30 días).");
+        AlertUtil.mostrarInfo("Limpieza completada", eliminados + " ticket(s) temporales eliminados (antiguos de +30 días).");
     }
 
     @FXML
@@ -214,9 +215,9 @@ public class ConfigController implements Initializable {
         if (destino != null) {
             try {
                 Files.copy(new File("gestion_pyme.db").toPath(), destino.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                mostrarAlerta("Backup Exitoso", "Copia guardada en: " + destino.getAbsolutePath());
+                AlertUtil.mostrarInfo("Backup Exitoso", "Copia guardada en: " + destino.getAbsolutePath());
             } catch (IOException e) {
-                mostrarAlerta("Error", "No se pudo crear el backup: " + e.getMessage());
+                AlertUtil.mostrarInfo("Error", "No se pudo crear el backup: " + e.getMessage());
             }
         }
     }
@@ -258,11 +259,11 @@ public class ConfigController implements Initializable {
             }
 
             configDAO.guardarConfiguracion(config);
-            mostrarAlerta("Guardado", "Configuración actualizada correctamente.");
+            AlertUtil.mostrarInfo("Guardado", "Configuración actualizada correctamente.");
             cerrarVentana(event);
 
         } catch (Exception e) {
-            mostrarAlerta("Error", "Verifica los datos ingresados: " + e.getMessage());
+            AlertUtil.mostrarInfo("Error", "Verifica los datos ingresados: " + e.getMessage());
         }
     }
 
@@ -286,12 +287,12 @@ public class ConfigController implements Initializable {
                 try {
                     File destino = new File("gestion_pyme.db").getAbsoluteFile();
                     Files.copy(origen.toPath(), destino.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                    mostrarAlerta("Restauración Exitosa",
+                    AlertUtil.mostrarInfo("Restauración Exitosa",
                         "La base de datos fue restaurada en:\n" + destino.getAbsolutePath() +
                         "\n\nEl sistema se cerrará para aplicar los cambios.");
                     System.exit(0);
                 } catch (IOException e) {
-                    mostrarAlerta("Error", "No se pudo restaurar: " + e.getMessage());
+                    AlertUtil.mostrarInfo("Error", "No se pudo restaurar: " + e.getMessage());
                 }
             }
         }
@@ -314,11 +315,11 @@ public class ConfigController implements Initializable {
             String nombreAdmin = SessionService.getInstance().getUsuarioActivo().getNombre();
             Usuario verificado = new UsuarioDAO().autenticar(nombreAdmin, pfPass.getText());
             if (verificado == null) {
-                mostrarAlerta("Contraseña incorrecta", "La contraseña ingresada no es válida.");
+                AlertUtil.mostrarInfo("Contraseña incorrecta", "La contraseña ingresada no es válida.");
                 return;
             }
         } catch (Exception e) {
-            mostrarAlerta("Error", "No se pudo verificar la identidad: " + e.getMessage());
+            AlertUtil.mostrarInfo("Error", "No se pudo verificar la identidad: " + e.getMessage());
             return;
         }
 
@@ -335,16 +336,10 @@ public class ConfigController implements Initializable {
         // Paso 3: ejecutar
         try {
             int eliminadas = new VentaDAO().borrarTodasLasVentas();
-            mostrarAlerta("Historial borrado", eliminadas + " venta(s) eliminadas. El inventario no fue modificado.");
+            AlertUtil.mostrarInfo("Historial borrado", eliminadas + " venta(s) eliminadas. El inventario no fue modificado.");
         } catch (SQLException e) {
-            mostrarAlerta("Error", "No se pudo borrar el historial: " + e.getMessage());
+            AlertUtil.mostrarInfo("Error", "No se pudo borrar el historial: " + e.getMessage());
         }
     }
 
-    private void mostrarAlerta(String titulo, String contenido) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle(titulo);
-        alert.setContentText(contenido);
-        alert.showAndWait();
-    }
 }
