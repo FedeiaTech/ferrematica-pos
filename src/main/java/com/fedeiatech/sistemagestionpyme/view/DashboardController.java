@@ -27,6 +27,7 @@ import javafx.fxml.Initializable;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.chart.BarChart;
+import javafx.scene.chart.CategoryAxis;
 import javafx.scene.chart.PieChart;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.Alert;
@@ -198,6 +199,7 @@ public class DashboardController implements Initializable {
             serie.getData().add(new XYChart.Data<>(dia, entry.getValue()));
         }
         chartVentas7Dias.getData().clear();
+        ((CategoryAxis) chartVentas7Dias.getXAxis()).getCategories().clear();
         chartVentas7Dias.getData().add(serie);
     }
 
