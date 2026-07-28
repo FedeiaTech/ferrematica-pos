@@ -11,11 +11,11 @@ import java.util.List;
 public class ItemDAO {
 
     public void guardar(ItemVenta item) throws SQLException {
-        String sql = "INSERT INTO items (codigo, nombre, descripcion, precio_costo, precio_venta, stock, es_servicio, unidad) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-        
+        String sql = "INSERT INTO items (codigo, nombre, descripcion, precio_costo, precio_venta, stock, es_servicio, unidad, categoria) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
         try (Connection conn = ConexionDB.getConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
+
             pstmt.setString(1, item.getCodigo());
             pstmt.setString(2, item.getNombre());
             pstmt.setString(3, item.getDescripcion());
@@ -24,13 +24,14 @@ public class ItemDAO {
             pstmt.setDouble(6, item.getStock());
             pstmt.setInt(7, item.isEsServicio() ? 1 : 0);
             pstmt.setString(8, item.getUnidad());
+            pstmt.setString(9, item.getCategoria());
 
             pstmt.executeUpdate();
         }
     }
 
     public void actualizar(ItemVenta item) throws SQLException {
-        String sql = "UPDATE items SET codigo=?, nombre=?, descripcion=?, precio_costo=?, precio_venta=?, stock=?, es_servicio=?, unidad=? WHERE id=?";
+        String sql = "UPDATE items SET codigo=?, nombre=?, descripcion=?, precio_costo=?, precio_venta=?, stock=?, es_servicio=?, unidad=?, categoria=? WHERE id=?";
 
         try (Connection conn = ConexionDB.getConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -43,7 +44,8 @@ public class ItemDAO {
             pstmt.setDouble(6, item.getStock());
             pstmt.setInt(7, item.isEsServicio() ? 1 : 0);
             pstmt.setString(8, item.getUnidad());
-            pstmt.setInt(9, item.getId());
+            pstmt.setString(9, item.getCategoria());
+            pstmt.setInt(10, item.getId());
 
             pstmt.executeUpdate();
         }
@@ -76,6 +78,7 @@ public class ItemDAO {
                     item.setEsServicio(rs.getInt("es_servicio") == 1);
                     String unidad = rs.getString("unidad");
                     item.setUnidad(unidad != null ? unidad : "u");
+                    item.setCategoria(rs.getString("categoria"));
                     return item;
                 }
             }
@@ -103,6 +106,7 @@ public class ItemDAO {
                 item.setEsServicio(rs.getInt("es_servicio") == 1);
                 String unidad = rs.getString("unidad");
                 item.setUnidad(unidad != null ? unidad : "u");
+                item.setCategoria(rs.getString("categoria"));
                 lista.add(item);
             }
         }

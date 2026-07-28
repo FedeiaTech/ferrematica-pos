@@ -57,12 +57,14 @@ public class InventoryController implements Initializable {
     @FXML private TableColumn<ItemVenta, String> colNombre;
     @FXML private TableColumn<ItemVenta, Double> colPrecio;
     @FXML private TableColumn<ItemVenta, Double> colStock;
+    @FXML private TableColumn<ItemVenta, String> colCategoria;
 
     @FXML private TextField txtCodigo;
     @FXML private TextField txtNombre;
     @FXML private TextField txtPrecio;
     @FXML private TextField txtStock;
     @FXML private ComboBox<String> cmbUnidad;
+    @FXML private ComboBox<String> cmbCategoria;
     @FXML private CheckBox chkServicio;
     @FXML private Button btnGuardar;
     @FXML private Button btnCancelar;
@@ -82,6 +84,10 @@ public class InventoryController implements Initializable {
 
         cmbUnidad.getItems().addAll("u", "kg", "g", "lt");
         cmbUnidad.setValue("u");
+
+        cmbCategoria.setEditable(true);
+        cmbCategoria.getItems().add("General");
+        cmbCategoria.setValue("General");
 
         configurarColumnas();
         cargarDatos();
@@ -131,6 +137,7 @@ public class InventoryController implements Initializable {
             cmbUnidad.setValue(item.getUnidad());
             cmbUnidad.setDisable(false);
         }
+        cmbCategoria.setValue(item.getCategoria());
 
         lblFormTitulo.setText("Editando: " + item.getNombre());
         btnGuardar.setText("ACTUALIZAR");
@@ -151,6 +158,7 @@ public class InventoryController implements Initializable {
         colNombre.setCellValueFactory(new PropertyValueFactory<>("nombre"));
         colPrecio.setCellValueFactory(new PropertyValueFactory<>("precioVenta"));
         colStock.setCellValueFactory(new PropertyValueFactory<>("stock"));
+        colCategoria.setCellValueFactory(new PropertyValueFactory<>("categoria"));
 
         tablaItems.setRowFactory(tv -> new TableRow<ItemVenta>() {
             @Override
@@ -235,9 +243,19 @@ public class InventoryController implements Initializable {
             }
             listaItems = FXCollections.observableArrayList(lista);
             tablaItems.setItems(listaItems);
+            actualizarSugerenciasCategoria(lista);
         } catch (SQLException e) {
             AlertUtil.mostrar(Alert.AlertType.ERROR, "Error DB", "No se pudo cargar la lista: " + e.getMessage());
         }
+    }
+
+    private void actualizarSugerenciasCategoria(List<ItemVenta> items) {
+        String valorActual = cmbCategoria.getValue();
+        java.util.LinkedHashSet<String> categorias = new java.util.LinkedHashSet<>();
+        categorias.add("General");
+        for (ItemVenta item : items) categorias.add(item.getCategoria());
+        cmbCategoria.getItems().setAll(categorias);
+        cmbCategoria.setValue(valorActual != null ? valorActual : "General");
     }
 
     @FXML
@@ -287,6 +305,8 @@ public class InventoryController implements Initializable {
                 item.setStock(Double.parseDouble(stockStr));
                 item.setUnidad(cmbUnidad.getValue() != null ? cmbUnidad.getValue() : "u");
             }
+            String categoria = cmbCategoria.getValue();
+            item.setCategoria(categoria != null && !categoria.isBlank() ? categoria.trim() : "General");
 
             if (itemEnEdicion != null) {
                 itemDAO.actualizar(item);
@@ -500,6 +520,7 @@ public class InventoryController implements Initializable {
         txtStock.setDisable(false);
         cmbUnidad.setValue("u");
         cmbUnidad.setDisable(false);
+        cmbCategoria.setValue("General");
         chkServicio.setSelected(false);
         lblFormTitulo.setText("Nuevo Producto / Servicio:");
         btnGuardar.setText("AGREGAR");

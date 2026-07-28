@@ -52,6 +52,11 @@ public class ConexionDB {
         } catch (SQLException ignored) {
         }
 
+        try {
+            stmt.execute("ALTER TABLE items ADD COLUMN categoria TEXT DEFAULT 'General'");
+        } catch (SQLException ignored) {
+        }
+
         String sqlVentas = "CREATE TABLE IF NOT EXISTS ventas ("
                 + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
                 + "fecha TEXT NOT NULL,"
