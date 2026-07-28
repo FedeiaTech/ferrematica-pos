@@ -210,6 +210,7 @@ public class DashboardController implements Initializable {
             pieData.add(new PieChart.Data(entry.getKey(), entry.getValue()));
         }
         chartTop5.setData(pieData);
+        chartTop5.layout();
     }
 
     private void verificarEstadoFiscal() {
