@@ -74,4 +74,22 @@ class ConfiguracionDAOTest {
         assertEquals("dueno@ferreteria.com", recargado.getSupabaseSyncEmail());
         assertEquals("secreta123", recargado.getSupabaseSyncPassword());
     }
+
+    @Test
+    void ultimaSincronizacionExitosaPersisteYSobrevivReinicioSinPisarOtrosCampos() throws SQLException {
+        configuracionDAO.inicializarTabla();
+
+        Configuracion config = configuracionDAO.obtenerConfiguracion();
+        config.setNombreEmpresa("Ferretería Don José");
+        configuracionDAO.guardarConfiguracion(config);
+
+        String instante = "2026-08-04T18:00:00Z";
+        configuracionDAO.actualizarUltimaSincronizacionExitosa(instante);
+
+        ConfiguracionDAO reiniciado = new ConfiguracionDAO();
+        Configuracion recargado = reiniciado.obtenerConfiguracion();
+
+        assertEquals(instante, recargado.getSupabaseUltimaSyncExitosa());
+        assertEquals("Ferretería Don José", recargado.getNombreEmpresa());
+    }
 }

@@ -48,6 +48,7 @@ public class ConfiguracionDAO {
                 config.setSupabaseSyncIntervaloMin(rs.getInt("supabase_sync_intervalo_min") == 0 ? 15 : rs.getInt("supabase_sync_intervalo_min"));
                 config.setSupabaseSyncEmail(rs.getString("supabase_sync_email"));
                 config.setSupabaseSyncPassword(rs.getString("supabase_sync_password"));
+                config.setSupabaseUltimaSyncExitosa(rs.getString("supabase_ultima_sync_exitosa"));
             }
         }
         return config;
@@ -96,6 +97,16 @@ public class ConfiguracionDAO {
         }
     }
 
+    /** Update liviano de una sola columna — no pisa el resto de la config con un objeto potencialmente desactualizado. */
+    public void actualizarUltimaSincronizacionExitosa(String instanteIso) throws SQLException {
+        String sql = "UPDATE configuracion SET supabase_ultima_sync_exitosa=? WHERE id=1";
+        try (Connection conn = ConexionDB.getConexion();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, instanteIso);
+            pstmt.executeUpdate();
+        }
+    }
+
     public void inicializarTabla() {
         String sqlCreate = "CREATE TABLE IF NOT EXISTS configuracion ("
                          + "id INTEGER PRIMARY KEY CHECK (id = 1), "
@@ -138,6 +149,7 @@ public class ConfiguracionDAO {
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN supabase_sync_intervalo_min INTEGER DEFAULT 15"); } catch (SQLException e) {}
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN supabase_sync_email TEXT"); } catch (SQLException e) {}
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN supabase_sync_password TEXT"); } catch (SQLException e) {}
+            try { stmt.execute("ALTER TABLE configuracion ADD COLUMN supabase_ultima_sync_exitosa TEXT"); } catch (SQLException e) {}
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error al migrar columnas de configuracion", e);
         }

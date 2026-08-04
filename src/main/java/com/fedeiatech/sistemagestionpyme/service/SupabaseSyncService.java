@@ -62,7 +62,6 @@ public class SupabaseSyncService {
     private final PostgrestClient clienteInyectado;
 
     private ScheduledExecutorService scheduler;
-    private volatile Instant ultimaSincronizacionExitosaEn;
 
     private SupabaseSyncService() {
         this(new ItemDAO(), new ConfiguracionDAO(), null);
@@ -117,12 +116,23 @@ public class SupabaseSyncService {
             }
         }
 
-        ultimaSincronizacionExitosaEn = Instant.now();
+        configDAO.actualizarUltimaSincronizacionExitosa(Instant.now().toString());
     }
 
-    /** Momento de la última sincronización exitosa, o {@code null} si nunca sincronizó en este proceso. */
+    /**
+     * Momento de la última sincronización exitosa, persistido en {@code configuracion} — sobrevive
+     * un reinicio de la app. {@code null} si nunca sincronizó con éxito, o si el valor guardado no
+     * es parseable.
+     */
     public Instant ultimaSincronizacionExitosaEn() {
-        return ultimaSincronizacionExitosaEn;
+        try {
+            Configuracion config = configDAO.obtenerConfiguracion();
+            String valor = config != null ? config.getSupabaseUltimaSyncExitosa() : null;
+            return valor == null || valor.isBlank() ? null : Instant.parse(valor);
+        } catch (SQLException | java.time.format.DateTimeParseException e) {
+            LOGGER.log(Level.WARNING, "No se pudo leer la última sincronización exitosa persistida", e);
+            return null;
+        }
     }
 
     /** Arranca (o reprograma) el scheduler periódico según la configuración vigente; no hace nada si está deshabilitado. */

@@ -27,6 +27,7 @@ public class Configuracion {
     private int supabaseSyncIntervaloMin = 15;
     private String supabaseSyncEmail;
     private String supabaseSyncPassword;
+    private String supabaseUltimaSyncExitosa;
 
     public Configuracion() {
     }
@@ -115,4 +116,8 @@ public class Configuracion {
 
     public String getSupabaseSyncPassword() { return supabaseSyncPassword; }
     public void setSupabaseSyncPassword(String v) { this.supabaseSyncPassword = v; }
+
+    /** Instant.toString() de la última sincronización exitosa, o null si nunca sincronizó. */
+    public String getSupabaseUltimaSyncExitosa() { return supabaseUltimaSyncExitosa; }
+    public void setSupabaseUltimaSyncExitosa(String v) { this.supabaseUltimaSyncExitosa = v; }
 }
