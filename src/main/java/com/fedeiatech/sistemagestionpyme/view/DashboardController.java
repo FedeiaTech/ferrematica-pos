@@ -67,6 +67,7 @@ public class DashboardController implements Initializable {
     @FXML private Button btnTema3;
     @FXML private Button btnTema4;
     @FXML private Button btnTema5;
+    @FXML private Button btnTema6;
     @FXML private Button btnEstadisticas;
 
     private IFiscalProvider fiscalProvider;
@@ -79,7 +80,7 @@ public class DashboardController implements Initializable {
 
         rootPane.setStyle(ThemeService.getInstance().getBgStyle());
 
-        Button[] botonesTema = {btnTema0, btnTema1, btnTema2, btnTema3, btnTema4, btnTema5};
+        Button[] botonesTema = {btnTema0, btnTema1, btnTema2, btnTema3, btnTema4, btnTema5, btnTema6};
         for (int i = 0; i < botonesTema.length; i++) {
             botonesTema[i].setUserData(i);
         }
