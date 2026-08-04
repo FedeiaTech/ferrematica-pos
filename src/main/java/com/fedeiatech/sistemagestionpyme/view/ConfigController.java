@@ -338,7 +338,6 @@ public class ConfigController implements Initializable {
             configDAO.guardarConfiguracion(config);
             SupabaseSyncService.getInstance().iniciarProgramacionSiCorresponde();
             AlertUtil.mostrarInfo("Guardado", "Configuración actualizada correctamente.");
-            cerrarVentana(event);
 
         } catch (Exception e) {
             AlertUtil.mostrarInfo("Error", "Verifica los datos ingresados: " + e.getMessage());
