@@ -1,0 +1,27 @@
+# Build
+target/
+dependency-reduced-pom.xml
+
+# Base de datos local
+*.db
+
+# Logs de la app
+logs/
+
+# Configuración interna de desarrollo (uso interno, nunca se commitea)
+CLAUDE.md
+.claude/
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Generado en runtime
+LEEME.pdf
+
+# Sistema operativo
+.DS_Store
+
+# SDD skill registry cache
+.atl/

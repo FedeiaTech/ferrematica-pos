@@ -11,11 +11,13 @@ public class ItemVenta {
     private double stock;
     private boolean esServicio;
     private String unidad;
+    private String categoria;
     private boolean esCombo = false;
     private int idCombo = 0;
 
     public ItemVenta() {
         this.unidad = "u";
+        this.categoria = "General";
     }
 
     public ItemVenta(int id, String codigo, String nombre, String descripcion, double precioCosto, double precioVenta, double stock, boolean esServicio) {
@@ -28,6 +30,7 @@ public class ItemVenta {
         this.stock = stock;
         this.esServicio = esServicio;
         this.unidad = "u";
+        this.categoria = "General";
     }
 
     public int getId() { return id; }
@@ -56,6 +59,9 @@ public class ItemVenta {
 
     public String getUnidad() { return unidad != null ? unidad : "u"; }
     public void setUnidad(String unidad) { this.unidad = unidad; }
+
+    public String getCategoria() { return categoria != null ? categoria : "General"; }
+    public void setCategoria(String categoria) { this.categoria = categoria; }
 
     public boolean isEsCombo() { return esCombo; }
     public void setEsCombo(boolean esCombo) { this.esCombo = esCombo; }

@@ -6,8 +6,12 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class ConfiguracionDAO {
+
+    private static final Logger LOGGER = Logger.getLogger(ConfiguracionDAO.class.getName());
 
     public Configuracion obtenerConfiguracion() throws SQLException {
         String sql = "SELECT * FROM configuracion WHERE id = 1";
@@ -33,12 +37,18 @@ public class ConfiguracionDAO {
                 config.setRutaGuardadoTickets(rs.getString("ruta_tickets"));
                 String colorTema = rs.getString("color_tema");
                 config.setColorTema(colorTema != null ? colorTema : "#f4f6f8");
-                config.setPremiumDesbloqueado(rs.getInt("premium_desbloqueado") == 1);
                 config.setAnchoTicketMm(rs.getInt("ancho_ticket_mm") == 0 ? 80 : rs.getInt("ancho_ticket_mm"));
                 config.setTicketMostrarDireccion(rs.getInt("ticket_mostrar_direccion") != 0);
                 config.setTicketMostrarCuit(rs.getInt("ticket_mostrar_cuit") != 0);
                 config.setUsarEnteros(rs.getInt("usar_enteros") == 1);
                 config.setMargenGananciaPct(rs.getDouble("margen_ganancia_pct"));
+                config.setSupabaseUrl(rs.getString("supabase_url"));
+                config.setSupabaseAnonKey(rs.getString("supabase_anon_key"));
+                config.setSupabaseSyncHabilitado(rs.getInt("supabase_sync_habilitado") == 1);
+                config.setSupabaseSyncIntervaloMin(rs.getInt("supabase_sync_intervalo_min") == 0 ? 15 : rs.getInt("supabase_sync_intervalo_min"));
+                config.setSupabaseSyncEmail(rs.getString("supabase_sync_email"));
+                config.setSupabaseSyncPassword(rs.getString("supabase_sync_password"));
+                config.setSupabaseUltimaSyncExitosa(rs.getString("supabase_ultima_sync_exitosa"));
             }
         }
         return config;
@@ -51,7 +61,9 @@ public class ConfiguracionDAO {
                    + "ruta_logo=?, mensaje_ticket=?, permitir_stock_negativo=?, recargo_tarjeta=?, "
                    + "ruta_backup=?, ruta_tickets=?, "
                    + "ancho_ticket_mm=?, ticket_mostrar_direccion=?, ticket_mostrar_cuit=?, "
-                   + "usar_enteros=?, margen_ganancia_pct=? "
+                   + "usar_enteros=?, margen_ganancia_pct=?, "
+                   + "supabase_url=?, supabase_anon_key=?, supabase_sync_habilitado=?, "
+                   + "supabase_sync_intervalo_min=?, supabase_sync_email=?, supabase_sync_password=? "
                    + "WHERE id=1";
 
         try (Connection conn = ConexionDB.getConexion();
@@ -74,7 +86,23 @@ public class ConfiguracionDAO {
             pstmt.setInt(15, config.isTicketMostrarCuit() ? 1 : 0);
             pstmt.setInt(16, config.isUsarEnteros() ? 1 : 0);
             pstmt.setDouble(17, config.getMargenGananciaPct());
+            pstmt.setString(18, config.getSupabaseUrl());
+            pstmt.setString(19, config.getSupabaseAnonKey());
+            pstmt.setInt(20, config.isSupabaseSyncHabilitado() ? 1 : 0);
+            pstmt.setInt(21, config.getSupabaseSyncIntervaloMin());
+            pstmt.setString(22, config.getSupabaseSyncEmail());
+            pstmt.setString(23, config.getSupabaseSyncPassword());
 
+            pstmt.executeUpdate();
+        }
+    }
+
+    /** Update liviano de una sola columna — no pisa el resto de la config con un objeto potencialmente desactualizado. */
+    public void actualizarUltimaSincronizacionExitosa(String instanteIso) throws SQLException {
+        String sql = "UPDATE configuracion SET supabase_ultima_sync_exitosa=? WHERE id=1";
+        try (Connection conn = ConexionDB.getConexion();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, instanteIso);
             pstmt.executeUpdate();
         }
     }
@@ -97,7 +125,7 @@ public class ConfiguracionDAO {
             actualizarTabla(conn);
 
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error al inicializar la tabla configuracion", e);
         }
     }
 
@@ -110,22 +138,20 @@ public class ConfiguracionDAO {
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN ruta_backup TEXT"); } catch (SQLException e) {}
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN ruta_tickets TEXT"); } catch (SQLException e) {}
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN color_tema TEXT DEFAULT '#ffffff'"); } catch (SQLException e) {}
-            try { stmt.execute("ALTER TABLE configuracion ADD COLUMN premium_desbloqueado INTEGER DEFAULT 0"); } catch (SQLException e) {}
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN ancho_ticket_mm INTEGER DEFAULT 80"); } catch (SQLException e) {}
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN ticket_mostrar_direccion INTEGER DEFAULT 1"); } catch (SQLException e) {}
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN ticket_mostrar_cuit INTEGER DEFAULT 1"); } catch (SQLException e) {}
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN usar_enteros INTEGER DEFAULT 0"); } catch (SQLException e) {}
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN margen_ganancia_pct REAL DEFAULT 0.0"); } catch (SQLException e) {}
+            try { stmt.execute("ALTER TABLE configuracion ADD COLUMN supabase_url TEXT"); } catch (SQLException e) {}
+            try { stmt.execute("ALTER TABLE configuracion ADD COLUMN supabase_anon_key TEXT"); } catch (SQLException e) {}
+            try { stmt.execute("ALTER TABLE configuracion ADD COLUMN supabase_sync_habilitado INTEGER DEFAULT 0"); } catch (SQLException e) {}
+            try { stmt.execute("ALTER TABLE configuracion ADD COLUMN supabase_sync_intervalo_min INTEGER DEFAULT 15"); } catch (SQLException e) {}
+            try { stmt.execute("ALTER TABLE configuracion ADD COLUMN supabase_sync_email TEXT"); } catch (SQLException e) {}
+            try { stmt.execute("ALTER TABLE configuracion ADD COLUMN supabase_sync_password TEXT"); } catch (SQLException e) {}
+            try { stmt.execute("ALTER TABLE configuracion ADD COLUMN supabase_ultima_sync_exitosa TEXT"); } catch (SQLException e) {}
         } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void desbloquearPremium() throws SQLException {
-        String sql = "UPDATE configuracion SET premium_desbloqueado = 1 WHERE id = 1";
-        try (Connection conn = ConexionDB.getConexion();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.executeUpdate();
+            LOGGER.log(Level.SEVERE, "Error al migrar columnas de configuracion", e);
         }
     }
 }

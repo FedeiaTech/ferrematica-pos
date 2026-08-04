@@ -1,12 +1,16 @@
 package com.fedeiatech.sistemagestionpyme.view;
 
 import com.fedeiatech.sistemagestionpyme.dao.ConfiguracionDAO;
+import com.fedeiatech.sistemagestionpyme.dao.ItemDAO;
 import com.fedeiatech.sistemagestionpyme.dao.UsuarioDAO;
 import com.fedeiatech.sistemagestionpyme.dao.VentaDAO;
 import com.fedeiatech.sistemagestionpyme.model.Configuracion;
 import com.fedeiatech.sistemagestionpyme.model.Usuario;
 import com.fedeiatech.sistemagestionpyme.service.SessionService;
+import com.fedeiatech.sistemagestionpyme.service.SupabaseSyncService;
+import com.fedeiatech.sistemagestionpyme.service.SyncBloqueadoException;
 import com.fedeiatech.sistemagestionpyme.service.ThemeService;
+import com.fedeiatech.sistemagestionpyme.view.util.AlertUtil;
 import java.awt.Desktop;
 import java.io.File;
 import java.io.IOException;
@@ -14,7 +18,10 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -22,11 +29,14 @@ import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 public class ConfigController implements Initializable {
+
+    private static final Logger LOGGER = Logger.getLogger(ConfigController.class.getName());
 
     @FXML private AnchorPane rootPane;
     @FXML private TextField txtNombreEmpresa;
@@ -52,6 +62,18 @@ public class ConfigController implements Initializable {
     @FXML private CheckBox chkUsarEnteros;
     @FXML private TextField txtMargenGanancia;
 
+    // Sincronización con Supabase (ADMIN-only)
+    @FXML private Tab tabSyncSupabase;
+    @FXML private VBox vboxSyncSupabase;
+    @FXML private TextField txtSupabaseUrl;
+    @FXML private TextField txtSupabaseAnonKey;
+    @FXML private TextField txtSupabaseSyncEmail;
+    @FXML private PasswordField txtSupabaseSyncPassword;
+    @FXML private TextField txtSupabaseSyncIntervaloMin;
+    @FXML private CheckBox chkSupabaseSyncHabilitado;
+    @FXML private Label lblSyncBloqueado;
+    @FXML private Button btnSincronizarAhora;
+
     private ConfiguracionDAO configDAO;
     private File archivoLogoSeleccionado;
 
@@ -63,6 +85,47 @@ public class ConfigController implements Initializable {
             cmbAnchoTicket.getItems().addAll("58 mm", "80 mm");
         }
         cargarDatos();
+        configurarVisibilidadSync();
+    }
+
+    private void configurarVisibilidadSync() {
+        if (tabSyncSupabase == null) return;
+        if (!SessionService.getInstance().esAdmin()) {
+            tabSyncSupabase.setDisable(true);
+            TabPane tabPane = (TabPane) tabSyncSupabase.getTabPane();
+            if (tabPane != null) tabPane.getTabs().remove(tabSyncSupabase);
+            return;
+        }
+        actualizarEstadoBloqueoSync();
+    }
+
+    private void actualizarEstadoBloqueoSync() {
+        if (lblSyncBloqueado == null) return;
+        try {
+            List<String> bloqueados = new ItemDAO().validarCodigosParaSync();
+            if (bloqueados.isEmpty()) {
+                lblSyncBloqueado.setText("");
+                lblSyncBloqueado.setVisible(false);
+                lblSyncBloqueado.setManaged(false);
+                if (chkSupabaseSyncHabilitado != null) chkSupabaseSyncHabilitado.setDisable(false);
+                if (btnSincronizarAhora != null) btnSincronizarAhora.setDisable(false);
+            } else {
+                StringBuilder sb = new StringBuilder("Sincronización bloqueada: corregí estos productos en Inventario (código vacío o duplicado):\n");
+                for (String linea : bloqueados) {
+                    sb.append("• ").append(linea).append("\n");
+                }
+                lblSyncBloqueado.setText(sb.toString());
+                lblSyncBloqueado.setVisible(true);
+                lblSyncBloqueado.setManaged(true);
+                if (chkSupabaseSyncHabilitado != null) {
+                    chkSupabaseSyncHabilitado.setSelected(false);
+                    chkSupabaseSyncHabilitado.setDisable(true);
+                }
+                if (btnSincronizarAhora != null) btnSincronizarAhora.setDisable(true);
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error al validar códigos para sincronización", e);
+        }
     }
 
     private void cargarDatos() {
@@ -98,9 +161,17 @@ public class ConfigController implements Initializable {
                 if (chkUsarEnteros != null) chkUsarEnteros.setSelected(config.isUsarEnteros());
                 if (txtMargenGanancia != null) txtMargenGanancia.setText(
                     config.getMargenGananciaPct() > 0 ? String.valueOf(config.getMargenGananciaPct()) : "");
+
+                // Sincronización con Supabase
+                if (txtSupabaseUrl != null) txtSupabaseUrl.setText(config.getSupabaseUrl() != null ? config.getSupabaseUrl() : "");
+                if (txtSupabaseAnonKey != null) txtSupabaseAnonKey.setText(config.getSupabaseAnonKey() != null ? config.getSupabaseAnonKey() : "");
+                if (txtSupabaseSyncEmail != null) txtSupabaseSyncEmail.setText(config.getSupabaseSyncEmail() != null ? config.getSupabaseSyncEmail() : "");
+                if (txtSupabaseSyncPassword != null) txtSupabaseSyncPassword.setText(config.getSupabaseSyncPassword() != null ? config.getSupabaseSyncPassword() : "");
+                if (txtSupabaseSyncIntervaloMin != null) txtSupabaseSyncIntervaloMin.setText(String.valueOf(config.getSupabaseSyncIntervaloMin()));
+                if (chkSupabaseSyncHabilitado != null) chkSupabaseSyncHabilitado.setSelected(config.isSupabaseSyncHabilitado());
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error al cargar la configuración", e);
         }
     }
 
@@ -158,7 +229,7 @@ public class ConfigController implements Initializable {
         try {
             if (carpeta.exists() && Desktop.isDesktopSupported()) Desktop.getDesktop().open(carpeta);
         } catch (IOException e) {
-            mostrarAlerta("Error", "No se pudo abrir la carpeta: " + e.getMessage());
+            AlertUtil.mostrarInfo("Error", "No se pudo abrir la carpeta: " + e.getMessage());
         }
     }
 
@@ -177,7 +248,7 @@ public class ConfigController implements Initializable {
         if (archivos != null) {
             for (File f : archivos) { if (f.delete()) eliminados++; }
         }
-        mostrarAlerta("Limpieza completada", eliminados + " ticket(s) eliminados de " + carpeta.getAbsolutePath());
+        AlertUtil.mostrarInfo("Limpieza completada", eliminados + " ticket(s) eliminados de " + carpeta.getAbsolutePath());
     }
 
     @FXML
@@ -186,7 +257,7 @@ public class ConfigController implements Initializable {
         try {
             if (Desktop.isDesktopSupported()) Desktop.getDesktop().open(db.getParentFile());
         } catch (IOException e) {
-            mostrarAlerta("Ubicación de la base de datos", db.getAbsolutePath());
+            AlertUtil.mostrarInfo("Ubicación de la base de datos", db.getAbsolutePath());
         }
     }
 
@@ -198,7 +269,7 @@ public class ConfigController implements Initializable {
             (name.startsWith("ticket_venta_") || name.startsWith("Ticket_")) && new File(d, name).lastModified() < limite);
         int eliminados = 0;
         if (viejos != null) { for (File f : viejos) { if (f.delete()) eliminados++; } }
-        mostrarAlerta("Limpieza completada", eliminados + " ticket(s) temporales eliminados (antiguos de +30 días).");
+        AlertUtil.mostrarInfo("Limpieza completada", eliminados + " ticket(s) temporales eliminados (antiguos de +30 días).");
     }
 
     @FXML
@@ -210,9 +281,9 @@ public class ConfigController implements Initializable {
         if (destino != null) {
             try {
                 Files.copy(new File("gestion_pyme.db").toPath(), destino.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                mostrarAlerta("Backup Exitoso", "Copia guardada en: " + destino.getAbsolutePath());
+                AlertUtil.mostrarInfo("Backup Exitoso", "Copia guardada en: " + destino.getAbsolutePath());
             } catch (IOException e) {
-                mostrarAlerta("Error", "No se pudo crear el backup: " + e.getMessage());
+                AlertUtil.mostrarInfo("Error", "No se pudo crear el backup: " + e.getMessage());
             }
         }
     }
@@ -220,46 +291,97 @@ public class ConfigController implements Initializable {
     @FXML
     void guardarCambios(ActionEvent event) {
         try {
-            int pv = Integer.parseInt(txtPuntoVenta.getText());
-            double recargo = Double.parseDouble(txtRecargo.getText().replace(",", "."));
-
-            Configuracion configActual = configDAO.obtenerConfiguracion();
-            Configuracion config = new Configuracion();
-            config.setNombreEmpresa(txtNombreEmpresa.getText());
-            config.setCuit(txtCuit.getText());
-            config.setDireccion(txtDireccion.getText());
-            config.setCondicionIva(txtCondicionIva.getText());
-            config.setPuntoVenta(pv);
-            config.setRutaLogo(lblRutaLogo.getText());
-            config.setMensajeTicket(txtMensajeTicket.getText());
-            config.setRutaGuardadoTickets(txtRutaTickets.getText());
-            config.setPermitirStockNegativo(chkStockNegativo.isSelected());
-            config.setRecargoTarjeta(recargo);
-            if (configActual != null) {
-                config.setCertificadoRuta(configActual.getCertificadoRuta());
-                config.setRutaBackup(configActual.getRutaBackup());
-                config.setPremiumDesbloqueado(configActual.isPremiumDesbloqueado());
-                config.setColorTema(configActual.getColorTema());
-            }
-
-            // Nuevos campos
-            if (cmbAnchoTicket != null) {
-                config.setAnchoTicketMm(cmbAnchoTicket.getValue() != null && cmbAnchoTicket.getValue().startsWith("58") ? 58 : 80);
-            }
-            config.setTicketMostrarDireccion(chkMostrarDireccion != null && chkMostrarDireccion.isSelected());
-            config.setTicketMostrarCuit(chkMostrarCuit != null && chkMostrarCuit.isSelected());
-            config.setUsarEnteros(chkUsarEnteros != null && chkUsarEnteros.isSelected());
-            if (txtMargenGanancia != null && !txtMargenGanancia.getText().isBlank()) {
-                config.setMargenGananciaPct(Double.parseDouble(txtMargenGanancia.getText().replace(",", ".")));
-            }
-
-            configDAO.guardarConfiguracion(config);
-            mostrarAlerta("Guardado", "Configuración actualizada correctamente.");
+            guardarConfiguracionDesdeFormulario();
+            AlertUtil.mostrarInfo("Guardado", "Configuración actualizada correctamente.");
             cerrarVentana(event);
-
         } catch (Exception e) {
-            mostrarAlerta("Error", "Verifica los datos ingresados: " + e.getMessage());
+            AlertUtil.mostrarInfo("Error", "Verifica los datos ingresados: " + e.getMessage());
         }
+    }
+
+    private void guardarConfiguracionDesdeFormulario() throws Exception {
+        int pv = Integer.parseInt(txtPuntoVenta.getText());
+        double recargo = Double.parseDouble(txtRecargo.getText().replace(",", "."));
+
+        Configuracion configActual = configDAO.obtenerConfiguracion();
+        Configuracion config = new Configuracion();
+        config.setNombreEmpresa(txtNombreEmpresa.getText());
+        config.setCuit(txtCuit.getText());
+        config.setDireccion(txtDireccion.getText());
+        config.setCondicionIva(txtCondicionIva.getText());
+        config.setPuntoVenta(pv);
+        config.setRutaLogo(lblRutaLogo.getText());
+        config.setMensajeTicket(txtMensajeTicket.getText());
+        config.setRutaGuardadoTickets(txtRutaTickets.getText());
+        config.setPermitirStockNegativo(chkStockNegativo.isSelected());
+        config.setRecargoTarjeta(recargo);
+        if (configActual != null) {
+            config.setCertificadoRuta(configActual.getCertificadoRuta());
+            config.setRutaBackup(configActual.getRutaBackup());
+            config.setColorTema(configActual.getColorTema());
+        }
+
+        // Nuevos campos
+        if (cmbAnchoTicket != null) {
+            config.setAnchoTicketMm(cmbAnchoTicket.getValue() != null && cmbAnchoTicket.getValue().startsWith("58") ? 58 : 80);
+        }
+        config.setTicketMostrarDireccion(chkMostrarDireccion != null && chkMostrarDireccion.isSelected());
+        config.setTicketMostrarCuit(chkMostrarCuit != null && chkMostrarCuit.isSelected());
+        config.setUsarEnteros(chkUsarEnteros != null && chkUsarEnteros.isSelected());
+        if (txtMargenGanancia != null && !txtMargenGanancia.getText().isBlank()) {
+            config.setMargenGananciaPct(Double.parseDouble(txtMargenGanancia.getText().replace(",", ".")));
+        }
+
+        // Sincronización con Supabase
+        if (txtSupabaseUrl != null) config.setSupabaseUrl(txtSupabaseUrl.getText());
+        if (txtSupabaseAnonKey != null) config.setSupabaseAnonKey(txtSupabaseAnonKey.getText());
+        if (txtSupabaseSyncEmail != null) config.setSupabaseSyncEmail(txtSupabaseSyncEmail.getText());
+        if (txtSupabaseSyncPassword != null) config.setSupabaseSyncPassword(txtSupabaseSyncPassword.getText());
+        if (txtSupabaseSyncIntervaloMin != null && !txtSupabaseSyncIntervaloMin.getText().isBlank()) {
+            config.setSupabaseSyncIntervaloMin(Integer.parseInt(txtSupabaseSyncIntervaloMin.getText().trim()));
+        } else {
+            config.setSupabaseSyncIntervaloMin(15);
+        }
+        config.setSupabaseSyncHabilitado(chkSupabaseSyncHabilitado != null && chkSupabaseSyncHabilitado.isSelected());
+
+        configDAO.guardarConfiguracion(config);
+        SupabaseSyncService.getInstance().iniciarProgramacionSiCorresponde();
+    }
+
+    @FXML
+    void sincronizarAhora(ActionEvent event) {
+        if (chkSupabaseSyncHabilitado == null || !chkSupabaseSyncHabilitado.isSelected()) {
+            AlertUtil.mostrarInfo("Sincronización deshabilitada",
+                    "Habilitá la sincronización y guardá los cambios antes de sincronizar manualmente.");
+            return;
+        }
+        try {
+            guardarConfiguracionDesdeFormulario();
+        } catch (Exception e) {
+            AlertUtil.mostrarInfo("Error", "Verifica los datos ingresados: " + e.getMessage());
+            return;
+        }
+        if (btnSincronizarAhora != null) btnSincronizarAhora.setDisable(true);
+        new Thread(() -> {
+            try {
+                SupabaseSyncService.getInstance().sincronizar();
+                javafx.application.Platform.runLater(() -> {
+                    AlertUtil.mostrarInfo("Sincronización", "Sincronización con Supabase completada correctamente.");
+                    if (btnSincronizarAhora != null) btnSincronizarAhora.setDisable(false);
+                });
+            } catch (SyncBloqueadoException e) {
+                javafx.application.Platform.runLater(() -> {
+                    AlertUtil.mostrarInfo("Sincronización bloqueada", e.getMessage());
+                    if (btnSincronizarAhora != null) btnSincronizarAhora.setDisable(false);
+                });
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Error al sincronizar con Supabase", e);
+                javafx.application.Platform.runLater(() -> {
+                    AlertUtil.mostrarInfo("Error", "No se pudo sincronizar con Supabase: " + e.getMessage());
+                    if (btnSincronizarAhora != null) btnSincronizarAhora.setDisable(false);
+                });
+            }
+        }, "supabase-sync-manual").start();
     }
 
     @FXML
@@ -282,12 +404,12 @@ public class ConfigController implements Initializable {
                 try {
                     File destino = new File("gestion_pyme.db").getAbsoluteFile();
                     Files.copy(origen.toPath(), destino.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                    mostrarAlerta("Restauración Exitosa",
+                    AlertUtil.mostrarInfo("Restauración Exitosa",
                         "La base de datos fue restaurada en:\n" + destino.getAbsolutePath() +
                         "\n\nEl sistema se cerrará para aplicar los cambios.");
                     System.exit(0);
                 } catch (IOException e) {
-                    mostrarAlerta("Error", "No se pudo restaurar: " + e.getMessage());
+                    AlertUtil.mostrarInfo("Error", "No se pudo restaurar: " + e.getMessage());
                 }
             }
         }
@@ -310,11 +432,11 @@ public class ConfigController implements Initializable {
             String nombreAdmin = SessionService.getInstance().getUsuarioActivo().getNombre();
             Usuario verificado = new UsuarioDAO().autenticar(nombreAdmin, pfPass.getText());
             if (verificado == null) {
-                mostrarAlerta("Contraseña incorrecta", "La contraseña ingresada no es válida.");
+                AlertUtil.mostrarInfo("Contraseña incorrecta", "La contraseña ingresada no es válida.");
                 return;
             }
         } catch (Exception e) {
-            mostrarAlerta("Error", "No se pudo verificar la identidad: " + e.getMessage());
+            AlertUtil.mostrarInfo("Error", "No se pudo verificar la identidad: " + e.getMessage());
             return;
         }
 
@@ -331,16 +453,10 @@ public class ConfigController implements Initializable {
         // Paso 3: ejecutar
         try {
             int eliminadas = new VentaDAO().borrarTodasLasVentas();
-            mostrarAlerta("Historial borrado", eliminadas + " venta(s) eliminadas. El inventario no fue modificado.");
+            AlertUtil.mostrarInfo("Historial borrado", eliminadas + " venta(s) eliminadas. El inventario no fue modificado.");
         } catch (SQLException e) {
-            mostrarAlerta("Error", "No se pudo borrar el historial: " + e.getMessage());
+            AlertUtil.mostrarInfo("Error", "No se pudo borrar el historial: " + e.getMessage());
         }
     }
 
-    private void mostrarAlerta(String titulo, String contenido) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle(titulo);
-        alert.setContentText(contenido);
-        alert.showAndWait();
-    }
 }

@@ -7,9 +7,9 @@ import com.fedeiatech.sistemagestionpyme.model.ItemVenta;
 import com.fedeiatech.sistemagestionpyme.service.ExportService;
 import com.fedeiatech.sistemagestionpyme.service.ImportService;
 import com.fedeiatech.sistemagestionpyme.service.ImportService.ImportResult;
-import com.fedeiatech.sistemagestionpyme.service.LicenseService;
 import com.fedeiatech.sistemagestionpyme.service.SessionService;
 import com.fedeiatech.sistemagestionpyme.service.ThemeService;
+import com.fedeiatech.sistemagestionpyme.view.util.AlertUtil;
 import java.io.File;
 import java.net.URL;
 import java.sql.SQLException;
@@ -48,6 +48,11 @@ import javafx.stage.Stage;
 
 public class InventoryController implements Initializable {
 
+    private static final java.util.logging.Logger LOGGER = java.util.logging.Logger.getLogger(InventoryController.class.getName());
+
+    private static final List<String> CATEGORIAS_FERRETERIA = List.of(
+        "Tornillería", "Electricidad", "Pintura", "Herramientas", "Plomería");
+
     @FXML private AnchorPane rootPane;
     @FXML private HBox formHBox;
     @FXML private TableView<ItemVenta> tablaItems;
@@ -56,12 +61,14 @@ public class InventoryController implements Initializable {
     @FXML private TableColumn<ItemVenta, String> colNombre;
     @FXML private TableColumn<ItemVenta, Double> colPrecio;
     @FXML private TableColumn<ItemVenta, Double> colStock;
+    @FXML private TableColumn<ItemVenta, String> colCategoria;
 
     @FXML private TextField txtCodigo;
     @FXML private TextField txtNombre;
     @FXML private TextField txtPrecio;
     @FXML private TextField txtStock;
     @FXML private ComboBox<String> cmbUnidad;
+    @FXML private ComboBox<String> cmbCategoria;
     @FXML private CheckBox chkServicio;
     @FXML private Button btnGuardar;
     @FXML private Button btnCancelar;
@@ -81,6 +88,13 @@ public class InventoryController implements Initializable {
 
         cmbUnidad.getItems().addAll("u", "kg", "g", "lt");
         cmbUnidad.setValue("u");
+
+        cmbCategoria.setEditable(true);
+        cmbCategoria.getItems().add("General");
+        for (String categoria : CATEGORIAS_FERRETERIA) {
+            if (!cmbCategoria.getItems().contains(categoria)) cmbCategoria.getItems().add(categoria);
+        }
+        cmbCategoria.setValue("General");
 
         configurarColumnas();
         cargarDatos();
@@ -130,6 +144,7 @@ public class InventoryController implements Initializable {
             cmbUnidad.setValue(item.getUnidad());
             cmbUnidad.setDisable(false);
         }
+        cmbCategoria.setValue(item.getCategoria());
 
         lblFormTitulo.setText("Editando: " + item.getNombre());
         btnGuardar.setText("ACTUALIZAR");
@@ -150,6 +165,7 @@ public class InventoryController implements Initializable {
         colNombre.setCellValueFactory(new PropertyValueFactory<>("nombre"));
         colPrecio.setCellValueFactory(new PropertyValueFactory<>("precioVenta"));
         colStock.setCellValueFactory(new PropertyValueFactory<>("stock"));
+        colCategoria.setCellValueFactory(new PropertyValueFactory<>("categoria"));
 
         tablaItems.setRowFactory(tv -> new TableRow<ItemVenta>() {
             @Override
@@ -234,9 +250,20 @@ public class InventoryController implements Initializable {
             }
             listaItems = FXCollections.observableArrayList(lista);
             tablaItems.setItems(listaItems);
+            actualizarSugerenciasCategoria(lista);
         } catch (SQLException e) {
-            mostrarAlerta(Alert.AlertType.ERROR, "Error DB", "No se pudo cargar la lista: " + e.getMessage());
+            AlertUtil.mostrar(Alert.AlertType.ERROR, "Error DB", "No se pudo cargar la lista: " + e.getMessage());
         }
+    }
+
+    private void actualizarSugerenciasCategoria(List<ItemVenta> items) {
+        String valorActual = cmbCategoria.getValue();
+        java.util.LinkedHashSet<String> categorias = new java.util.LinkedHashSet<>();
+        categorias.add("General");
+        categorias.addAll(CATEGORIAS_FERRETERIA);
+        for (ItemVenta item : items) categorias.add(item.getCategoria());
+        cmbCategoria.getItems().setAll(categorias);
+        cmbCategoria.setValue(valorActual != null ? valorActual : "General");
     }
 
     @FXML
@@ -257,7 +284,7 @@ public class InventoryController implements Initializable {
             stage.setOnHidden(e -> { cargarDatos(); tablaItems.getSelectionModel().clearSelection(); });
             stage.show();
         } catch (Exception e) {
-            mostrarAlerta(Alert.AlertType.ERROR, "Error", "No se pudo abrir el formulario de combo: " + e.getMessage());
+            AlertUtil.mostrar(Alert.AlertType.ERROR, "Error", "No se pudo abrir el formulario de combo: " + e.getMessage());
         }
     }
 
@@ -265,7 +292,7 @@ public class InventoryController implements Initializable {
     void guardarItem(ActionEvent event) {
         try {
             if (txtCodigo.getText().isEmpty() || txtNombre.getText().isEmpty() || txtPrecio.getText().isEmpty()) {
-                mostrarAlerta(Alert.AlertType.WARNING, "Datos incompletos", "Por favor llena Código, Nombre y Precio.");
+                AlertUtil.mostrar(Alert.AlertType.WARNING, "Datos incompletos", "Por favor llena Código, Nombre y Precio.");
                 return;
             }
 
@@ -286,22 +313,24 @@ public class InventoryController implements Initializable {
                 item.setStock(Double.parseDouble(stockStr));
                 item.setUnidad(cmbUnidad.getValue() != null ? cmbUnidad.getValue() : "u");
             }
+            String categoria = cmbCategoria.getValue();
+            item.setCategoria(categoria != null && !categoria.isBlank() ? categoria.trim() : "General");
 
             if (itemEnEdicion != null) {
                 itemDAO.actualizar(item);
-                mostrarAlerta(Alert.AlertType.INFORMATION, "Éxito", "Producto actualizado correctamente.");
+                AlertUtil.mostrar(Alert.AlertType.INFORMATION, "Éxito", "Producto actualizado correctamente.");
             } else {
                 itemDAO.guardar(item);
-                mostrarAlerta(Alert.AlertType.INFORMATION, "Éxito", "Producto guardado correctamente.");
+                AlertUtil.mostrar(Alert.AlertType.INFORMATION, "Éxito", "Producto guardado correctamente.");
             }
 
             cargarDatos();
             limpiarFormulario();
 
         } catch (NumberFormatException e) {
-            mostrarAlerta(Alert.AlertType.ERROR, "Error de Formato", "El Precio y Stock deben ser números válidos.");
+            AlertUtil.mostrar(Alert.AlertType.ERROR, "Error de Formato", "El Precio y Stock deben ser números válidos.");
         } catch (SQLException e) {
-            mostrarAlerta(Alert.AlertType.ERROR, "Error Base de Datos", "No se pudo guardar: " + e.getMessage());
+            AlertUtil.mostrar(Alert.AlertType.ERROR, "Error Base de Datos", "No se pudo guardar: " + e.getMessage());
         }
     }
 
@@ -309,7 +338,7 @@ public class InventoryController implements Initializable {
     void eliminarItem(ActionEvent event) {
         ItemVenta itemSeleccionado = tablaItems.getSelectionModel().getSelectedItem();
         if (itemSeleccionado == null) {
-            mostrarAlerta(Alert.AlertType.WARNING, "Atención", "Selecciona un producto de la lista para eliminar.");
+            AlertUtil.mostrar(Alert.AlertType.WARNING, "Atención", "Selecciona un producto de la lista para eliminar.");
             return;
         }
 
@@ -322,15 +351,15 @@ public class InventoryController implements Initializable {
         if (resultado.isPresent() && resultado.get() == ButtonType.OK) {
             try {
                 if (comboDAO.esComponenteDeAlgunCombo(itemSeleccionado.getId())) {
-                    mostrarAlerta(Alert.AlertType.WARNING, "No se puede eliminar",
+                    AlertUtil.mostrar(Alert.AlertType.WARNING, "No se puede eliminar",
                         "Este producto es componente de un combo. Eliminá primero el combo.");
                     return;
                 }
                 itemDAO.eliminar(itemSeleccionado.getId());
                 cargarDatos();
-                mostrarAlerta(Alert.AlertType.INFORMATION, "Eliminado", "Producto eliminado.");
+                AlertUtil.mostrar(Alert.AlertType.INFORMATION, "Eliminado", "Producto eliminado.");
             } catch (SQLException e) {
-                mostrarAlerta(Alert.AlertType.ERROR, "Error", "No se pudo eliminar: " + e.getMessage());
+                AlertUtil.mostrar(Alert.AlertType.ERROR, "Error", "No se pudo eliminar: " + e.getMessage());
             }
         }
     }
@@ -350,7 +379,7 @@ public class InventoryController implements Initializable {
             File generado = new ExportService().generarPlantillaInventario(destino);
             new ExportService().abrirArchivo(generado);
         } catch (Exception e) {
-            mostrarAlerta(Alert.AlertType.ERROR, "Error", "No se pudo generar la plantilla: " + e.getMessage());
+            AlertUtil.mostrar(Alert.AlertType.ERROR, "Error", "No se pudo generar la plantilla: " + e.getMessage());
         }
     }
 
@@ -368,12 +397,12 @@ public class InventoryController implements Initializable {
         try {
             result = new ImportService().importarDesdeExcel(archivo);
         } catch (Exception e) {
-            mostrarAlerta(Alert.AlertType.ERROR, "Error al leer archivo", e.getMessage());
+            AlertUtil.mostrar(Alert.AlertType.ERROR, "Error al leer archivo", e.getMessage());
             return;
         }
 
         if (result.validos.isEmpty() && result.errores.isEmpty()) {
-            mostrarAlerta(Alert.AlertType.WARNING, "Archivo vacío", "El archivo no contiene datos.");
+            AlertUtil.mostrar(Alert.AlertType.WARNING, "Archivo vacío", "El archivo no contiene datos.");
             return;
         }
 
@@ -415,7 +444,7 @@ public class InventoryController implements Initializable {
                 }
             }
         } catch (SQLException e) {
-            mostrarAlerta(Alert.AlertType.ERROR, "Error BD", e.getMessage());
+            AlertUtil.mostrar(Alert.AlertType.ERROR, "Error BD", e.getMessage());
             return;
         }
 
@@ -467,7 +496,7 @@ public class InventoryController implements Initializable {
         String resumen = guardados + " producto(s) importado(s)";
         if (saltados > 0) resumen += "\n" + saltados + " saltado(s) por duplicado";
         if (!erroresBD.isEmpty()) resumen += "\n" + erroresBD.size() + " error(es) de base de datos";
-        mostrarAlerta(Alert.AlertType.INFORMATION, "Importación completada", resumen);
+        AlertUtil.mostrar(Alert.AlertType.INFORMATION, "Importación completada", resumen);
     }
 
     @FXML
@@ -499,6 +528,7 @@ public class InventoryController implements Initializable {
         txtStock.setDisable(false);
         cmbUnidad.setValue("u");
         cmbUnidad.setDisable(false);
+        cmbCategoria.setValue("General");
         chkServicio.setSelected(false);
         lblFormTitulo.setText("Nuevo Producto / Servicio:");
         btnGuardar.setText("AGREGAR");
@@ -507,10 +537,4 @@ public class InventoryController implements Initializable {
         btnCancelar.setManaged(false);
     }
 
-    private void mostrarAlerta(Alert.AlertType tipo, String titulo, String mensaje) {
-        Alert alert = new Alert(tipo);
-        alert.setTitle(titulo);
-        alert.setContentText(mensaje);
-        alert.showAndWait();
-    }
 }

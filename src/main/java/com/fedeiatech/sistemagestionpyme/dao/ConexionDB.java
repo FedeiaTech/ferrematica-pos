@@ -7,14 +7,17 @@ import java.sql.Statement;
 
 public class ConexionDB {
 
-    private static final String URL = "jdbc:sqlite:gestion_pyme.db";
     private static Connection conexion = null;
 
-    public static Connection getConexion() throws SQLException {
+    private static String urlActual() {
+        return "jdbc:sqlite:" + System.getProperty("db.path", "gestion_pyme.db");
+    }
+
+    public static synchronized Connection getConexion() throws SQLException {
         if (conexion == null || conexion.isClosed()) {
             try {
                 Class.forName("org.sqlite.JDBC");
-                conexion = DriverManager.getConnection(URL);
+                conexion = DriverManager.getConnection(urlActual());
                 System.out.println("Conexión a SQLite establecida.");
                 inicializarTablas();
             } catch (ClassNotFoundException e) {
@@ -22,6 +25,11 @@ public class ConexionDB {
             }
         }
         return conexion;
+    }
+
+    public static synchronized void resetParaTests() throws SQLException {
+        if (conexion != null && !conexion.isClosed()) conexion.close();
+        conexion = null;
     }
 
     private static void inicializarTablas() throws SQLException {
@@ -41,6 +49,26 @@ public class ConexionDB {
 
         try {
             stmt.execute("ALTER TABLE items ADD COLUMN unidad TEXT DEFAULT 'u'");
+        } catch (SQLException ignored) {
+        }
+
+        try {
+            stmt.execute("ALTER TABLE items ADD COLUMN categoria TEXT DEFAULT 'General'");
+        } catch (SQLException ignored) {
+        }
+
+        try {
+            stmt.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_items_codigo ON items(codigo);");
+        } catch (SQLException ignored) {
+        }
+
+        stmt.execute("CREATE TABLE IF NOT EXISTS items_eliminados ("
+                + "codigo TEXT PRIMARY KEY,"
+                + "eliminado_en TEXT"
+                + ");");
+
+        try {
+            stmt.execute("ALTER TABLE items_eliminados ADD COLUMN nombre TEXT");
         } catch (SQLException ignored) {
         }
 

@@ -1,10 +1,10 @@
-# JFX-Business-Engine — FedeiaTech
+# Ferrematica — by FedeiaTech
 
-**Sistema de Gestión Comercial para PyMEs argentinas.**  
-*Offline-First, orientado a comercios minoristas. Preparado para integración fiscal ARCA.*
+**Sistema de Gestión Comercial para Ferrematica.**  
+*Offline-First, orientado a comercios minoristas. Preparado para integración fiscal ARCA. Sincroniza stock/precio con el catálogo compartido de Ferrematica (Supabase) para alimentar la tienda online.*
 
-**Estado:** v0.8.1 — Producción | **Licencia:** Propietaria  
-**Autor:** Federico Iacono — IATech  
+**Estado:** v1.0.0 — Producción | **Licencia:** Propietaria  
+**Autor:** Federico Iacono — IATech / FedeiaTech  
 **Contacto:** iaconofede@gmail.com
 
 **Descarga:** [fedeiatech.com/descargas](https://fedeiatech.com/descargas) *(próximamente)*
@@ -21,6 +21,7 @@
 - **Reportes:** Historial de ventas con opción de reimprimir cualquier ticket anterior.
 - **Configuración de Empresa:** Nombre, CUIT, dirección, logo, mensaje de ticket, backup y restore de base de datos.
 - **Base de Datos Local:** SQLite — funciona sin conexión a internet. Sin servidores externos.
+- **Sincronización con Ferrematica Online:** push periódico (u on-demand) de stock/precio hacia el catálogo compartido de Supabase, para que la tienda online muestre disponibilidad real. Opt-in, solo ADMIN, con validación de códigos antes de sincronizar.
 
 ---
 
@@ -42,7 +43,7 @@
 - [x] **Punto de Venta (POS)** — transacción atómica, stock, ticket PDF, ajuste de cantidades en carrito
 - [x] **Motor de Tickets PDF** — logo, datos empresa, guardado permanente/temporal
 - [x] **Dashboard con KPIs y Gráficos** — ventas del día, ganancia estimada, stock crítico, BarChart 7 días, PieChart top 5
-- [x] **Gestión de Inventario** — CRUD completo con unidades por ítem (u/kg/g/lt)
+- [x] **Gestión de Inventario** — CRUD completo con unidades (u/kg/g/lt) y categoría por ítem (taxonomía libre con sugerencias por perfil de negocio)
 - [x] **Configuración y Persistencia** — empresa, backup/restore
 - [x] **Reportes con Export Excel** — resumen diario, por producto y detalle completo filtrado por período
 - [x] **Importación Masiva Excel** — plantilla descargable, validación por fila, resumen pre-confirmación y detección de duplicados
@@ -50,30 +51,31 @@
 - [x] **Temas de color** — 6 colores de fondo (3 claros + 3 saturados), persiste entre sesiones, accesible para todos los roles
 - [x] **Sistema de Combos** — combos basados en inventario con stock calculado automáticamente, visibles en negrita en inventario y vendibles desde POS
 - [x] **Estadísticas Avanzadas** — canasta de productos (market basket), mejores horarios de venta, mapa de demanda día/hora
-- [x] **Modelo Freemium/Premium** — unlock por contraseña única, reportes y stats bloqueados en free, botón PREMIUM en dashboard
+- [x] **Sincronización con Supabase** — push de stock/precio al catálogo compartido, con detección de bajas (tombstones) y programación automática configurable
 - [ ] **Conexión Fiscal ARCA** *(planificado post comercialización)*
 
 ---
 
-## Niveles de Licencia
+## Funcionalidades
 
-El sistema funciona en modo **FREE** desde el primer arranque. Para activar el modo **PREMIUM**, ingresar la clave de activación desde el botón "PREMIUM 🔒" en el dashboard (unlock único, permanente).
+Sistema de instalación única para Ferrematica — todas las funciones están disponibles desde el primer arranque, sin niveles de licencia ni desbloqueos.
 
-| Feature | FREE | PREMIUM |
-| --- | --- | --- |
-| Punto de Venta (POS) | ✓ | ✓ |
-| Inventario (solo lectura para CAJERO) | ✓ | ✓ |
-| Tickets PDF | ✓ | ✓ |
-| Dashboard con KPIs y gráficos | ✓ | ✓ |
-| Temas de color | ✓ | ✓ |
-| Gestión de Inventario completa (ADMIN) | ✓ | ✓ |
-| Reportes e historial de ventas | — | ✓ |
-| Export Excel (3 formatos) | — | ✓ |
-| Import masivo desde Excel | — | ✓ |
-| Sistema de Combos | — | ✓ |
-| Estadísticas Avanzadas (canasta, horarios, heatmap) | — | ✓ |
-| Gestión de Usuarios (panel admin) | — | ✓ |
-| Conexión Fiscal ARCA | — | ✓ *(próximo)* |
+| Feature | Disponible |
+| --- | --- |
+| Punto de Venta (POS) | ✓ |
+| Inventario (solo lectura para CAJERO) | ✓ |
+| Tickets PDF | ✓ |
+| Dashboard con KPIs y gráficos | ✓ |
+| Temas de color | ✓ |
+| Gestión de Inventario completa (ADMIN) | ✓ |
+| Reportes e historial de ventas | ✓ |
+| Export Excel (3 formatos) | ✓ |
+| Import masivo desde Excel | ✓ |
+| Sistema de Combos | ✓ |
+| Estadísticas Avanzadas (canasta, horarios, heatmap) | ✓ |
+| Gestión de Usuarios (panel admin) | ✓ |
+| Sincronización de stock con Ferrematica Online | ✓ |
+| Conexión Fiscal ARCA | — *(próximo)* |
 
 ---
 
@@ -83,8 +85,8 @@ El sistema funciona en modo **FREE** desde el primer arranque. Para activar el m
 
 ```bash
 # Clonar y ejecutar
-git clone https://github.com/FedeiaTech/JFX-Business-Engine.git
-cd JFX-Business-Engine
+git clone https://github.com/FedeiaTech/ferrematica-pos.git
+cd ferrematica-pos
 mvn javafx:run
 ```
 
@@ -101,6 +103,24 @@ La base de datos `gestion_pyme.db` se crea automáticamente en la raíz del proy
 ---
 
 ## Changelog
+
+### v1.0.0 — 2026-08-04
+
+- **De-fork a build dedicado Ferrematica:** eliminado todo el modelo freemium/premium (`LicenseService`, `PerfilNegocio`) — esta copia queda 100% desbloqueada desde el primer arranque, sin niveles de licencia. El producto multi-tenant original sigue existiendo sin cambios en su repositorio propio.
+- **Sincronización con Supabase:** nuevo `SupabaseSyncService` — push periódico (o manual desde Config) de stock/precio/nombre al catálogo compartido `products`, autenticado como cuenta dedicada (nunca con la anon key desnuda). Detecta y bloquea la sincronización si hay códigos de producto en blanco o duplicados. Empuja bajas como `is_active=false` (tombstones) en vez de intentar borrar filas remotas.
+- **Indicador de sincronización en el Dashboard:** estado visual (gris/naranja/verde) junto al indicador de ARCA, con la hora de la última sincronización exitosa — persiste entre reinicios.
+- **Ventanas modales:** todas las ventanas secundarias (Inventario, POS, Reportes, Config, Usuarios, Estadísticas) ahora bloquean el Dashboard mientras están abiertas — ya no se puede operar en dos ventanas en simultáneo.
+- **Fix:** el botón "Sincronizar ahora" guarda la configuración antes de sincronizar (antes exigía guardar, cerrar y reabrir Config a mano).
+- **Fix:** los tombstones de baja fallaban en silencio contra Supabase (violación de `NOT NULL` en `name`) — detectado en pruebas manuales contra un proyecto real, corregido y cubierto con test.
+
+### v0.9.0 — 2026-07-28
+
+- **Logging centralizado:** reemplaza los `printStackTrace()`/catch silenciosos reales por un logger a archivo (`logs/app.log`), para poder diagnosticar fallos en instalaciones de clientes.
+- **Diálogos de alerta centralizados:** `AlertUtil` reemplaza 5 implementaciones casi idénticas de `mostrarAlerta` repartidas en distintos controllers. Dashboard y Estadísticas ahora avisan al usuario cuando falla la carga de un gráfico (antes quedaba en silencio).
+- **`ConexionDB` thread-safe:** `getConexion()` sincronizado para eliminar una carrera check-then-act.
+- **Primeros tests automatizados:** JUnit 5 contra SQLite real (sin mocks), cubriendo CRUD de inventario, la transacción atómica de venta (descuento de stock) y la idempotencia de la migración de configuración.
+- **Categoría de producto:** campo libre con sugerencias, para clasificar el inventario por rubro sin imponer una taxonomía rígida.
+- **Perfil de Negocio:** kiosco, tienda, ferretería o genérico, configurable desde Configuración. Define qué categorías se sugieren en Inventario — no cambia el modelo de datos ni la lógica de negocio.
 
 ### v0.8.1 — 2026-05-05
 - Diálogo "Acerca de" con autoría, versión y contacto en el dashboard

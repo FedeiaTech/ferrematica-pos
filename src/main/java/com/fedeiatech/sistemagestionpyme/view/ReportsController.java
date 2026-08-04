@@ -3,7 +3,6 @@ package com.fedeiatech.sistemagestionpyme.view;
 import com.fedeiatech.sistemagestionpyme.dao.VentaDAO;
 import com.fedeiatech.sistemagestionpyme.model.Venta;
 import com.fedeiatech.sistemagestionpyme.service.ExportService;
-import com.fedeiatech.sistemagestionpyme.service.LicenseService;
 import com.fedeiatech.sistemagestionpyme.service.ThemeService;
 import com.fedeiatech.sistemagestionpyme.service.TicketService;
 import java.io.File;
@@ -13,12 +12,14 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import com.fedeiatech.sistemagestionpyme.view.util.AlertUtil;
 import javafx.geometry.Insets;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ChoiceBox;
@@ -35,10 +36,13 @@ import javafx.scene.Scene;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
 import javafx.stage.FileChooser;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 
 public class ReportsController implements Initializable {
+
+    private static final Logger LOGGER = Logger.getLogger(ReportsController.class.getName());
 
     @FXML private AnchorPane rootPane;
     @FXML private TableView<Venta> tablaVentas;
@@ -51,11 +55,6 @@ public class ReportsController implements Initializable {
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         rootPane.setStyle(ThemeService.getInstance().getBgStyle());
-
-        if (!LicenseService.permiteReportes()) {
-            mostrarAlerta("Acceso Denegado", "No tienes licencia para ver este módulo.");
-            return;
-        }
 
         configurarTabla();
         cargarDatos();
@@ -99,8 +98,8 @@ public class ReportsController implements Initializable {
             List<Venta> historial = dao.listarVentasHistoricas();
             tablaVentas.setItems(FXCollections.observableArrayList(historial));
         } catch (SQLException e) {
-            e.printStackTrace();
-            mostrarAlerta("Error BD", "No se pudo cargar el historial.");
+            LOGGER.log(Level.SEVERE, "Error al cargar el historial de ventas", e);
+            AlertUtil.mostrarAdvertencia("Error BD", "No se pudo cargar el historial.");
         }
     }
 
@@ -169,11 +168,11 @@ public class ReportsController implements Initializable {
             }
 
             exportService.abrirArchivo(generado);
-            mostrarInfo("Exportación exitosa",
+            AlertUtil.mostrarInfo("Exportación exitosa",
                     datos.size() + " filas exportadas a:\n" + generado.getName());
 
         } catch (Exception e) {
-            mostrarAlerta("Error al exportar", e.getMessage());
+            AlertUtil.mostrarAdvertencia("Error al exportar", e.getMessage());
         }
     }
 
@@ -182,7 +181,7 @@ public class ReportsController implements Initializable {
             VentaDAO dao = new VentaDAO();
             Venta ventaCompleta = dao.obtenerVentaCompleta(idVenta);
             if (ventaCompleta == null) {
-                mostrarAlerta("Error", "No se encontró la venta ID " + idVenta);
+                AlertUtil.mostrarAdvertencia("Error", "No se encontró la venta ID " + idVenta);
                 return;
             }
             TicketService ts = new TicketService();
@@ -190,11 +189,11 @@ public class ReportsController implements Initializable {
             if (ticket != null && ticket.exists()) {
                 ts.abrirArchivo(ticket);
             } else {
-                mostrarAlerta("Error PDF", "El archivo PDF no se pudo generar.");
+                AlertUtil.mostrarAdvertencia("Error PDF", "El archivo PDF no se pudo generar.");
             }
         } catch (Exception e) {
-            e.printStackTrace();
-            mostrarAlerta("Error Crítico", "Fallo al reimprimir: " + e.getMessage());
+            LOGGER.log(Level.SEVERE, "Error al reimprimir ticket", e);
+            AlertUtil.mostrarAdvertencia("Error Crítico", "Fallo al reimprimir: " + e.getMessage());
         }
     }
 
@@ -206,23 +205,12 @@ public class ReportsController implements Initializable {
             Stage stage = new Stage();
             stage.setTitle("Estadísticas Avanzadas");
             stage.setScene(new Scene(root));
+            stage.initOwner(rootPane.getScene().getWindow());
+            stage.initModality(Modality.WINDOW_MODAL);
             stage.show();
         } catch (Exception e) {
-            mostrarAlerta("Error", "No se pudo abrir estadísticas: " + e.getMessage());
+            AlertUtil.mostrarAdvertencia("Error", "No se pudo abrir estadísticas: " + e.getMessage());
         }
     }
 
-    private void mostrarAlerta(String titulo, String contenido) {
-        Alert alert = new Alert(Alert.AlertType.WARNING);
-        alert.setTitle(titulo);
-        alert.setContentText(contenido);
-        alert.showAndWait();
-    }
-
-    private void mostrarInfo(String titulo, String contenido) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle(titulo);
-        alert.setContentText(contenido);
-        alert.showAndWait();
-    }
 }

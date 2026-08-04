@@ -22,7 +22,7 @@
               AnchorPane.rightAnchor="15.0" AnchorPane.topAnchor="15.0">
             <children>
                 <Label text="Estadísticas Avanzadas" style="-fx-font-weight: bold; -fx-font-size: 20; -fx-text-fill: #2c3e50;" />
-                <Label fx:id="lblPremiumLock" text="🔒 Esta sección requiere activación Premium."
+                <Label fx:id="lblInfoMensaje" text=""
                        style="-fx-font-size: 14; -fx-text-fill: #e74c3c; -fx-font-weight: bold;"
                        visible="false" managed="false" />
 

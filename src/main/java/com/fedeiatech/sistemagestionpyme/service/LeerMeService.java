@@ -5,10 +5,14 @@ import com.lowagie.text.pdf.*;
 import java.awt.Color;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class LeerMeService {
 
-    private static final String VERSION = "v0.8.0";
+    private static final Logger LOGGER = Logger.getLogger(LeerMeService.class.getName());
+
+    private static final String VERSION = "v1.0.0";
     private static final String AUTOR   = "Federico Iacono — IATech";
     private static final String DERECHOS = "© 2026 IATech. Todos los derechos reservados.";
 
@@ -32,9 +36,15 @@ public class LeerMeService {
         Font fAmarillo= new Font(Font.HELVETICA, 10, Font.BOLD,  new Color(255, 200, 50));
 
         // Encabezado
-        agregarP(doc, "Sistema de Gestión PyME", fTitulo, Element.ALIGN_CENTER);
+        agregarP(doc, "Ferrematica — Sistema de Gestión", fTitulo, Element.ALIGN_CENTER);
         agregarP(doc, AUTOR + "  |  " + VERSION, fGris, Element.ALIGN_CENTER);
         agregarP(doc, DERECHOS, fGris, Element.ALIGN_CENTER);
+        agregarLinea(doc);
+
+        // Bienvenida
+        agregarP(doc, "BIENVENIDO", fSub, Element.ALIGN_LEFT);
+        agregarP(doc, "Este es el sistema de gestión dedicado a Ferrematica: punto de venta, inventario, reportes y estadísticas, todo en una sola aplicación de escritorio y sin conexión a internet.", fNormal, Element.ALIGN_LEFT);
+        agregarP(doc, "Todas las funciones están disponibles desde el primer arranque — no hay módulos bloqueados ni claves de activación.", fVerde, Element.ALIGN_LEFT);
         agregarLinea(doc);
 
         // Primer uso
@@ -44,19 +54,12 @@ public class LeerMeService {
         agregarP(doc, "Se recomienda cambiar la contraseña desde el botón Usuarios en el dashboard antes de operar.", fGris, Element.ALIGN_LEFT);
         agregarLinea(doc);
 
-        // Premium
-        agregarP(doc, "ACTIVACIÓN PREMIUM", fSub, Element.ALIGN_LEFT);
-        agregarP(doc, "El sistema funciona en modo Free desde el primer arranque. Para desbloquear todas las funciones:", fNormal, Element.ALIGN_LEFT);
-        agregarP(doc, "   Dashboard → botón PREMIUM → ingresar la clave de activación provista por IATech.", fAccent, Element.ALIGN_LEFT);
-        agregarP(doc, "El desbloqueo es permanente y queda guardado en la base de datos local.", fGris, Element.ALIGN_LEFT);
-        agregarLinea(doc);
-
         // Módulos
         agregarP(doc, "MÓDULOS PRINCIPALES", fSub, Element.ALIGN_LEFT);
         modulo(doc, "Punto de Venta (POS)", "Buscá productos por código o nombre. Seleccioná y cobrá. El stock se descuenta automáticamente al confirmar la venta. El ticket PDF se genera al instante.", fNormal, fAccent);
         modulo(doc, "Inventario", "Administrá productos, precios, stock y unidades (unidad, kg, g, lt). Creá combos de productos con stock calculado automáticamente.", fNormal, fAccent);
-        modulo(doc, "Reportes (PREMIUM)", "Historial completo de ventas, reimpresión de tickets y exportación a Excel en tres formatos.", fNormal, fAccent);
-        modulo(doc, "Estadísticas (PREMIUM)", "Canasta de productos frecuentes, mejor horario de venta, mapa de demanda y tendencias semanales/mensuales.", fNormal, fAccent);
+        modulo(doc, "Reportes", "Historial completo de ventas, reimpresión de tickets y exportación a Excel en tres formatos.", fNormal, fAccent);
+        modulo(doc, "Estadísticas", "Canasta de productos frecuentes, mejor horario de venta, mapa de demanda y tendencias semanales/mensuales.", fNormal, fAccent);
         modulo(doc, "Configuración", "Datos de empresa, logo, formato del ticket (58mm/80mm), margen de ganancia, backup y más.", fNormal, fAccent);
         agregarLinea(doc);
 
@@ -112,7 +115,7 @@ public class LeerMeService {
             if (!f.exists()) f = generarLeerMe();
             if (java.awt.Desktop.isDesktopSupported()) java.awt.Desktop.getDesktop().open(f);
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error al abrir LEEME.pdf", e);
         }
     }
 }

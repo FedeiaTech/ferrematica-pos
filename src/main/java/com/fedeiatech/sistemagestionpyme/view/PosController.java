@@ -5,13 +5,13 @@ import com.fedeiatech.sistemagestionpyme.dao.ConfiguracionDAO;
 import com.fedeiatech.sistemagestionpyme.dao.ItemDAO;
 import com.fedeiatech.sistemagestionpyme.dao.VentaDAO;
 import com.fedeiatech.sistemagestionpyme.model.Combo;
-import com.fedeiatech.sistemagestionpyme.service.LicenseService;
 import com.fedeiatech.sistemagestionpyme.service.ThemeService;
 import com.fedeiatech.sistemagestionpyme.model.Configuracion;
 import com.fedeiatech.sistemagestionpyme.model.DetalleVenta;
 import com.fedeiatech.sistemagestionpyme.model.ItemVenta;
 import com.fedeiatech.sistemagestionpyme.model.Venta;
 import com.fedeiatech.sistemagestionpyme.service.TicketService;
+import com.fedeiatech.sistemagestionpyme.view.util.AlertUtil;
 import java.io.File;
 import java.net.URL;
 import java.sql.SQLException;
@@ -178,17 +178,15 @@ public class PosController implements Initializable {
                              p.getNombre().toLowerCase().contains(termino.toLowerCase()))
                 .collect(Collectors.toList());
 
-            List<Combo> combos = LicenseService.esPremium()
-                ? comboDAO.listarTodos().stream()
-                    .filter(c -> c.getCodigo().equalsIgnoreCase(termino) ||
-                                 c.getNombre().toLowerCase().contains(termino.toLowerCase()))
-                    .collect(Collectors.toList())
-                : java.util.Collections.emptyList();
+            List<Combo> combos = comboDAO.listarTodos().stream()
+                .filter(c -> c.getCodigo().equalsIgnoreCase(termino) ||
+                             c.getNombre().toLowerCase().contains(termino.toLowerCase()))
+                .collect(Collectors.toList());
 
             int total = items.size() + combos.size();
 
             if (total == 0) {
-                mostrarAlerta(Alert.AlertType.WARNING, "No encontrado", "No existe producto con ese criterio.");
+                AlertUtil.mostrar(Alert.AlertType.WARNING, "No encontrado", "No existe producto con ese criterio.");
             } else if (total == 1) {
                 if (!items.isEmpty()) agregarAlCarrito(items.get(0));
                 else agregarComboAlCarrito(combos.get(0));
@@ -212,7 +210,7 @@ public class PosController implements Initializable {
             }
 
         } catch (SQLException e) {
-            mostrarAlerta(Alert.AlertType.ERROR, "Error BD", e.getMessage());
+            AlertUtil.mostrar(Alert.AlertType.ERROR, "Error BD", e.getMessage());
         }
     }
 
@@ -245,11 +243,11 @@ public class PosController implements Initializable {
             try {
                 cantidad = Double.parseDouble(resultado.get().replace(",", "."));
                 if (cantidad <= 0) {
-                    mostrarAlerta(Alert.AlertType.WARNING, "Cantidad inválida", "La cantidad debe ser mayor a cero.");
+                    AlertUtil.mostrar(Alert.AlertType.WARNING, "Cantidad inválida", "La cantidad debe ser mayor a cero.");
                     return;
                 }
             } catch (NumberFormatException e) {
-                mostrarAlerta(Alert.AlertType.ERROR, "Error de formato", "Ingresá un número válido (Ej: 1.5)");
+                AlertUtil.mostrar(Alert.AlertType.ERROR, "Error de formato", "Ingresá un número válido (Ej: 1.5)");
                 return;
             }
         } else {
@@ -285,7 +283,7 @@ public class PosController implements Initializable {
             recalcularTotal();
             txtBuscador.requestFocus();
         } else {
-            mostrarAlerta(Alert.AlertType.WARNING, "Atención", "Selecciona un ítem de la lista para quitarlo.");
+            AlertUtil.mostrar(Alert.AlertType.WARNING, "Atención", "Selecciona un ítem de la lista para quitarlo.");
         }
     }
 
@@ -313,7 +311,7 @@ public class PosController implements Initializable {
             }
             recalcularTotal();
         } catch (NumberFormatException e) {
-            mostrarAlerta(Alert.AlertType.ERROR, "Error de formato", "Ingresá un número válido (Ej: 1.5)");
+            AlertUtil.mostrar(Alert.AlertType.ERROR, "Error de formato", "Ingresá un número válido (Ej: 1.5)");
         }
     }
 
@@ -378,7 +376,7 @@ public class PosController implements Initializable {
             limpiarPantalla();
 
         } catch (SQLException e) {
-            mostrarAlerta(Alert.AlertType.ERROR, "Error", e.getMessage());
+            AlertUtil.mostrar(Alert.AlertType.ERROR, "Error", e.getMessage());
         }
     }
 
@@ -393,12 +391,6 @@ public class PosController implements Initializable {
         txtBuscador.requestFocus();
     }
 
-    private void mostrarAlerta(Alert.AlertType tipo, String titulo, String mensaje) {
-        Alert alert = new Alert(tipo);
-        alert.setTitle(titulo);
-        alert.setContentText(mensaje);
-        alert.showAndWait();
-    }
 
     private boolean verificarProblemaStock(DetalleVenta detalle) {
         try {

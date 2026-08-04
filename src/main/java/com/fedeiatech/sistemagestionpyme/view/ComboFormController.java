@@ -5,6 +5,7 @@ import com.fedeiatech.sistemagestionpyme.dao.ItemDAO;
 import com.fedeiatech.sistemagestionpyme.model.Combo;
 import com.fedeiatech.sistemagestionpyme.model.ComponenteCombo;
 import com.fedeiatech.sistemagestionpyme.model.ItemVenta;
+import com.fedeiatech.sistemagestionpyme.view.util.AlertUtil;
 import java.net.URL;
 import java.sql.SQLException;
 import java.util.List;
@@ -90,7 +91,7 @@ public class ComboFormController implements Initializable {
             btnEliminar.setVisible(true);
             btnEliminar.setManaged(true);
         } catch (SQLException e) {
-            mostrarAlerta("Error", "No se pudo cargar el combo: " + e.getMessage());
+            AlertUtil.mostrarAdvertencia("Error", "No se pudo cargar el combo: " + e.getMessage());
         }
     }
 
@@ -108,7 +109,7 @@ public class ComboFormController implements Initializable {
                 .toList();
 
             if (resultados.isEmpty()) {
-                mostrarAlerta("No encontrado", "No se encontró ningún producto con ese término.");
+                AlertUtil.mostrarAdvertencia("No encontrado", "No se encontró ningún producto con ese término.");
                 return;
             }
 
@@ -131,7 +132,7 @@ public class ComboFormController implements Initializable {
             } catch (NumberFormatException ignored) {}
 
             if (cantidad <= 0) {
-                mostrarAlerta("Cantidad inválida", "La cantidad debe ser mayor a 0.");
+                AlertUtil.mostrarAdvertencia("Cantidad inválida", "La cantidad debe ser mayor a 0.");
                 return;
             }
 
@@ -151,18 +152,18 @@ public class ComboFormController implements Initializable {
             actualizarStock();
 
         } catch (SQLException e) {
-            mostrarAlerta("Error", e.getMessage());
+            AlertUtil.mostrarAdvertencia("Error", e.getMessage());
         }
     }
 
     @FXML
     void guardar(ActionEvent event) {
         if (txtCodigo.getText().isBlank() || txtNombre.getText().isBlank() || txtPrecio.getText().isBlank()) {
-            mostrarAlerta("Datos incompletos", "Completá Código, Nombre y Precio.");
+            AlertUtil.mostrarAdvertencia("Datos incompletos", "Completá Código, Nombre y Precio.");
             return;
         }
         if (componentes.isEmpty()) {
-            mostrarAlerta("Sin componentes", "Agregá al menos un componente al combo.");
+            AlertUtil.mostrarAdvertencia("Sin componentes", "Agregá al menos un componente al combo.");
             return;
         }
         try {
@@ -170,7 +171,7 @@ public class ComboFormController implements Initializable {
             if (idComboEdicion == 0) {
                 Combo existente = comboDAO.buscarPorCodigo(txtCodigo.getText().trim());
                 if (existente != null) {
-                    mostrarAlerta("Código duplicado", "Ya existe un combo con el código \"" + txtCodigo.getText().trim() + "\".");
+                    AlertUtil.mostrarAdvertencia("Código duplicado", "Ya existe un combo con el código \"" + txtCodigo.getText().trim() + "\".");
                     return;
                 }
             }
@@ -189,13 +190,13 @@ public class ComboFormController implements Initializable {
             }
             cerrar();
         } catch (NumberFormatException e) {
-            mostrarAlerta("Error de formato", "El precio debe ser un número válido.");
+            AlertUtil.mostrarAdvertencia("Error de formato", "El precio debe ser un número válido.");
         } catch (SQLException e) {
             String msg = e.getMessage();
             if (msg != null && msg.contains("UNIQUE") && msg.contains("combos.codigo")) {
-                mostrarAlerta("Código duplicado", "Ya existe un combo con el código \"" + txtCodigo.getText().trim() + "\". Usá otro código o editá el combo existente.");
+                AlertUtil.mostrarAdvertencia("Código duplicado", "Ya existe un combo con el código \"" + txtCodigo.getText().trim() + "\". Usá otro código o editá el combo existente.");
             } else {
-                mostrarAlerta("Error DB", "No se pudo guardar: " + msg);
+                AlertUtil.mostrarAdvertencia("Error DB", "No se pudo guardar: " + msg);
             }
         }
     }
@@ -211,7 +212,7 @@ public class ComboFormController implements Initializable {
                     comboDAO.eliminar(idComboEdicion);
                     cerrar();
                 } catch (SQLException e) {
-                    mostrarAlerta("Error", "No se pudo eliminar: " + e.getMessage());
+                    AlertUtil.mostrarAdvertencia("Error", "No se pudo eliminar: " + e.getMessage());
                 }
             }
         });
@@ -238,10 +239,4 @@ public class ComboFormController implements Initializable {
         ((Stage) txtCodigo.getScene().getWindow()).close();
     }
 
-    private void mostrarAlerta(String titulo, String mensaje) {
-        Alert a = new Alert(Alert.AlertType.WARNING);
-        a.setTitle(titulo);
-        a.setContentText(mensaje);
-        a.showAndWait();
-    }
 }

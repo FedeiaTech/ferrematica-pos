@@ -64,7 +64,7 @@ public class LoginController implements Initializable {
         Parent root = loader.load();
         Stage stage = (Stage) btnIngresar.getScene().getWindow();
         stage.setScene(new Scene(root));
-        stage.setTitle("Sistema FedeiaTech - Pyme v0.7");
+        stage.setTitle("Sistema FedeiaTech - Pyme v1.0.0");
         stage.setMaximized(true);
     }
 }

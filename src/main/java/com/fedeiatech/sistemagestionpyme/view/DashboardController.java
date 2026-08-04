@@ -4,17 +4,25 @@ import com.fedeiatech.sistemagestionpyme.dao.ConfiguracionDAO;
 import com.fedeiatech.sistemagestionpyme.model.Configuracion;
 import com.fedeiatech.sistemagestionpyme.dao.VentaDAO;
 import com.fedeiatech.sistemagestionpyme.model.Usuario;
+import com.fedeiatech.sistemagestionpyme.dao.ConfiguracionDAO;
+import com.fedeiatech.sistemagestionpyme.model.Configuracion;
 import com.fedeiatech.sistemagestionpyme.service.IFiscalProvider;
-import com.fedeiatech.sistemagestionpyme.service.LicenseService;
 import com.fedeiatech.sistemagestionpyme.service.MockFiscalProvider;
 import com.fedeiatech.sistemagestionpyme.service.SessionService;
 import com.fedeiatech.sistemagestionpyme.service.LeerMeService;
+import com.fedeiatech.sistemagestionpyme.service.SupabaseSyncService;
 import com.fedeiatech.sistemagestionpyme.service.ThemeService;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.time.ZoneId;
+import com.fedeiatech.sistemagestionpyme.view.util.AlertUtil;
 import java.io.IOException;
 import java.net.URL;
 import java.sql.SQLException;
 import java.util.Map;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -24,22 +32,24 @@ import javafx.fxml.Initializable;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.chart.BarChart;
+import javafx.scene.chart.CategoryAxis;
 import javafx.scene.chart.PieChart;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
-import javafx.scene.control.PasswordField;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.paint.Color;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 
 public class DashboardController implements Initializable {
 
+    private static final Logger LOGGER = Logger.getLogger(DashboardController.class.getName());
+
     @FXML private AnchorPane rootPane;
     @FXML private Label lblEstadoFiscal;
+    @FXML private Label lblEstadoSync;
     @FXML private Label lblVentasDia;
     @FXML private Label lblContadorVentas;
     @FXML private Label lblGananciaDia;
@@ -57,7 +67,6 @@ public class DashboardController implements Initializable {
     @FXML private Button btnTema3;
     @FXML private Button btnTema4;
     @FXML private Button btnTema5;
-    @FXML private Button btnPremium;
     @FXML private Button btnEstadisticas;
 
     private IFiscalProvider fiscalProvider;
@@ -77,6 +86,7 @@ public class DashboardController implements Initializable {
 
         aplicarRestriccionesPorRol();
         verificarEstadoFiscal();
+        actualizarEstadoSync();
         cargarMetricas();
     }
 
@@ -87,59 +97,11 @@ public class DashboardController implements Initializable {
         lblUsuario.setText(usuario.getNombre() + "  ·  " + usuario.getRol());
 
         boolean esAdmin = usuario.esAdmin();
-        boolean esPremium = LicenseService.esPremium();
 
         btnInventario.setDisable(!esAdmin);
         btnConfiguracion.setDisable(!esAdmin);
-        btnReportes.setDisable(!esPremium);
-        if (btnEstadisticas != null) btnEstadisticas.setDisable(!esPremium);
-        btnUsuarios.setVisible(esAdmin && esPremium);
-        btnUsuarios.setManaged(esAdmin && esPremium);
-
-        if (btnPremium != null) {
-            if (esPremium) {
-                btnPremium.setText("PREMIUM ✓");
-                btnPremium.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-size: 11; -fx-cursor: hand; -fx-background-radius: 5; -fx-padding: 5 12;");
-            } else {
-                btnPremium.setText("PREMIUM 🔒");
-                btnPremium.setStyle("-fx-background-color: #f39c12; -fx-text-fill: white; -fx-font-size: 11; -fx-cursor: hand; -fx-background-radius: 5; -fx-padding: 5 12;");
-            }
-        }
-    }
-
-    @FXML
-    void abrirDialogoPremium(ActionEvent event) {
-        if (LicenseService.esPremium()) {
-            Alert a = new Alert(Alert.AlertType.INFORMATION);
-            a.setTitle("Premium activo");
-            a.setContentText("El modo Premium ya está activado en esta instalación.");
-            a.showAndWait();
-            return;
-        }
-
-        PasswordField pf = new PasswordField();
-        pf.setPromptText("Clave de activación");
-        Dialog<ButtonType> dialog = new Dialog<>();
-        dialog.setTitle("Activar Premium");
-        dialog.setHeaderText("Ingresá la clave de activación");
-        dialog.getDialogPane().setContent(pf);
-        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-        dialog.showAndWait().ifPresent(bt -> {
-            if (bt == ButtonType.OK) {
-                if (LicenseService.verificarYDesbloquear(pf.getText())) {
-                    aplicarRestriccionesPorRol();
-                    Alert ok = new Alert(Alert.AlertType.INFORMATION);
-                    ok.setTitle("Activación exitosa");
-                    ok.setContentText("¡Modo Premium activado correctamente!");
-                    ok.showAndWait();
-                } else {
-                    Alert err = new Alert(Alert.AlertType.ERROR);
-                    err.setTitle("Clave incorrecta");
-                    err.setContentText("La clave de activación no es válida.");
-                    err.showAndWait();
-                }
-            }
-        });
+        btnUsuarios.setVisible(esAdmin);
+        btnUsuarios.setManaged(esAdmin);
     }
 
     private void cargarMetricas() {
@@ -172,10 +134,17 @@ public class DashboardController implements Initializable {
 
         } catch (SQLException e) {
             lblVentasDia.setText("Error");
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error al cargar métricas del dashboard", e);
+            AlertUtil.mostrarError("Error al cargar dashboard", "No se pudieron cargar las métricas: " + e.getMessage());
         }
-        try { cargarGraficoVentas7Dias(); } catch (Exception e) { e.printStackTrace(); }
-        try { cargarGraficoTop5(); } catch (Exception e) { e.printStackTrace(); }
+        try { cargarGraficoVentas7Dias(); } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error al cargar gráfico de 7 días", e);
+            AlertUtil.mostrarError("Error al cargar gráfico", "No se pudo cargar el gráfico de ventas: " + e.getMessage());
+        }
+        try { cargarGraficoTop5(); } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error al cargar gráfico top 5", e);
+            AlertUtil.mostrarError("Error al cargar gráfico", "No se pudo cargar el gráfico de productos: " + e.getMessage());
+        }
     }
 
     private void cargarGraficoVentas7Dias() throws SQLException {
@@ -186,6 +155,7 @@ public class DashboardController implements Initializable {
             serie.getData().add(new XYChart.Data<>(dia, entry.getValue()));
         }
         chartVentas7Dias.getData().clear();
+        ((CategoryAxis) chartVentas7Dias.getXAxis()).getCategories().clear();
         chartVentas7Dias.getData().add(serie);
     }
 
@@ -196,11 +166,37 @@ public class DashboardController implements Initializable {
             pieData.add(new PieChart.Data(entry.getKey(), entry.getValue()));
         }
         chartTop5.setData(pieData);
+        chartTop5.layout();
     }
 
     private void verificarEstadoFiscal() {
         lblEstadoFiscal.setText("ARCA (sin configurar)");
         lblEstadoFiscal.setStyle("-fx-background-color: #bdc3c7; -fx-text-fill: #7f8c8d; -fx-background-radius: 15; -fx-padding: 5 15;");
+    }
+
+    private void actualizarEstadoSync() {
+        if (lblEstadoSync == null) return;
+        try {
+            Configuracion config = new ConfiguracionDAO().obtenerConfiguracion();
+            boolean habilitado = config != null && config.isSupabaseSyncHabilitado();
+            Instant ultimaOk = SupabaseSyncService.getInstance().ultimaSincronizacionExitosaEn();
+
+            if (!habilitado) {
+                lblEstadoSync.setText("Sync (deshabilitado)");
+                lblEstadoSync.setStyle("-fx-background-color: #bdc3c7; -fx-text-fill: #7f8c8d; -fx-background-radius: 15; -fx-padding: 5 15;");
+            } else if (ultimaOk == null) {
+                lblEstadoSync.setText("Sync (nunca sincronizado)");
+                lblEstadoSync.setStyle("-fx-background-color: #f39c12; -fx-text-fill: white; -fx-background-radius: 15; -fx-padding: 5 15;");
+            } else {
+                String hora = DateTimeFormatter.ofPattern("HH:mm")
+                        .withZone(ZoneId.systemDefault())
+                        .format(ultimaOk);
+                lblEstadoSync.setText("Sync ✓ " + hora);
+                lblEstadoSync.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-background-radius: 15; -fx-padding: 5 15;");
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "No se pudo determinar el estado de sincronización con Supabase", e);
+        }
     }
 
     @FXML
@@ -217,10 +213,12 @@ public class DashboardController implements Initializable {
             stage.setTitle("Punto de Venta");
             stage.setMaximized(true);
             stage.setScene(new Scene(root));
+            stage.initOwner(rootPane.getScene().getWindow());
+            stage.initModality(Modality.WINDOW_MODAL);
             stage.setOnHidden(e -> cargarMetricas());
             stage.show();
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error al abrir el POS", e);
         }
     }
 
@@ -232,8 +230,8 @@ public class DashboardController implements Initializable {
     @FXML
     void abrirConfiguracion(ActionEvent event) {
         abrirVentana("/config_view.fxml", "Configuración de Empresa", false, () -> {
-            LicenseService.invalidarCache();
             aplicarRestriccionesPorRol();
+            actualizarEstadoSync();
             cargarMetricas();
         });
     }
@@ -257,7 +255,7 @@ public class DashboardController implements Initializable {
     void abrirAcercaDe(ActionEvent event) {
         Alert dlg = new Alert(Alert.AlertType.INFORMATION);
         dlg.setTitle("Acerca de");
-        dlg.setHeaderText("Sistema de Gestión PyME  —  v0.8.0");
+        dlg.setHeaderText("Sistema de Gestión PyME  —  v1.0.0");
         dlg.setContentText(
             "Desarrollado por Federico Iacono\n" +
             "IATech — Soluciones de software para PyMEs argentinas\n\n" +
@@ -284,9 +282,9 @@ public class DashboardController implements Initializable {
             Stage stage = (Stage) lblUsuario.getScene().getWindow();
             stage.setScene(new Scene(root));
             stage.setMaximized(false);
-            stage.setTitle("Sistema FedeiaTech - Pyme v0.7");
+            stage.setTitle("Sistema FedeiaTech - Pyme v1.0.0");
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error al cerrar sesión", e);
         }
     }
 
@@ -302,10 +300,12 @@ public class DashboardController implements Initializable {
             stage.setTitle(titulo);
             stage.setScene(new Scene(root));
             if (maximizar) stage.setMaximized(true);
+            stage.initOwner(rootPane.getScene().getWindow());
+            stage.initModality(Modality.WINDOW_MODAL);
             if (alCerrar != null) stage.setOnHidden(e -> alCerrar.run());
             stage.show();
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error al abrir ventana: " + fxmlPath, e);
         }
     }
 }

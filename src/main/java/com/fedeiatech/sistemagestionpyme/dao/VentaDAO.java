@@ -10,8 +10,12 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class VentaDAO {
+
+    private static final Logger LOGGER = Logger.getLogger(VentaDAO.class.getName());
 
     public void registrarVenta(Venta venta) throws SQLException {
         String sqlVenta = "INSERT INTO ventas (fecha, total) VALUES (?, ?)";
@@ -70,7 +74,7 @@ public class VentaDAO {
 
             conn.commit();
         } catch (SQLException e) {
-            if (conn != null) { try { conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); } }
+            if (conn != null) { try { conn.rollback(); } catch (SQLException ex) { LOGGER.log(Level.SEVERE, "Error al hacer rollback de la venta", ex); } }
             throw e;
         } finally {
             if (conn != null) conn.setAutoCommit(true);
@@ -173,7 +177,7 @@ public class VentaDAO {
                      "FROM detalles_venta d " +
                      "LEFT JOIN items i ON d.id_item = i.id " +
                      "LEFT JOIN combos c ON d.id_combo = c.id " +
-                     "GROUP BY d.id_item, d.id_combo, nombre " +
+                     "GROUP BY d.id_item, d.id_combo " +
                      "ORDER BY total_vendido DESC " +
                      "LIMIT 5";
         try (Connection conn = ConexionDB.getConexion();

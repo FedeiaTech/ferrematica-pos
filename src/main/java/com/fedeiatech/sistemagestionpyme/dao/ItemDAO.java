@@ -5,17 +5,18 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
 public class ItemDAO {
 
     public void guardar(ItemVenta item) throws SQLException {
-        String sql = "INSERT INTO items (codigo, nombre, descripcion, precio_costo, precio_venta, stock, es_servicio, unidad) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-        
+        String sql = "INSERT INTO items (codigo, nombre, descripcion, precio_costo, precio_venta, stock, es_servicio, unidad, categoria) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
         try (Connection conn = ConexionDB.getConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
+
             pstmt.setString(1, item.getCodigo());
             pstmt.setString(2, item.getNombre());
             pstmt.setString(3, item.getDescripcion());
@@ -24,13 +25,14 @@ public class ItemDAO {
             pstmt.setDouble(6, item.getStock());
             pstmt.setInt(7, item.isEsServicio() ? 1 : 0);
             pstmt.setString(8, item.getUnidad());
+            pstmt.setString(9, item.getCategoria());
 
             pstmt.executeUpdate();
         }
     }
 
     public void actualizar(ItemVenta item) throws SQLException {
-        String sql = "UPDATE items SET codigo=?, nombre=?, descripcion=?, precio_costo=?, precio_venta=?, stock=?, es_servicio=?, unidad=? WHERE id=?";
+        String sql = "UPDATE items SET codigo=?, nombre=?, descripcion=?, precio_costo=?, precio_venta=?, stock=?, es_servicio=?, unidad=?, categoria=? WHERE id=?";
 
         try (Connection conn = ConexionDB.getConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -43,18 +45,115 @@ public class ItemDAO {
             pstmt.setDouble(6, item.getStock());
             pstmt.setInt(7, item.isEsServicio() ? 1 : 0);
             pstmt.setString(8, item.getUnidad());
-            pstmt.setInt(9, item.getId());
+            pstmt.setString(9, item.getCategoria());
+            pstmt.setInt(10, item.getId());
 
             pstmt.executeUpdate();
         }
     }
 
     public void eliminar(int id) throws SQLException {
-        String sql = "DELETE FROM items WHERE id = ?";
+        String sqlDatos = "SELECT codigo, nombre FROM items WHERE id = ?";
+        String sqlTombstone = "INSERT OR REPLACE INTO items_eliminados (codigo, eliminado_en, nombre) VALUES (?, ?, ?)";
+        String sqlDelete = "DELETE FROM items WHERE id = ?";
+
+        try (Connection conn = ConexionDB.getConexion()) {
+            String codigo = null;
+            String nombre = null;
+            try (PreparedStatement pstmt = conn.prepareStatement(sqlDatos)) {
+                pstmt.setInt(1, id);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        codigo = rs.getString("codigo");
+                        nombre = rs.getString("nombre");
+                    }
+                }
+            }
+
+            if (codigo != null && !codigo.trim().isEmpty()) {
+                try (PreparedStatement pstmt = conn.prepareStatement(sqlTombstone)) {
+                    pstmt.setString(1, codigo);
+                    pstmt.setString(2, Instant.now().toString());
+                    pstmt.setString(3, nombre);
+                    pstmt.executeUpdate();
+                }
+            }
+
+            try (PreparedStatement pstmt = conn.prepareStatement(sqlDelete)) {
+                pstmt.setInt(1, id);
+                pstmt.executeUpdate();
+            }
+        }
+    }
+
+    /** Snapshot de un producto dado de baja localmente, pendiente de empujarse como is_active=false. */
+    public record ItemEliminado(String codigo, String nombre) {}
+
+    /** Igual que {@link #listarCodigosEliminadosPendientes()} pero incluye el nombre — necesario porque
+     * Supabase exige {@code name NOT NULL} incluso en un upsert que solo actualiza is_active. */
+    public List<ItemEliminado> listarEliminadosConNombrePendientes() throws SQLException {
+        List<ItemEliminado> resultado = new ArrayList<>();
+        String sql = "SELECT codigo, nombre FROM items_eliminados";
+
+        try (Connection conn = ConexionDB.getConexion();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+            while (rs.next()) {
+                resultado.add(new ItemEliminado(rs.getString("codigo"), rs.getString("nombre")));
+            }
+        }
+        return resultado;
+    }
+
+    public List<String> validarCodigosParaSync() throws SQLException {
+        List<String> offenders = new ArrayList<>();
+        String sql = "SELECT codigo, nombre FROM items "
+                + "WHERE codigo IS NULL OR trim(codigo) = '' "
+                + "   OR codigo IN (SELECT codigo FROM items GROUP BY codigo HAVING COUNT(*) > 1) "
+                + "ORDER BY codigo";
+
+        try (Connection conn = ConexionDB.getConexion();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+
+            while (rs.next()) {
+                String codigo = rs.getString("codigo");
+                String nombre = rs.getString("nombre");
+                String codigoMostrado = (codigo == null || codigo.trim().isEmpty()) ? "(vacío)" : codigo;
+                offenders.add(codigoMostrado + " | " + nombre);
+            }
+        }
+        return offenders;
+    }
+
+    public List<String> listarCodigosEliminadosPendientes() throws SQLException {
+        List<String> codigos = new ArrayList<>();
+        String sql = "SELECT codigo FROM items_eliminados";
+
+        try (Connection conn = ConexionDB.getConexion();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+
+            while (rs.next()) {
+                codigos.add(rs.getString("codigo"));
+            }
+        }
+        return codigos;
+    }
+
+    public void limpiarEliminadosSincronizados(List<String> codigos) throws SQLException {
+        if (codigos == null || codigos.isEmpty()) {
+            return;
+        }
+
+        String sql = "DELETE FROM items_eliminados WHERE codigo = ?";
         try (Connection conn = ConexionDB.getConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, id);
-            pstmt.executeUpdate();
+            for (String codigo : codigos) {
+                pstmt.setString(1, codigo);
+                pstmt.addBatch();
+            }
+            pstmt.executeBatch();
         }
     }
 
@@ -76,6 +175,7 @@ public class ItemDAO {
                     item.setEsServicio(rs.getInt("es_servicio") == 1);
                     String unidad = rs.getString("unidad");
                     item.setUnidad(unidad != null ? unidad : "u");
+                    item.setCategoria(rs.getString("categoria"));
                     return item;
                 }
             }
@@ -103,6 +203,7 @@ public class ItemDAO {
                 item.setEsServicio(rs.getInt("es_servicio") == 1);
                 String unidad = rs.getString("unidad");
                 item.setUnidad(unidad != null ? unidad : "u");
+                item.setCategoria(rs.getString("categoria"));
                 lista.add(item);
             }
         }
