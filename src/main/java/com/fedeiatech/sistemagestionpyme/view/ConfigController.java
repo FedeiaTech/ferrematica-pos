@@ -347,6 +347,11 @@ public class ConfigController implements Initializable {
 
     @FXML
     void sincronizarAhora(ActionEvent event) {
+        if (chkSupabaseSyncHabilitado == null || !chkSupabaseSyncHabilitado.isSelected()) {
+            AlertUtil.mostrarInfo("Sincronización deshabilitada",
+                    "Habilitá la sincronización y guardá los cambios antes de sincronizar manualmente.");
+            return;
+        }
         if (btnSincronizarAhora != null) btnSincronizarAhora.setDisable(true);
         new Thread(() -> {
             try {
