@@ -57,6 +57,16 @@ public class ConexionDB {
         } catch (SQLException ignored) {
         }
 
+        try {
+            stmt.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_items_codigo ON items(codigo);");
+        } catch (SQLException ignored) {
+        }
+
+        stmt.execute("CREATE TABLE IF NOT EXISTS items_eliminados ("
+                + "codigo TEXT PRIMARY KEY,"
+                + "eliminado_en TEXT"
+                + ");");
+
         String sqlVentas = "CREATE TABLE IF NOT EXISTS ventas ("
                 + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
                 + "fecha TEXT NOT NULL,"
