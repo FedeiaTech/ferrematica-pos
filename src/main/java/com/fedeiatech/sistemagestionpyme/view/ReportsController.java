@@ -36,6 +36,7 @@ import javafx.scene.Scene;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
 import javafx.stage.FileChooser;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 
@@ -204,6 +205,8 @@ public class ReportsController implements Initializable {
             Stage stage = new Stage();
             stage.setTitle("Estadísticas Avanzadas");
             stage.setScene(new Scene(root));
+            stage.initOwner(rootPane.getScene().getWindow());
+            stage.initModality(Modality.WINDOW_MODAL);
             stage.show();
         } catch (Exception e) {
             AlertUtil.mostrarAdvertencia("Error", "No se pudo abrir estadísticas: " + e.getMessage());

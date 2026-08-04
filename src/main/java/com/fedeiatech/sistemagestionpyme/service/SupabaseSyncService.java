@@ -62,6 +62,7 @@ public class SupabaseSyncService {
     private final PostgrestClient clienteInyectado;
 
     private ScheduledExecutorService scheduler;
+    private volatile Instant ultimaSincronizacionExitosaEn;
 
     private SupabaseSyncService() {
         this(new ItemDAO(), new ConfiguracionDAO(), null);
@@ -115,6 +116,13 @@ public class SupabaseSyncService {
                 itemDAO.limpiarEliminadosSincronizados(pendientesEliminados);
             }
         }
+
+        ultimaSincronizacionExitosaEn = Instant.now();
+    }
+
+    /** Momento de la última sincronización exitosa, o {@code null} si nunca sincronizó en este proceso. */
+    public Instant ultimaSincronizacionExitosaEn() {
+        return ultimaSincronizacionExitosaEn;
     }
 
     /** Arranca (o reprograma) el scheduler periódico según la configuración vigente; no hace nada si está deshabilitado. */
