@@ -20,6 +20,7 @@ public class App extends Application {
             new com.fedeiatech.sistemagestionpyme.dao.ConfiguracionDAO().inicializarTabla();
             new com.fedeiatech.sistemagestionpyme.dao.UsuarioDAO().inicializarTabla();
             com.fedeiatech.sistemagestionpyme.dao.DataSeeder.sembrarDemoSiVacio();
+            com.fedeiatech.sistemagestionpyme.service.SupabaseSyncService.getInstance().iniciarProgramacionSiCorresponde();
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error en inicialización", e);
         }

@@ -27,7 +27,7 @@ public class ConexionDB {
         return conexion;
     }
 
-    static synchronized void resetParaTests() throws SQLException {
+    public static synchronized void resetParaTests() throws SQLException {
         if (conexion != null && !conexion.isClosed()) conexion.close();
         conexion = null;
     }

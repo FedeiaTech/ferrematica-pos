@@ -7,6 +7,8 @@ import com.fedeiatech.sistemagestionpyme.dao.VentaDAO;
 import com.fedeiatech.sistemagestionpyme.model.Configuracion;
 import com.fedeiatech.sistemagestionpyme.model.Usuario;
 import com.fedeiatech.sistemagestionpyme.service.SessionService;
+import com.fedeiatech.sistemagestionpyme.service.SupabaseSyncService;
+import com.fedeiatech.sistemagestionpyme.service.SyncBloqueadoException;
 import com.fedeiatech.sistemagestionpyme.service.ThemeService;
 import com.fedeiatech.sistemagestionpyme.view.util.AlertUtil;
 import java.awt.Desktop;
@@ -334,6 +336,7 @@ public class ConfigController implements Initializable {
             config.setSupabaseSyncHabilitado(chkSupabaseSyncHabilitado != null && chkSupabaseSyncHabilitado.isSelected());
 
             configDAO.guardarConfiguracion(config);
+            SupabaseSyncService.getInstance().iniciarProgramacionSiCorresponde();
             AlertUtil.mostrarInfo("Guardado", "Configuración actualizada correctamente.");
             cerrarVentana(event);
 
@@ -344,11 +347,27 @@ public class ConfigController implements Initializable {
 
     @FXML
     void sincronizarAhora(ActionEvent event) {
-        // Stub — la llamada real a SupabaseSyncService.sincronizar() se conecta en la PR C3
-        // (network/sync service), aún no implementada. Este handler solo deja el botón
-        // operativo desde la UI; el estado bloqueado/habilitado ya se gestiona en
-        // actualizarEstadoBloqueoSync().
-        AlertUtil.mostrarInfo("Sincronización", "La sincronización con Supabase todavía no está disponible en esta versión.");
+        if (btnSincronizarAhora != null) btnSincronizarAhora.setDisable(true);
+        new Thread(() -> {
+            try {
+                SupabaseSyncService.getInstance().sincronizar();
+                javafx.application.Platform.runLater(() -> {
+                    AlertUtil.mostrarInfo("Sincronización", "Sincronización con Supabase completada correctamente.");
+                    if (btnSincronizarAhora != null) btnSincronizarAhora.setDisable(false);
+                });
+            } catch (SyncBloqueadoException e) {
+                javafx.application.Platform.runLater(() -> {
+                    AlertUtil.mostrarInfo("Sincronización bloqueada", e.getMessage());
+                    if (btnSincronizarAhora != null) btnSincronizarAhora.setDisable(false);
+                });
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Error al sincronizar con Supabase", e);
+                javafx.application.Platform.runLater(() -> {
+                    AlertUtil.mostrarInfo("Error", "No se pudo sincronizar con Supabase: " + e.getMessage());
+                    if (btnSincronizarAhora != null) btnSincronizarAhora.setDisable(false);
+                });
+            }
+        }, "supabase-sync-manual").start();
     }
 
     @FXML
