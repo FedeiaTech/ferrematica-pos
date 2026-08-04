@@ -53,17 +53,19 @@ public class ItemDAO {
     }
 
     public void eliminar(int id) throws SQLException {
-        String sqlCodigo = "SELECT codigo FROM items WHERE id = ?";
-        String sqlTombstone = "INSERT OR REPLACE INTO items_eliminados (codigo, eliminado_en) VALUES (?, ?)";
+        String sqlDatos = "SELECT codigo, nombre FROM items WHERE id = ?";
+        String sqlTombstone = "INSERT OR REPLACE INTO items_eliminados (codigo, eliminado_en, nombre) VALUES (?, ?, ?)";
         String sqlDelete = "DELETE FROM items WHERE id = ?";
 
         try (Connection conn = ConexionDB.getConexion()) {
             String codigo = null;
-            try (PreparedStatement pstmt = conn.prepareStatement(sqlCodigo)) {
+            String nombre = null;
+            try (PreparedStatement pstmt = conn.prepareStatement(sqlDatos)) {
                 pstmt.setInt(1, id);
                 try (ResultSet rs = pstmt.executeQuery()) {
                     if (rs.next()) {
                         codigo = rs.getString("codigo");
+                        nombre = rs.getString("nombre");
                     }
                 }
             }
@@ -72,6 +74,7 @@ public class ItemDAO {
                 try (PreparedStatement pstmt = conn.prepareStatement(sqlTombstone)) {
                     pstmt.setString(1, codigo);
                     pstmt.setString(2, Instant.now().toString());
+                    pstmt.setString(3, nombre);
                     pstmt.executeUpdate();
                 }
             }
@@ -81,6 +84,25 @@ public class ItemDAO {
                 pstmt.executeUpdate();
             }
         }
+    }
+
+    /** Snapshot de un producto dado de baja localmente, pendiente de empujarse como is_active=false. */
+    public record ItemEliminado(String codigo, String nombre) {}
+
+    /** Igual que {@link #listarCodigosEliminadosPendientes()} pero incluye el nombre — necesario porque
+     * Supabase exige {@code name NOT NULL} incluso en un upsert que solo actualiza is_active. */
+    public List<ItemEliminado> listarEliminadosConNombrePendientes() throws SQLException {
+        List<ItemEliminado> resultado = new ArrayList<>();
+        String sql = "SELECT codigo, nombre FROM items_eliminados";
+
+        try (Connection conn = ConexionDB.getConexion();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+            while (rs.next()) {
+                resultado.add(new ItemEliminado(rs.getString("codigo"), rs.getString("nombre")));
+            }
+        }
+        return resultado;
     }
 
     public List<String> validarCodigosParaSync() throws SQLException {

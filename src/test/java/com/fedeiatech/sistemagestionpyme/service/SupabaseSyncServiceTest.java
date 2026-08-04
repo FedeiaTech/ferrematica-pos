@@ -111,6 +111,25 @@ class SupabaseSyncServiceTest {
         assertEquals(nombreConEspeciales, extraerCampoString(body, "name"));
     }
 
+    @Test
+    void tombstonesIncluyenNombreParaNoViolarNotNullEnSupabase() throws Exception {
+        itemDAO.guardar(new ItemVenta(0, "SKU-4", "Pala punta cuadrada", "d", 5.0, 10.0, 3.0, false));
+        ItemVenta guardado = itemDAO.buscarPorCodigo("SKU-4");
+        itemDAO.eliminar(guardado.getId());
+        configurarSyncHabilitado();
+        FakePostgrestClient fake = new FakePostgrestClient();
+        SupabaseSyncService service = new SupabaseSyncService(itemDAO, configDAO, fake);
+
+        service.sincronizar();
+
+        FakePostgrestClient.Llamada llamadaTombstone = fake.llamadas.stream()
+            .filter(l -> l.path().startsWith("/rest/v1/products") && l.jsonBody().contains("\"is_active\":false"))
+            .findFirst().orElseThrow();
+        assertTrue(llamadaTombstone.jsonBody().contains("\"sku\":\"SKU-4\""));
+        assertTrue(llamadaTombstone.jsonBody().contains("\"name\":\"Pala punta cuadrada\""));
+        assertTrue(itemDAO.listarCodigosEliminadosPendientes().isEmpty());
+    }
+
     private void configurarSyncHabilitado() throws SQLException {
         Configuracion config = configDAO.obtenerConfiguracion();
         config.setSupabaseUrl("http://localhost:0");

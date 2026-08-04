@@ -107,12 +107,16 @@ public class SupabaseSyncService {
             throw new IOException("Error al sincronizar productos: HTTP " + respItems.statusCode() + " - " + respItems.body());
         }
 
-        List<String> pendientesEliminados = itemDAO.listarCodigosEliminadosPendientes();
+        List<ItemDAO.ItemEliminado> pendientesEliminados = itemDAO.listarEliminadosConNombrePendientes();
         if (!pendientesEliminados.isEmpty()) {
             String payloadTombstones = serializarTombstones(pendientesEliminados);
             PostgrestResponse respTombstones = http.post("/rest/v1/products?on_conflict=sku", payloadTombstones, headers);
             if (respTombstones.esExitosa()) {
-                itemDAO.limpiarEliminadosSincronizados(pendientesEliminados);
+                List<String> codigos = pendientesEliminados.stream().map(ItemDAO.ItemEliminado::codigo).toList();
+                itemDAO.limpiarEliminadosSincronizados(codigos);
+            } else {
+                LOGGER.log(Level.WARNING, "Fallo al empujar tombstones a Supabase: HTTP "
+                        + respTombstones.statusCode() + " - " + respTombstones.body());
             }
         }
 
@@ -227,12 +231,18 @@ public class SupabaseSyncService {
         return sb.toString();
     }
 
-    private static String serializarTombstones(List<String> codigos) {
+    private static String serializarTombstones(List<ItemDAO.ItemEliminado> pendientes) {
         String syncedAt = Instant.now().toString();
         StringBuilder sb = new StringBuilder("[");
-        for (int i = 0; i < codigos.size(); i++) {
+        for (int i = 0; i < pendientes.size(); i++) {
             if (i > 0) sb.append(",");
-            sb.append("{\"sku\":\"").append(escapeJson(codigos.get(i)))
+            ItemDAO.ItemEliminado item = pendientes.get(i);
+            // "name" NOT NULL en products — un upsert ON CONFLICT DO UPDATE igual valida la fila
+            // insertada antes de resolver el conflicto, así que hace falta mandarlo aunque solo
+            // nos importe actualizar is_active. Si no quedó nombre guardado, el sku sirve de respaldo.
+            String nombre = item.nombre() != null && !item.nombre().isBlank() ? item.nombre() : item.codigo();
+            sb.append("{\"sku\":\"").append(escapeJson(item.codigo()))
+              .append("\",\"name\":\"").append(escapeJson(nombre))
               .append("\",\"is_active\":false,\"synced_at\":\"").append(syncedAt).append("\"}");
         }
         sb.append("]");

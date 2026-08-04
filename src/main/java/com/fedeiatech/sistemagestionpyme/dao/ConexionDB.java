@@ -67,6 +67,11 @@ public class ConexionDB {
                 + "eliminado_en TEXT"
                 + ");");
 
+        try {
+            stmt.execute("ALTER TABLE items_eliminados ADD COLUMN nombre TEXT");
+        } catch (SQLException ignored) {
+        }
+
         String sqlVentas = "CREATE TABLE IF NOT EXISTS ventas ("
                 + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
                 + "fecha TEXT NOT NULL,"
