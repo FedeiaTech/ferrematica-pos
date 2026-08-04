@@ -255,7 +255,7 @@ public class DashboardController implements Initializable {
     void abrirAcercaDe(ActionEvent event) {
         Alert dlg = new Alert(Alert.AlertType.INFORMATION);
         dlg.setTitle("Acerca de");
-        dlg.setHeaderText("Sistema de Gestión PyME  —  v0.9.0");
+        dlg.setHeaderText("Sistema de Gestión PyME  —  v1.0.0");
         dlg.setContentText(
             "Desarrollado por Federico Iacono\n" +
             "IATech — Soluciones de software para PyMEs argentinas\n\n" +
@@ -282,7 +282,7 @@ public class DashboardController implements Initializable {
             Stage stage = (Stage) lblUsuario.getScene().getWindow();
             stage.setScene(new Scene(root));
             stage.setMaximized(false);
-            stage.setTitle("Sistema FedeiaTech - Pyme v0.9.0");
+            stage.setTitle("Sistema FedeiaTech - Pyme v1.0.0");
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Error al cerrar sesión", e);
         }

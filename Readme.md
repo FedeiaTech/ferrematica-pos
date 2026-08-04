@@ -1,10 +1,10 @@
-# JFX-Business-Engine — FedeiaTech
+# Ferrematica — by FedeiaTech
 
-**Sistema de Gestión Comercial para PyMEs argentinas.**  
-*Offline-First, orientado a comercios minoristas. Preparado para integración fiscal ARCA.*
+**Sistema de Gestión Comercial para Ferrematica.**  
+*Offline-First, orientado a comercios minoristas. Preparado para integración fiscal ARCA. Sincroniza stock/precio con el catálogo compartido de Ferrematica (Supabase) para alimentar la tienda online.*
 
-**Estado:** v0.9.0 — Producción | **Licencia:** Propietaria  
-**Autor:** Federico Iacono — IATech  
+**Estado:** v1.0.0 — Producción | **Licencia:** Propietaria  
+**Autor:** Federico Iacono — IATech / FedeiaTech  
 **Contacto:** iaconofede@gmail.com
 
 **Descarga:** [fedeiatech.com/descargas](https://fedeiatech.com/descargas) *(próximamente)*
@@ -21,6 +21,7 @@
 - **Reportes:** Historial de ventas con opción de reimprimir cualquier ticket anterior.
 - **Configuración de Empresa:** Nombre, CUIT, dirección, logo, mensaje de ticket, backup y restore de base de datos.
 - **Base de Datos Local:** SQLite — funciona sin conexión a internet. Sin servidores externos.
+- **Sincronización con Ferrematica Online:** push periódico (u on-demand) de stock/precio hacia el catálogo compartido de Supabase, para que la tienda online muestre disponibilidad real. Opt-in, solo ADMIN, con validación de códigos antes de sincronizar.
 
 ---
 
@@ -50,6 +51,7 @@
 - [x] **Temas de color** — 6 colores de fondo (3 claros + 3 saturados), persiste entre sesiones, accesible para todos los roles
 - [x] **Sistema de Combos** — combos basados en inventario con stock calculado automáticamente, visibles en negrita en inventario y vendibles desde POS
 - [x] **Estadísticas Avanzadas** — canasta de productos (market basket), mejores horarios de venta, mapa de demanda día/hora
+- [x] **Sincronización con Supabase** — push de stock/precio al catálogo compartido, con detección de bajas (tombstones) y programación automática configurable
 - [ ] **Conexión Fiscal ARCA** *(planificado post comercialización)*
 
 ---
@@ -72,6 +74,7 @@ Sistema de instalación única para Ferrematica — todas las funciones están d
 | Sistema de Combos | ✓ |
 | Estadísticas Avanzadas (canasta, horarios, heatmap) | ✓ |
 | Gestión de Usuarios (panel admin) | ✓ |
+| Sincronización de stock con Ferrematica Online | ✓ |
 | Conexión Fiscal ARCA | — *(próximo)* |
 
 ---
@@ -82,8 +85,8 @@ Sistema de instalación única para Ferrematica — todas las funciones están d
 
 ```bash
 # Clonar y ejecutar
-git clone https://github.com/FedeiaTech/JFX-Business-Engine.git
-cd JFX-Business-Engine
+git clone https://github.com/FedeiaTech/ferrematica-pos.git
+cd ferrematica-pos
 mvn javafx:run
 ```
 
@@ -100,6 +103,15 @@ La base de datos `gestion_pyme.db` se crea automáticamente en la raíz del proy
 ---
 
 ## Changelog
+
+### v1.0.0 — 2026-08-04
+
+- **De-fork a build dedicado Ferrematica:** eliminado todo el modelo freemium/premium (`LicenseService`, `PerfilNegocio`) — esta copia queda 100% desbloqueada desde el primer arranque, sin niveles de licencia. El producto multi-tenant original sigue existiendo sin cambios en su repositorio propio.
+- **Sincronización con Supabase:** nuevo `SupabaseSyncService` — push periódico (o manual desde Config) de stock/precio/nombre al catálogo compartido `products`, autenticado como cuenta dedicada (nunca con la anon key desnuda). Detecta y bloquea la sincronización si hay códigos de producto en blanco o duplicados. Empuja bajas como `is_active=false` (tombstones) en vez de intentar borrar filas remotas.
+- **Indicador de sincronización en el Dashboard:** estado visual (gris/naranja/verde) junto al indicador de ARCA, con la hora de la última sincronización exitosa — persiste entre reinicios.
+- **Ventanas modales:** todas las ventanas secundarias (Inventario, POS, Reportes, Config, Usuarios, Estadísticas) ahora bloquean el Dashboard mientras están abiertas — ya no se puede operar en dos ventanas en simultáneo.
+- **Fix:** el botón "Sincronizar ahora" guarda la configuración antes de sincronizar (antes exigía guardar, cerrar y reabrir Config a mano).
+- **Fix:** los tombstones de baja fallaban en silencio contra Supabase (violación de `NOT NULL` en `name`) — detectado en pruebas manuales contra un proyecto real, corregido y cubierto con test.
 
 ### v0.9.0 — 2026-07-28
 

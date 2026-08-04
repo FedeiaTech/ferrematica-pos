@@ -63,7 +63,7 @@
                     </children>
                 </VBox>
 
-                <Label text="~by FedeiaTech · v0.9.0" textFill="#bdc3c7" style="-fx-font-size: 10; -fx-padding: 12 0 0 0;" />
+                <Label text="~by FedeiaTech · v1.0.0" textFill="#bdc3c7" style="-fx-font-size: 10; -fx-padding: 12 0 0 0;" />
 
             </children>
         </VBox>
