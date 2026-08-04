@@ -5,7 +5,6 @@ import com.fedeiatech.sistemagestionpyme.model.Configuracion;
 import com.fedeiatech.sistemagestionpyme.dao.VentaDAO;
 import com.fedeiatech.sistemagestionpyme.model.Usuario;
 import com.fedeiatech.sistemagestionpyme.service.IFiscalProvider;
-import com.fedeiatech.sistemagestionpyme.service.LicenseService;
 import com.fedeiatech.sistemagestionpyme.service.MockFiscalProvider;
 import com.fedeiatech.sistemagestionpyme.service.SessionService;
 import com.fedeiatech.sistemagestionpyme.service.LeerMeService;
@@ -32,10 +31,7 @@ import javafx.scene.chart.PieChart;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
-import javafx.scene.control.PasswordField;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
@@ -63,7 +59,6 @@ public class DashboardController implements Initializable {
     @FXML private Button btnTema3;
     @FXML private Button btnTema4;
     @FXML private Button btnTema5;
-    @FXML private Button btnPremium;
     @FXML private Button btnEstadisticas;
 
     private IFiscalProvider fiscalProvider;
@@ -93,59 +88,11 @@ public class DashboardController implements Initializable {
         lblUsuario.setText(usuario.getNombre() + "  ·  " + usuario.getRol());
 
         boolean esAdmin = usuario.esAdmin();
-        boolean esPremium = LicenseService.esPremium();
 
         btnInventario.setDisable(!esAdmin);
         btnConfiguracion.setDisable(!esAdmin);
-        btnReportes.setDisable(!esPremium);
-        if (btnEstadisticas != null) btnEstadisticas.setDisable(!esPremium);
-        btnUsuarios.setVisible(esAdmin && esPremium);
-        btnUsuarios.setManaged(esAdmin && esPremium);
-
-        if (btnPremium != null) {
-            if (esPremium) {
-                btnPremium.setText("PREMIUM ✓");
-                btnPremium.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-size: 11; -fx-cursor: hand; -fx-background-radius: 5; -fx-padding: 5 12;");
-            } else {
-                btnPremium.setText("PREMIUM 🔒");
-                btnPremium.setStyle("-fx-background-color: #f39c12; -fx-text-fill: white; -fx-font-size: 11; -fx-cursor: hand; -fx-background-radius: 5; -fx-padding: 5 12;");
-            }
-        }
-    }
-
-    @FXML
-    void abrirDialogoPremium(ActionEvent event) {
-        if (LicenseService.esPremium()) {
-            Alert a = new Alert(Alert.AlertType.INFORMATION);
-            a.setTitle("Premium activo");
-            a.setContentText("El modo Premium ya está activado en esta instalación.");
-            a.showAndWait();
-            return;
-        }
-
-        PasswordField pf = new PasswordField();
-        pf.setPromptText("Clave de activación");
-        Dialog<ButtonType> dialog = new Dialog<>();
-        dialog.setTitle("Activar Premium");
-        dialog.setHeaderText("Ingresá la clave de activación");
-        dialog.getDialogPane().setContent(pf);
-        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-        dialog.showAndWait().ifPresent(bt -> {
-            if (bt == ButtonType.OK) {
-                if (LicenseService.verificarYDesbloquear(pf.getText())) {
-                    aplicarRestriccionesPorRol();
-                    Alert ok = new Alert(Alert.AlertType.INFORMATION);
-                    ok.setTitle("Activación exitosa");
-                    ok.setContentText("¡Modo Premium activado correctamente!");
-                    ok.showAndWait();
-                } else {
-                    Alert err = new Alert(Alert.AlertType.ERROR);
-                    err.setTitle("Clave incorrecta");
-                    err.setContentText("La clave de activación no es válida.");
-                    err.showAndWait();
-                }
-            }
-        });
+        btnUsuarios.setVisible(esAdmin);
+        btnUsuarios.setManaged(esAdmin);
     }
 
     private void cargarMetricas() {
@@ -247,7 +194,6 @@ public class DashboardController implements Initializable {
     @FXML
     void abrirConfiguracion(ActionEvent event) {
         abrirVentana("/config_view.fxml", "Configuración de Empresa", false, () -> {
-            LicenseService.invalidarCache();
             aplicarRestriccionesPorRol();
             cargarMetricas();
         });

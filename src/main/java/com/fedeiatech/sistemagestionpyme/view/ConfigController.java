@@ -4,7 +4,6 @@ import com.fedeiatech.sistemagestionpyme.dao.ConfiguracionDAO;
 import com.fedeiatech.sistemagestionpyme.dao.UsuarioDAO;
 import com.fedeiatech.sistemagestionpyme.dao.VentaDAO;
 import com.fedeiatech.sistemagestionpyme.model.Configuracion;
-import com.fedeiatech.sistemagestionpyme.model.PerfilNegocio;
 import com.fedeiatech.sistemagestionpyme.model.Usuario;
 import com.fedeiatech.sistemagestionpyme.service.SessionService;
 import com.fedeiatech.sistemagestionpyme.service.ThemeService;
@@ -57,7 +56,6 @@ public class ConfigController implements Initializable {
     @FXML private CheckBox chkMostrarCuit;
     @FXML private CheckBox chkUsarEnteros;
     @FXML private TextField txtMargenGanancia;
-    @FXML private ChoiceBox<PerfilNegocio> cmbPerfilNegocio;
 
     private ConfiguracionDAO configDAO;
     private File archivoLogoSeleccionado;
@@ -68,9 +66,6 @@ public class ConfigController implements Initializable {
         rootPane.setStyle(ThemeService.getInstance().getBgStyle());
         if (cmbAnchoTicket != null) {
             cmbAnchoTicket.getItems().addAll("58 mm", "80 mm");
-        }
-        if (cmbPerfilNegocio != null) {
-            cmbPerfilNegocio.getItems().addAll(PerfilNegocio.values());
         }
         cargarDatos();
     }
@@ -108,9 +103,6 @@ public class ConfigController implements Initializable {
                 if (chkUsarEnteros != null) chkUsarEnteros.setSelected(config.isUsarEnteros());
                 if (txtMargenGanancia != null) txtMargenGanancia.setText(
                     config.getMargenGananciaPct() > 0 ? String.valueOf(config.getMargenGananciaPct()) : "");
-                if (cmbPerfilNegocio != null) {
-                    cmbPerfilNegocio.setValue(PerfilNegocio.desdeNombre(config.getPerfilNegocio()));
-                }
             }
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error al cargar la configuración", e);
@@ -251,7 +243,6 @@ public class ConfigController implements Initializable {
             if (configActual != null) {
                 config.setCertificadoRuta(configActual.getCertificadoRuta());
                 config.setRutaBackup(configActual.getRutaBackup());
-                config.setPremiumDesbloqueado(configActual.isPremiumDesbloqueado());
                 config.setColorTema(configActual.getColorTema());
             }
 
@@ -265,9 +256,6 @@ public class ConfigController implements Initializable {
             if (txtMargenGanancia != null && !txtMargenGanancia.getText().isBlank()) {
                 config.setMargenGananciaPct(Double.parseDouble(txtMargenGanancia.getText().replace(",", ".")));
             }
-            config.setPerfilNegocio(
-                cmbPerfilNegocio != null && cmbPerfilNegocio.getValue() != null
-                    ? cmbPerfilNegocio.getValue().name() : PerfilNegocio.GENERICO.name());
 
             configDAO.guardarConfiguracion(config);
             AlertUtil.mostrarInfo("Guardado", "Configuración actualizada correctamente.");

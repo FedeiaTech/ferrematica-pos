@@ -1,7 +1,6 @@
 package com.fedeiatech.sistemagestionpyme.view;
 
 import com.fedeiatech.sistemagestionpyme.dao.VentaDAO;
-import com.fedeiatech.sistemagestionpyme.service.LicenseService;
 import com.fedeiatech.sistemagestionpyme.service.ThemeService;
 import com.fedeiatech.sistemagestionpyme.view.util.AlertUtil;
 import java.net.URL;
@@ -31,7 +30,7 @@ public class StatsController implements Initializable {
     private static final Logger LOGGER = Logger.getLogger(StatsController.class.getName());
 
     @FXML private AnchorPane rootPane;
-    @FXML private Label lblPremiumLock;
+    @FXML private Label lblInfoMensaje;
     @FXML private TabPane tabPane;
     @FXML private TableView<String[]> tablaBasket;
     @FXML private TableColumn<String[], String> colProdA;
@@ -55,13 +54,6 @@ public class StatsController implements Initializable {
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         rootPane.setStyle(ThemeService.getInstance().getBgStyle());
-
-        if (!LicenseService.permiteEstadisticas()) {
-            lblPremiumLock.setVisible(true);
-            lblPremiumLock.setManaged(true);
-            tabPane.setDisable(true);
-            return;
-        }
 
         configurarTablaBasket();
         configurarTablaSemanal();
@@ -108,10 +100,10 @@ public class StatsController implements Initializable {
         ObservableList<String[]> lista = FXCollections.observableArrayList(datos);
         tablaBasket.setItems(lista);
         if (datos.isEmpty()) {
-            lblPremiumLock.setText("ℹ No hay suficientes datos para mostrar correlaciones (mínimo 2 tickets con pares).");
-            lblPremiumLock.setStyle("-fx-font-size: 11; -fx-text-fill: #7f8c8d;");
-            lblPremiumLock.setVisible(true);
-            lblPremiumLock.setManaged(true);
+            lblInfoMensaje.setText("ℹ No hay suficientes datos para mostrar correlaciones (mínimo 2 tickets con pares).");
+            lblInfoMensaje.setStyle("-fx-font-size: 11; -fx-text-fill: #7f8c8d;");
+            lblInfoMensaje.setVisible(true);
+            lblInfoMensaje.setManaged(true);
         }
     }
 

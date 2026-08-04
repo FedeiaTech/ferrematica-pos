@@ -3,7 +3,6 @@ package com.fedeiatech.sistemagestionpyme.view;
 import com.fedeiatech.sistemagestionpyme.dao.VentaDAO;
 import com.fedeiatech.sistemagestionpyme.model.Venta;
 import com.fedeiatech.sistemagestionpyme.service.ExportService;
-import com.fedeiatech.sistemagestionpyme.service.LicenseService;
 import com.fedeiatech.sistemagestionpyme.service.ThemeService;
 import com.fedeiatech.sistemagestionpyme.service.TicketService;
 import java.io.File;
@@ -55,11 +54,6 @@ public class ReportsController implements Initializable {
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         rootPane.setStyle(ThemeService.getInstance().getBgStyle());
-
-        if (!LicenseService.permiteReportes()) {
-            AlertUtil.mostrarAdvertencia("Acceso Denegado", "No tienes licencia para ver este módulo.");
-            return;
-        }
 
         configurarTabla();
         cargarDatos();

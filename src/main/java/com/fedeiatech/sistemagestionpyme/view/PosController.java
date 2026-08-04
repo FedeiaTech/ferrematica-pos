@@ -5,7 +5,6 @@ import com.fedeiatech.sistemagestionpyme.dao.ConfiguracionDAO;
 import com.fedeiatech.sistemagestionpyme.dao.ItemDAO;
 import com.fedeiatech.sistemagestionpyme.dao.VentaDAO;
 import com.fedeiatech.sistemagestionpyme.model.Combo;
-import com.fedeiatech.sistemagestionpyme.service.LicenseService;
 import com.fedeiatech.sistemagestionpyme.service.ThemeService;
 import com.fedeiatech.sistemagestionpyme.model.Configuracion;
 import com.fedeiatech.sistemagestionpyme.model.DetalleVenta;
@@ -179,12 +178,10 @@ public class PosController implements Initializable {
                              p.getNombre().toLowerCase().contains(termino.toLowerCase()))
                 .collect(Collectors.toList());
 
-            List<Combo> combos = LicenseService.esPremium()
-                ? comboDAO.listarTodos().stream()
-                    .filter(c -> c.getCodigo().equalsIgnoreCase(termino) ||
-                                 c.getNombre().toLowerCase().contains(termino.toLowerCase()))
-                    .collect(Collectors.toList())
-                : java.util.Collections.emptyList();
+            List<Combo> combos = comboDAO.listarTodos().stream()
+                .filter(c -> c.getCodigo().equalsIgnoreCase(termino) ||
+                             c.getNombre().toLowerCase().contains(termino.toLowerCase()))
+                .collect(Collectors.toList());
 
             int total = items.size() + combos.size();
 

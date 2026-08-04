@@ -7,7 +7,6 @@ import com.fedeiatech.sistemagestionpyme.model.ItemVenta;
 import com.fedeiatech.sistemagestionpyme.service.ExportService;
 import com.fedeiatech.sistemagestionpyme.service.ImportService;
 import com.fedeiatech.sistemagestionpyme.service.ImportService.ImportResult;
-import com.fedeiatech.sistemagestionpyme.service.LicenseService;
 import com.fedeiatech.sistemagestionpyme.service.SessionService;
 import com.fedeiatech.sistemagestionpyme.service.ThemeService;
 import com.fedeiatech.sistemagestionpyme.view.util.AlertUtil;
@@ -51,6 +50,9 @@ public class InventoryController implements Initializable {
 
     private static final java.util.logging.Logger LOGGER = java.util.logging.Logger.getLogger(InventoryController.class.getName());
 
+    private static final List<String> CATEGORIAS_FERRETERIA = List.of(
+        "Tornillería", "Electricidad", "Pintura", "Herramientas", "Plomería");
+
     @FXML private AnchorPane rootPane;
     @FXML private HBox formHBox;
     @FXML private TableView<ItemVenta> tablaItems;
@@ -89,7 +91,9 @@ public class InventoryController implements Initializable {
 
         cmbCategoria.setEditable(true);
         cmbCategoria.getItems().add("General");
-        cargarCategoriasSugeridasDelPerfil();
+        for (String categoria : CATEGORIAS_FERRETERIA) {
+            if (!cmbCategoria.getItems().contains(categoria)) cmbCategoria.getItems().add(categoria);
+        }
         cmbCategoria.setValue("General");
 
         configurarColumnas();
@@ -252,25 +256,11 @@ public class InventoryController implements Initializable {
         }
     }
 
-    private void cargarCategoriasSugeridasDelPerfil() {
-        try {
-            com.fedeiatech.sistemagestionpyme.model.Configuracion config =
-                new com.fedeiatech.sistemagestionpyme.dao.ConfiguracionDAO().obtenerConfiguracion();
-            if (config == null) return;
-            com.fedeiatech.sistemagestionpyme.model.PerfilNegocio perfil =
-                com.fedeiatech.sistemagestionpyme.model.PerfilNegocio.desdeNombre(config.getPerfilNegocio());
-            for (String sugerida : perfil.categoriasSugeridas()) {
-                if (!cmbCategoria.getItems().contains(sugerida)) cmbCategoria.getItems().add(sugerida);
-            }
-        } catch (SQLException e) {
-            LOGGER.log(java.util.logging.Level.WARNING, "No se pudieron cargar las categorías sugeridas del perfil", e);
-        }
-    }
-
     private void actualizarSugerenciasCategoria(List<ItemVenta> items) {
         String valorActual = cmbCategoria.getValue();
         java.util.LinkedHashSet<String> categorias = new java.util.LinkedHashSet<>();
         categorias.add("General");
+        categorias.addAll(CATEGORIAS_FERRETERIA);
         for (ItemVenta item : items) categorias.add(item.getCategoria());
         cmbCategoria.getItems().setAll(categorias);
         cmbCategoria.setValue(valorActual != null ? valorActual : "General");

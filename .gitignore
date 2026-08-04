@@ -22,3 +22,6 @@ LEEME.pdf
 
 # Sistema operativo
 .DS_Store
+
+# SDD skill registry cache
+.atl/

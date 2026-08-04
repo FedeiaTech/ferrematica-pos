@@ -14,13 +14,11 @@ public class Configuracion {
     private String rutaBackup;
     private String rutaGuardadoTickets;
     private String colorTema = "#f4f6f8";
-    private boolean premiumDesbloqueado = false;
     private int anchoTicketMm = 80;
     private boolean ticketMostrarDireccion = true;
     private boolean ticketMostrarCuit = true;
     private boolean usarEnteros = false;
     private double margenGananciaPct = 0.0;
-    private String perfilNegocio = PerfilNegocio.GENERICO.name();
 
     public Configuracion() {
     }
@@ -77,9 +75,6 @@ public class Configuracion {
     public String getColorTema() { return colorTema; }
     public void setColorTema(String colorTema) { this.colorTema = colorTema; }
 
-    public boolean isPremiumDesbloqueado() { return premiumDesbloqueado; }
-    public void setPremiumDesbloqueado(boolean premiumDesbloqueado) { this.premiumDesbloqueado = premiumDesbloqueado; }
-
     public int getAnchoTicketMm() { return anchoTicketMm; }
     public void setAnchoTicketMm(int v) { this.anchoTicketMm = v; }
 
@@ -94,7 +89,4 @@ public class Configuracion {
 
     public double getMargenGananciaPct() { return margenGananciaPct; }
     public void setMargenGananciaPct(double v) { this.margenGananciaPct = v; }
-
-    public String getPerfilNegocio() { return perfilNegocio; }
-    public void setPerfilNegocio(String perfilNegocio) { this.perfilNegocio = perfilNegocio; }
 }

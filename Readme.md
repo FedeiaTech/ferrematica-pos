@@ -50,31 +50,29 @@
 - [x] **Temas de color** — 6 colores de fondo (3 claros + 3 saturados), persiste entre sesiones, accesible para todos los roles
 - [x] **Sistema de Combos** — combos basados en inventario con stock calculado automáticamente, visibles en negrita en inventario y vendibles desde POS
 - [x] **Estadísticas Avanzadas** — canasta de productos (market basket), mejores horarios de venta, mapa de demanda día/hora
-- [x] **Modelo Freemium/Premium** — unlock por contraseña única, reportes y stats bloqueados en free, botón PREMIUM en dashboard
-- [x] **Perfil de Negocio** — kiosco, tienda, ferretería o genérico; define categorías sugeridas en Inventario
 - [ ] **Conexión Fiscal ARCA** *(planificado post comercialización)*
 
 ---
 
-## Niveles de Licencia
+## Funcionalidades
 
-El sistema funciona en modo **FREE** desde el primer arranque. Para activar el modo **PREMIUM**, ingresar la clave de activación desde el botón "PREMIUM 🔒" en el dashboard (unlock único, permanente).
+Sistema de instalación única para Ferrematica — todas las funciones están disponibles desde el primer arranque, sin niveles de licencia ni desbloqueos.
 
-| Feature | FREE | PREMIUM |
-| --- | --- | --- |
-| Punto de Venta (POS) | ✓ | ✓ |
-| Inventario (solo lectura para CAJERO) | ✓ | ✓ |
-| Tickets PDF | ✓ | ✓ |
-| Dashboard con KPIs y gráficos | ✓ | ✓ |
-| Temas de color | ✓ | ✓ |
-| Gestión de Inventario completa (ADMIN) | ✓ | ✓ |
-| Reportes e historial de ventas | — | ✓ |
-| Export Excel (3 formatos) | — | ✓ |
-| Import masivo desde Excel | — | ✓ |
-| Sistema de Combos | — | ✓ |
-| Estadísticas Avanzadas (canasta, horarios, heatmap) | — | ✓ |
-| Gestión de Usuarios (panel admin) | — | ✓ |
-| Conexión Fiscal ARCA | — | ✓ *(próximo)* |
+| Feature | Disponible |
+| --- | --- |
+| Punto de Venta (POS) | ✓ |
+| Inventario (solo lectura para CAJERO) | ✓ |
+| Tickets PDF | ✓ |
+| Dashboard con KPIs y gráficos | ✓ |
+| Temas de color | ✓ |
+| Gestión de Inventario completa (ADMIN) | ✓ |
+| Reportes e historial de ventas | ✓ |
+| Export Excel (3 formatos) | ✓ |
+| Import masivo desde Excel | ✓ |
+| Sistema de Combos | ✓ |
+| Estadísticas Avanzadas (canasta, horarios, heatmap) | ✓ |
+| Gestión de Usuarios (panel admin) | ✓ |
+| Conexión Fiscal ARCA | — *(próximo)* |
 
 ---
 
