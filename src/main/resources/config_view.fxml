@@ -4,6 +4,7 @@
 <?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.ChoiceBox?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
 <?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.Tab?>
 <?import javafx.scene.control.TabPane?>
@@ -204,6 +205,63 @@
                                                style="-fx-background-color: #c0392b; -fx-text-fill: white; -fx-font-weight: bold;" />
                                     </HBox>
                                     <Label text="Guarda una copia del archivo .db en un pendrive o nube. Se recomienda hacer backup semanal." textFill="GRAY" />
+
+                                 </children>
+                              </VBox>
+                           </children>
+                        </AnchorPane></content>
+                        </ScrollPane>
+                     </content>
+                  </Tab>
+
+                  <!-- ===== SINCRONIZACIÓN CON SUPABASE (solo ADMIN) ===== -->
+                  <Tab fx:id="tabSyncSupabase" text="Sincronización">
+                     <content>
+                        <ScrollPane fitToWidth="true" style="-fx-background-color: transparent;">
+                        <content><AnchorPane minHeight="420.0">
+                           <children>
+                              <VBox fx:id="vboxSyncSupabase" spacing="14.0" AnchorPane.leftAnchor="20.0" AnchorPane.topAnchor="15.0" AnchorPane.rightAnchor="20.0">
+                                 <children>
+
+                                    <Label text="Sincronización con Supabase" style="-fx-font-weight: bold; -fx-font-size: 13;" />
+                                    <Label text="Publica el catálogo de productos (stock, precio, categoría) hacia la tienda online. Requiere una cuenta de sincronización provista por el administrador del proyecto Supabase."
+                                           style="-fx-text-fill: #7f8c8d; -fx-font-size: 11;" wrapText="true" maxWidth="700.0" />
+
+                                    <GridPane hgap="15.0" vgap="12.0">
+                                       <columnConstraints>
+                                          <ColumnConstraints minWidth="180.0" prefWidth="180.0" />
+                                          <ColumnConstraints hgrow="ALWAYS" prefWidth="380.0" />
+                                       </columnConstraints>
+                                       <rowConstraints>
+                                          <RowConstraints prefHeight="32.0" />
+                                          <RowConstraints prefHeight="32.0" />
+                                          <RowConstraints prefHeight="32.0" />
+                                          <RowConstraints prefHeight="32.0" />
+                                          <RowConstraints prefHeight="32.0" />
+                                       </rowConstraints>
+                                       <children>
+                                          <Label text="URL del proyecto Supabase:" />
+                                          <TextField fx:id="txtSupabaseUrl" GridPane.columnIndex="1" promptText="https://xxxx.supabase.co" />
+                                          <Label text="Anon key:" GridPane.rowIndex="1" />
+                                          <TextField fx:id="txtSupabaseAnonKey" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                                          <Label text="Email de la cuenta de sync:" GridPane.rowIndex="2" />
+                                          <TextField fx:id="txtSupabaseSyncEmail" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                                          <Label text="Contraseña de la cuenta de sync:" GridPane.rowIndex="3" />
+                                          <PasswordField fx:id="txtSupabaseSyncPassword" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+                                          <Label text="Intervalo de sincronización (min):" GridPane.rowIndex="4" />
+                                          <TextField fx:id="txtSupabaseSyncIntervaloMin" GridPane.columnIndex="1" GridPane.rowIndex="4" prefWidth="80.0" />
+                                       </children>
+                                    </GridPane>
+
+                                    <CheckBox fx:id="chkSupabaseSyncHabilitado" text="Habilitar sincronización automática" />
+
+                                    <Label fx:id="lblSyncBloqueado" text="" wrapText="true" maxWidth="700.0"
+                                           style="-fx-text-fill: #c0392b; -fx-font-size: 11;" visible="false" managed="false" />
+
+                                    <HBox spacing="10.0" alignment="CENTER_LEFT">
+                                       <Button fx:id="btnSincronizarAhora" text="Sincronizar ahora" onAction="#sincronizarAhora"
+                                               style="-fx-background-color: #2980b9; -fx-text-fill: white; -fx-font-weight: bold;" />
+                                    </HBox>
 
                                  </children>
                               </VBox>

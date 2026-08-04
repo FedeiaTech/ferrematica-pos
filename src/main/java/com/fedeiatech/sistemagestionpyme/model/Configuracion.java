@@ -20,6 +20,14 @@ public class Configuracion {
     private boolean usarEnteros = false;
     private double margenGananciaPct = 0.0;
 
+    // Sincronización con Supabase
+    private String supabaseUrl;
+    private String supabaseAnonKey;
+    private boolean supabaseSyncHabilitado = false;
+    private int supabaseSyncIntervaloMin = 15;
+    private String supabaseSyncEmail;
+    private String supabaseSyncPassword;
+
     public Configuracion() {
     }
 
@@ -89,4 +97,22 @@ public class Configuracion {
 
     public double getMargenGananciaPct() { return margenGananciaPct; }
     public void setMargenGananciaPct(double v) { this.margenGananciaPct = v; }
+
+    public String getSupabaseUrl() { return supabaseUrl; }
+    public void setSupabaseUrl(String v) { this.supabaseUrl = v; }
+
+    public String getSupabaseAnonKey() { return supabaseAnonKey; }
+    public void setSupabaseAnonKey(String v) { this.supabaseAnonKey = v; }
+
+    public boolean isSupabaseSyncHabilitado() { return supabaseSyncHabilitado; }
+    public void setSupabaseSyncHabilitado(boolean v) { this.supabaseSyncHabilitado = v; }
+
+    public int getSupabaseSyncIntervaloMin() { return supabaseSyncIntervaloMin; }
+    public void setSupabaseSyncIntervaloMin(int v) { this.supabaseSyncIntervaloMin = v; }
+
+    public String getSupabaseSyncEmail() { return supabaseSyncEmail; }
+    public void setSupabaseSyncEmail(String v) { this.supabaseSyncEmail = v; }
+
+    public String getSupabaseSyncPassword() { return supabaseSyncPassword; }
+    public void setSupabaseSyncPassword(String v) { this.supabaseSyncPassword = v; }
 }

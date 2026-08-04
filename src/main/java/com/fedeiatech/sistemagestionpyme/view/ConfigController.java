@@ -1,6 +1,7 @@
 package com.fedeiatech.sistemagestionpyme.view;
 
 import com.fedeiatech.sistemagestionpyme.dao.ConfiguracionDAO;
+import com.fedeiatech.sistemagestionpyme.dao.ItemDAO;
 import com.fedeiatech.sistemagestionpyme.dao.UsuarioDAO;
 import com.fedeiatech.sistemagestionpyme.dao.VentaDAO;
 import com.fedeiatech.sistemagestionpyme.model.Configuracion;
@@ -15,6 +16,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.ResourceBundle;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -25,6 +27,7 @@ import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
@@ -57,6 +60,18 @@ public class ConfigController implements Initializable {
     @FXML private CheckBox chkUsarEnteros;
     @FXML private TextField txtMargenGanancia;
 
+    // Sincronización con Supabase (ADMIN-only)
+    @FXML private Tab tabSyncSupabase;
+    @FXML private VBox vboxSyncSupabase;
+    @FXML private TextField txtSupabaseUrl;
+    @FXML private TextField txtSupabaseAnonKey;
+    @FXML private TextField txtSupabaseSyncEmail;
+    @FXML private PasswordField txtSupabaseSyncPassword;
+    @FXML private TextField txtSupabaseSyncIntervaloMin;
+    @FXML private CheckBox chkSupabaseSyncHabilitado;
+    @FXML private Label lblSyncBloqueado;
+    @FXML private Button btnSincronizarAhora;
+
     private ConfiguracionDAO configDAO;
     private File archivoLogoSeleccionado;
 
@@ -68,6 +83,47 @@ public class ConfigController implements Initializable {
             cmbAnchoTicket.getItems().addAll("58 mm", "80 mm");
         }
         cargarDatos();
+        configurarVisibilidadSync();
+    }
+
+    private void configurarVisibilidadSync() {
+        if (tabSyncSupabase == null) return;
+        if (!SessionService.getInstance().esAdmin()) {
+            tabSyncSupabase.setDisable(true);
+            TabPane tabPane = (TabPane) tabSyncSupabase.getTabPane();
+            if (tabPane != null) tabPane.getTabs().remove(tabSyncSupabase);
+            return;
+        }
+        actualizarEstadoBloqueoSync();
+    }
+
+    private void actualizarEstadoBloqueoSync() {
+        if (lblSyncBloqueado == null) return;
+        try {
+            List<String> bloqueados = new ItemDAO().validarCodigosParaSync();
+            if (bloqueados.isEmpty()) {
+                lblSyncBloqueado.setText("");
+                lblSyncBloqueado.setVisible(false);
+                lblSyncBloqueado.setManaged(false);
+                if (chkSupabaseSyncHabilitado != null) chkSupabaseSyncHabilitado.setDisable(false);
+                if (btnSincronizarAhora != null) btnSincronizarAhora.setDisable(false);
+            } else {
+                StringBuilder sb = new StringBuilder("Sincronización bloqueada: corregí estos productos en Inventario (código vacío o duplicado):\n");
+                for (String linea : bloqueados) {
+                    sb.append("• ").append(linea).append("\n");
+                }
+                lblSyncBloqueado.setText(sb.toString());
+                lblSyncBloqueado.setVisible(true);
+                lblSyncBloqueado.setManaged(true);
+                if (chkSupabaseSyncHabilitado != null) {
+                    chkSupabaseSyncHabilitado.setSelected(false);
+                    chkSupabaseSyncHabilitado.setDisable(true);
+                }
+                if (btnSincronizarAhora != null) btnSincronizarAhora.setDisable(true);
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error al validar códigos para sincronización", e);
+        }
     }
 
     private void cargarDatos() {
@@ -103,6 +159,14 @@ public class ConfigController implements Initializable {
                 if (chkUsarEnteros != null) chkUsarEnteros.setSelected(config.isUsarEnteros());
                 if (txtMargenGanancia != null) txtMargenGanancia.setText(
                     config.getMargenGananciaPct() > 0 ? String.valueOf(config.getMargenGananciaPct()) : "");
+
+                // Sincronización con Supabase
+                if (txtSupabaseUrl != null) txtSupabaseUrl.setText(config.getSupabaseUrl() != null ? config.getSupabaseUrl() : "");
+                if (txtSupabaseAnonKey != null) txtSupabaseAnonKey.setText(config.getSupabaseAnonKey() != null ? config.getSupabaseAnonKey() : "");
+                if (txtSupabaseSyncEmail != null) txtSupabaseSyncEmail.setText(config.getSupabaseSyncEmail() != null ? config.getSupabaseSyncEmail() : "");
+                if (txtSupabaseSyncPassword != null) txtSupabaseSyncPassword.setText(config.getSupabaseSyncPassword() != null ? config.getSupabaseSyncPassword() : "");
+                if (txtSupabaseSyncIntervaloMin != null) txtSupabaseSyncIntervaloMin.setText(String.valueOf(config.getSupabaseSyncIntervaloMin()));
+                if (chkSupabaseSyncHabilitado != null) chkSupabaseSyncHabilitado.setSelected(config.isSupabaseSyncHabilitado());
             }
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error al cargar la configuración", e);
@@ -257,6 +321,18 @@ public class ConfigController implements Initializable {
                 config.setMargenGananciaPct(Double.parseDouble(txtMargenGanancia.getText().replace(",", ".")));
             }
 
+            // Sincronización con Supabase
+            if (txtSupabaseUrl != null) config.setSupabaseUrl(txtSupabaseUrl.getText());
+            if (txtSupabaseAnonKey != null) config.setSupabaseAnonKey(txtSupabaseAnonKey.getText());
+            if (txtSupabaseSyncEmail != null) config.setSupabaseSyncEmail(txtSupabaseSyncEmail.getText());
+            if (txtSupabaseSyncPassword != null) config.setSupabaseSyncPassword(txtSupabaseSyncPassword.getText());
+            if (txtSupabaseSyncIntervaloMin != null && !txtSupabaseSyncIntervaloMin.getText().isBlank()) {
+                config.setSupabaseSyncIntervaloMin(Integer.parseInt(txtSupabaseSyncIntervaloMin.getText().trim()));
+            } else {
+                config.setSupabaseSyncIntervaloMin(15);
+            }
+            config.setSupabaseSyncHabilitado(chkSupabaseSyncHabilitado != null && chkSupabaseSyncHabilitado.isSelected());
+
             configDAO.guardarConfiguracion(config);
             AlertUtil.mostrarInfo("Guardado", "Configuración actualizada correctamente.");
             cerrarVentana(event);
@@ -264,6 +340,15 @@ public class ConfigController implements Initializable {
         } catch (Exception e) {
             AlertUtil.mostrarInfo("Error", "Verifica los datos ingresados: " + e.getMessage());
         }
+    }
+
+    @FXML
+    void sincronizarAhora(ActionEvent event) {
+        // Stub — la llamada real a SupabaseSyncService.sincronizar() se conecta en la PR C3
+        // (network/sync service), aún no implementada. Este handler solo deja el botón
+        // operativo desde la UI; el estado bloqueado/habilitado ya se gestiona en
+        // actualizarEstadoBloqueoSync().
+        AlertUtil.mostrarInfo("Sincronización", "La sincronización con Supabase todavía no está disponible en esta versión.");
     }
 
     @FXML

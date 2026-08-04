@@ -42,6 +42,12 @@ public class ConfiguracionDAO {
                 config.setTicketMostrarCuit(rs.getInt("ticket_mostrar_cuit") != 0);
                 config.setUsarEnteros(rs.getInt("usar_enteros") == 1);
                 config.setMargenGananciaPct(rs.getDouble("margen_ganancia_pct"));
+                config.setSupabaseUrl(rs.getString("supabase_url"));
+                config.setSupabaseAnonKey(rs.getString("supabase_anon_key"));
+                config.setSupabaseSyncHabilitado(rs.getInt("supabase_sync_habilitado") == 1);
+                config.setSupabaseSyncIntervaloMin(rs.getInt("supabase_sync_intervalo_min") == 0 ? 15 : rs.getInt("supabase_sync_intervalo_min"));
+                config.setSupabaseSyncEmail(rs.getString("supabase_sync_email"));
+                config.setSupabaseSyncPassword(rs.getString("supabase_sync_password"));
             }
         }
         return config;
@@ -54,7 +60,9 @@ public class ConfiguracionDAO {
                    + "ruta_logo=?, mensaje_ticket=?, permitir_stock_negativo=?, recargo_tarjeta=?, "
                    + "ruta_backup=?, ruta_tickets=?, "
                    + "ancho_ticket_mm=?, ticket_mostrar_direccion=?, ticket_mostrar_cuit=?, "
-                   + "usar_enteros=?, margen_ganancia_pct=? "
+                   + "usar_enteros=?, margen_ganancia_pct=?, "
+                   + "supabase_url=?, supabase_anon_key=?, supabase_sync_habilitado=?, "
+                   + "supabase_sync_intervalo_min=?, supabase_sync_email=?, supabase_sync_password=? "
                    + "WHERE id=1";
 
         try (Connection conn = ConexionDB.getConexion();
@@ -77,6 +85,12 @@ public class ConfiguracionDAO {
             pstmt.setInt(15, config.isTicketMostrarCuit() ? 1 : 0);
             pstmt.setInt(16, config.isUsarEnteros() ? 1 : 0);
             pstmt.setDouble(17, config.getMargenGananciaPct());
+            pstmt.setString(18, config.getSupabaseUrl());
+            pstmt.setString(19, config.getSupabaseAnonKey());
+            pstmt.setInt(20, config.isSupabaseSyncHabilitado() ? 1 : 0);
+            pstmt.setInt(21, config.getSupabaseSyncIntervaloMin());
+            pstmt.setString(22, config.getSupabaseSyncEmail());
+            pstmt.setString(23, config.getSupabaseSyncPassword());
 
             pstmt.executeUpdate();
         }
@@ -118,6 +132,12 @@ public class ConfiguracionDAO {
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN ticket_mostrar_cuit INTEGER DEFAULT 1"); } catch (SQLException e) {}
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN usar_enteros INTEGER DEFAULT 0"); } catch (SQLException e) {}
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN margen_ganancia_pct REAL DEFAULT 0.0"); } catch (SQLException e) {}
+            try { stmt.execute("ALTER TABLE configuracion ADD COLUMN supabase_url TEXT"); } catch (SQLException e) {}
+            try { stmt.execute("ALTER TABLE configuracion ADD COLUMN supabase_anon_key TEXT"); } catch (SQLException e) {}
+            try { stmt.execute("ALTER TABLE configuracion ADD COLUMN supabase_sync_habilitado INTEGER DEFAULT 0"); } catch (SQLException e) {}
+            try { stmt.execute("ALTER TABLE configuracion ADD COLUMN supabase_sync_intervalo_min INTEGER DEFAULT 15"); } catch (SQLException e) {}
+            try { stmt.execute("ALTER TABLE configuracion ADD COLUMN supabase_sync_email TEXT"); } catch (SQLException e) {}
+            try { stmt.execute("ALTER TABLE configuracion ADD COLUMN supabase_sync_password TEXT"); } catch (SQLException e) {}
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error al migrar columnas de configuracion", e);
         }

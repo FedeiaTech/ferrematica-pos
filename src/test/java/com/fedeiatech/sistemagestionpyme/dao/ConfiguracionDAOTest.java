@@ -48,4 +48,30 @@ class ConfiguracionDAOTest {
         assertEquals("Ferretería Don José", recargado.getNombreEmpresa());
         assertEquals(35.5, recargado.getMargenGananciaPct());
     }
+
+    @Test
+    void datosDeSyncSupabasePersistenEntreReinicios() throws SQLException {
+        configuracionDAO.inicializarTabla();
+
+        Configuracion config = configuracionDAO.obtenerConfiguracion();
+        assertNotNull(config);
+        config.setSupabaseUrl("https://proyecto.supabase.co");
+        config.setSupabaseAnonKey("anon-key-123");
+        config.setSupabaseSyncHabilitado(true);
+        config.setSupabaseSyncIntervaloMin(30);
+        config.setSupabaseSyncEmail("dueno@ferreteria.com");
+        config.setSupabaseSyncPassword("secreta123");
+        configuracionDAO.guardarConfiguracion(config);
+
+        // Simula un reinicio: nueva instancia del DAO contra la misma conexión/archivo
+        ConfiguracionDAO reiniciado = new ConfiguracionDAO();
+        Configuracion recargado = reiniciado.obtenerConfiguracion();
+
+        assertEquals("https://proyecto.supabase.co", recargado.getSupabaseUrl());
+        assertEquals("anon-key-123", recargado.getSupabaseAnonKey());
+        assertEquals(true, recargado.isSupabaseSyncHabilitado());
+        assertEquals(30, recargado.getSupabaseSyncIntervaloMin());
+        assertEquals("dueno@ferreteria.com", recargado.getSupabaseSyncEmail());
+        assertEquals("secreta123", recargado.getSupabaseSyncPassword());
+    }
 }
