@@ -291,57 +291,61 @@ public class ConfigController implements Initializable {
     @FXML
     void guardarCambios(ActionEvent event) {
         try {
-            int pv = Integer.parseInt(txtPuntoVenta.getText());
-            double recargo = Double.parseDouble(txtRecargo.getText().replace(",", "."));
-
-            Configuracion configActual = configDAO.obtenerConfiguracion();
-            Configuracion config = new Configuracion();
-            config.setNombreEmpresa(txtNombreEmpresa.getText());
-            config.setCuit(txtCuit.getText());
-            config.setDireccion(txtDireccion.getText());
-            config.setCondicionIva(txtCondicionIva.getText());
-            config.setPuntoVenta(pv);
-            config.setRutaLogo(lblRutaLogo.getText());
-            config.setMensajeTicket(txtMensajeTicket.getText());
-            config.setRutaGuardadoTickets(txtRutaTickets.getText());
-            config.setPermitirStockNegativo(chkStockNegativo.isSelected());
-            config.setRecargoTarjeta(recargo);
-            if (configActual != null) {
-                config.setCertificadoRuta(configActual.getCertificadoRuta());
-                config.setRutaBackup(configActual.getRutaBackup());
-                config.setColorTema(configActual.getColorTema());
-            }
-
-            // Nuevos campos
-            if (cmbAnchoTicket != null) {
-                config.setAnchoTicketMm(cmbAnchoTicket.getValue() != null && cmbAnchoTicket.getValue().startsWith("58") ? 58 : 80);
-            }
-            config.setTicketMostrarDireccion(chkMostrarDireccion != null && chkMostrarDireccion.isSelected());
-            config.setTicketMostrarCuit(chkMostrarCuit != null && chkMostrarCuit.isSelected());
-            config.setUsarEnteros(chkUsarEnteros != null && chkUsarEnteros.isSelected());
-            if (txtMargenGanancia != null && !txtMargenGanancia.getText().isBlank()) {
-                config.setMargenGananciaPct(Double.parseDouble(txtMargenGanancia.getText().replace(",", ".")));
-            }
-
-            // Sincronización con Supabase
-            if (txtSupabaseUrl != null) config.setSupabaseUrl(txtSupabaseUrl.getText());
-            if (txtSupabaseAnonKey != null) config.setSupabaseAnonKey(txtSupabaseAnonKey.getText());
-            if (txtSupabaseSyncEmail != null) config.setSupabaseSyncEmail(txtSupabaseSyncEmail.getText());
-            if (txtSupabaseSyncPassword != null) config.setSupabaseSyncPassword(txtSupabaseSyncPassword.getText());
-            if (txtSupabaseSyncIntervaloMin != null && !txtSupabaseSyncIntervaloMin.getText().isBlank()) {
-                config.setSupabaseSyncIntervaloMin(Integer.parseInt(txtSupabaseSyncIntervaloMin.getText().trim()));
-            } else {
-                config.setSupabaseSyncIntervaloMin(15);
-            }
-            config.setSupabaseSyncHabilitado(chkSupabaseSyncHabilitado != null && chkSupabaseSyncHabilitado.isSelected());
-
-            configDAO.guardarConfiguracion(config);
-            SupabaseSyncService.getInstance().iniciarProgramacionSiCorresponde();
+            guardarConfiguracionDesdeFormulario();
             AlertUtil.mostrarInfo("Guardado", "Configuración actualizada correctamente.");
-
+            cerrarVentana(event);
         } catch (Exception e) {
             AlertUtil.mostrarInfo("Error", "Verifica los datos ingresados: " + e.getMessage());
         }
+    }
+
+    private void guardarConfiguracionDesdeFormulario() throws Exception {
+        int pv = Integer.parseInt(txtPuntoVenta.getText());
+        double recargo = Double.parseDouble(txtRecargo.getText().replace(",", "."));
+
+        Configuracion configActual = configDAO.obtenerConfiguracion();
+        Configuracion config = new Configuracion();
+        config.setNombreEmpresa(txtNombreEmpresa.getText());
+        config.setCuit(txtCuit.getText());
+        config.setDireccion(txtDireccion.getText());
+        config.setCondicionIva(txtCondicionIva.getText());
+        config.setPuntoVenta(pv);
+        config.setRutaLogo(lblRutaLogo.getText());
+        config.setMensajeTicket(txtMensajeTicket.getText());
+        config.setRutaGuardadoTickets(txtRutaTickets.getText());
+        config.setPermitirStockNegativo(chkStockNegativo.isSelected());
+        config.setRecargoTarjeta(recargo);
+        if (configActual != null) {
+            config.setCertificadoRuta(configActual.getCertificadoRuta());
+            config.setRutaBackup(configActual.getRutaBackup());
+            config.setColorTema(configActual.getColorTema());
+        }
+
+        // Nuevos campos
+        if (cmbAnchoTicket != null) {
+            config.setAnchoTicketMm(cmbAnchoTicket.getValue() != null && cmbAnchoTicket.getValue().startsWith("58") ? 58 : 80);
+        }
+        config.setTicketMostrarDireccion(chkMostrarDireccion != null && chkMostrarDireccion.isSelected());
+        config.setTicketMostrarCuit(chkMostrarCuit != null && chkMostrarCuit.isSelected());
+        config.setUsarEnteros(chkUsarEnteros != null && chkUsarEnteros.isSelected());
+        if (txtMargenGanancia != null && !txtMargenGanancia.getText().isBlank()) {
+            config.setMargenGananciaPct(Double.parseDouble(txtMargenGanancia.getText().replace(",", ".")));
+        }
+
+        // Sincronización con Supabase
+        if (txtSupabaseUrl != null) config.setSupabaseUrl(txtSupabaseUrl.getText());
+        if (txtSupabaseAnonKey != null) config.setSupabaseAnonKey(txtSupabaseAnonKey.getText());
+        if (txtSupabaseSyncEmail != null) config.setSupabaseSyncEmail(txtSupabaseSyncEmail.getText());
+        if (txtSupabaseSyncPassword != null) config.setSupabaseSyncPassword(txtSupabaseSyncPassword.getText());
+        if (txtSupabaseSyncIntervaloMin != null && !txtSupabaseSyncIntervaloMin.getText().isBlank()) {
+            config.setSupabaseSyncIntervaloMin(Integer.parseInt(txtSupabaseSyncIntervaloMin.getText().trim()));
+        } else {
+            config.setSupabaseSyncIntervaloMin(15);
+        }
+        config.setSupabaseSyncHabilitado(chkSupabaseSyncHabilitado != null && chkSupabaseSyncHabilitado.isSelected());
+
+        configDAO.guardarConfiguracion(config);
+        SupabaseSyncService.getInstance().iniciarProgramacionSiCorresponde();
     }
 
     @FXML
@@ -349,6 +353,12 @@ public class ConfigController implements Initializable {
         if (chkSupabaseSyncHabilitado == null || !chkSupabaseSyncHabilitado.isSelected()) {
             AlertUtil.mostrarInfo("Sincronización deshabilitada",
                     "Habilitá la sincronización y guardá los cambios antes de sincronizar manualmente.");
+            return;
+        }
+        try {
+            guardarConfiguracionDesdeFormulario();
+        } catch (Exception e) {
+            AlertUtil.mostrarInfo("Error", "Verifica los datos ingresados: " + e.getMessage());
             return;
         }
         if (btnSincronizarAhora != null) btnSincronizarAhora.setDisable(true);
