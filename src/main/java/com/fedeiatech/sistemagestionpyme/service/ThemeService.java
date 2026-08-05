@@ -19,7 +19,8 @@ public class ThemeService {
     public static final String ACENTO_MARCA = "#B24C37";
 
     private static ThemeService instancia;
-    private String colorActual = COLORES[0];
+    // Default: tema Ferrematica (crema, último de COLORES) en vez de blanco puro.
+    private String colorActual = COLORES[COLORES.length - 1];
 
     private ThemeService() {
         cargarDesdeBD();
