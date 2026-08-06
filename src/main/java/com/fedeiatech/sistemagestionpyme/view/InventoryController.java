@@ -17,27 +17,33 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.ResourceBundle;
+import java.util.stream.Collectors;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.geometry.Insets;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -54,7 +60,7 @@ public class InventoryController implements Initializable {
         "Tornillería", "Electricidad", "Pintura", "Herramientas", "Plomería");
 
     @FXML private AnchorPane rootPane;
-    @FXML private HBox formHBox;
+    @FXML private VBox formHBox;
     @FXML private TableView<ItemVenta> tablaItems;
     @FXML private TableColumn<ItemVenta, Integer> colId;
     @FXML private TableColumn<ItemVenta, String> colCodigo;
@@ -65,6 +71,7 @@ public class InventoryController implements Initializable {
 
     @FXML private TextField txtCodigo;
     @FXML private TextField txtNombre;
+    @FXML private TextArea txtDescripcion;
     @FXML private TextField txtPrecio;
     @FXML private TextField txtStock;
     @FXML private ComboBox<String> cmbUnidad;
@@ -86,7 +93,7 @@ public class InventoryController implements Initializable {
 
         rootPane.setStyle(ThemeService.getInstance().getBgStyle());
 
-        cmbUnidad.getItems().addAll("u", "kg", "g", "lt");
+        cmbUnidad.getItems().addAll("u", "kg", "g", "lt", "docena", "par");
         cmbUnidad.setValue("u");
 
         cmbCategoria.setEditable(true);
@@ -130,6 +137,7 @@ public class InventoryController implements Initializable {
         itemEnEdicion = item;
         txtCodigo.setText(item.getCodigo());
         txtNombre.setText(item.getNombre());
+        txtDescripcion.setText(item.getDescripcion() != null ? item.getDescripcion() : "");
         txtPrecio.setText(String.valueOf(item.getPrecioVenta()));
         chkServicio.setSelected(item.isEsServicio());
 
@@ -299,7 +307,7 @@ public class InventoryController implements Initializable {
             ItemVenta item = (itemEnEdicion != null) ? itemEnEdicion : new ItemVenta();
             item.setCodigo(txtCodigo.getText());
             item.setNombre(txtNombre.getText());
-            item.setDescripcion(item.getDescripcion() != null ? item.getDescripcion() : "");
+            item.setDescripcion(txtDescripcion.getText() != null ? txtDescripcion.getText().trim() : "");
             item.setPrecioCosto(item.getPrecioCosto());
             item.setPrecioVenta(Double.parseDouble(txtPrecio.getText()));
 
@@ -332,6 +340,155 @@ public class InventoryController implements Initializable {
         } catch (SQLException e) {
             AlertUtil.mostrar(Alert.AlertType.ERROR, "Error Base de Datos", "No se pudo guardar: " + e.getMessage());
         }
+    }
+
+    @FXML
+    void duplicarItem(ActionEvent event) {
+        ItemVenta original = tablaItems.getSelectionModel().getSelectedItem();
+        if (original == null) {
+            AlertUtil.mostrar(Alert.AlertType.WARNING, "Atención", "Selecciona un producto de la lista para duplicar.");
+            return;
+        }
+        if (original.isEsCombo()) {
+            AlertUtil.mostrar(Alert.AlertType.WARNING, "No disponible", "Los combos no se duplican desde acá — usá \"Editar Combo\".");
+            return;
+        }
+
+        try {
+            String codigoNuevo = siguienteCodigoDisponible(original.getCodigo());
+
+            ItemVenta copia = new ItemVenta();
+            copia.setCodigo(codigoNuevo);
+            copia.setNombre(original.getNombre() + " (copia)");
+            copia.setDescripcion(original.getDescripcion());
+            copia.setPrecioCosto(original.getPrecioCosto());
+            copia.setPrecioVenta(original.getPrecioVenta());
+            copia.setEsServicio(original.isEsServicio());
+            copia.setStock(original.isEsServicio() ? -1 : original.getStock());
+            copia.setUnidad(original.getUnidad());
+            copia.setCategoria(original.getCategoria());
+
+            itemDAO.guardar(copia);
+            cargarDatos();
+
+            for (ItemVenta item : listaItems) {
+                if (item.getCodigo().equals(codigoNuevo)) {
+                    tablaItems.getSelectionModel().select(item);
+                    break;
+                }
+            }
+
+            AlertUtil.mostrar(Alert.AlertType.INFORMATION, "Producto duplicado",
+                "Se creó \"" + copia.getNombre() + "\" con código " + codigoNuevo + ". Ajustá lo que haga falta y guardá.");
+        } catch (SQLException e) {
+            AlertUtil.mostrar(Alert.AlertType.ERROR, "Error Base de Datos", "No se pudo duplicar: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Genera el próximo código libre a partir de uno existente. Si termina en dígitos,
+     * los incrementa preservando el ancho (ej: "TORN-001" -> "TORN-002"). Si no tiene
+     * sufijo numérico, agrega "-2", "-3", etc. Reintenta hasta encontrar uno no usado.
+     */
+    private String siguienteCodigoDisponible(String codigoOriginal) throws SQLException {
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("^(.*?)(\\d+)$").matcher(codigoOriginal);
+        String prefijo;
+        long numero;
+        int ancho;
+
+        if (m.matches()) {
+            prefijo = m.group(1);
+            String digitos = m.group(2);
+            ancho = digitos.length();
+            numero = Long.parseLong(digitos);
+        } else {
+            prefijo = codigoOriginal + "-";
+            ancho = 1;
+            numero = 1;
+        }
+
+        for (int intento = 0; intento < 10_000; intento++) {
+            numero++;
+            String candidato = prefijo + String.format("%0" + ancho + "d", numero);
+            if (itemDAO.buscarPorCodigo(candidato) == null) {
+                return candidato;
+            }
+        }
+        throw new SQLException("No se encontró un código libre para duplicar " + codigoOriginal);
+    }
+
+    @FXML
+    void gestionarCategorias(ActionEvent event) {
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("Gestionar categorías");
+        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+
+        ListView<String> listCategorias = new ListView<>();
+        listCategorias.setPrefSize(260, 250);
+        actualizarListaCategorias(listCategorias);
+
+        Button btnRenombrar = new Button("Renombrar");
+        Button btnEliminar = new Button("Eliminar (mover a \"A asignar\")");
+        btnRenombrar.setDisable(true);
+        btnEliminar.setDisable(true);
+
+        listCategorias.getSelectionModel().selectedItemProperty().addListener((obs, viejo, nuevo) -> {
+            btnRenombrar.setDisable(nuevo == null);
+            btnEliminar.setDisable(nuevo == null);
+        });
+
+        btnRenombrar.setOnAction(e -> {
+            String actual = listCategorias.getSelectionModel().getSelectedItem();
+            if (actual == null) return;
+            TextInputDialog input = new TextInputDialog(actual);
+            input.setTitle("Renombrar categoría");
+            input.setHeaderText("Nuevo nombre para \"" + actual + "\"");
+            input.setContentText("Nombre:");
+            input.showAndWait().ifPresent(nuevoNombre -> {
+                String limpio = nuevoNombre.trim();
+                if (limpio.isEmpty() || limpio.equals(actual)) return;
+                try {
+                    int afectados = itemDAO.renombrarCategoria(actual, limpio);
+                    AlertUtil.mostrar(Alert.AlertType.INFORMATION, "Categoría renombrada",
+                        afectados + " producto(s) movidos de \"" + actual + "\" a \"" + limpio + "\".");
+                    cargarDatos();
+                    actualizarListaCategorias(listCategorias);
+                } catch (SQLException ex) {
+                    AlertUtil.mostrar(Alert.AlertType.ERROR, "Error Base de Datos", ex.getMessage());
+                }
+            });
+        });
+
+        btnEliminar.setOnAction(e -> {
+            String actual = listCategorias.getSelectionModel().getSelectedItem();
+            if (actual == null) return;
+            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+            confirm.setTitle("Eliminar categoría");
+            confirm.setHeaderText("¿Eliminar \"" + actual + "\"?");
+            confirm.setContentText("Los productos de esta categoría pasan a \"A asignar\". No se borra ningún producto.");
+            if (confirm.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
+            try {
+                int afectados = itemDAO.renombrarCategoria(actual, "A asignar");
+                AlertUtil.mostrar(Alert.AlertType.INFORMATION, "Categoría eliminada",
+                    afectados + " producto(s) movidos a \"A asignar\".");
+                cargarDatos();
+                actualizarListaCategorias(listCategorias);
+            } catch (SQLException ex) {
+                AlertUtil.mostrar(Alert.AlertType.ERROR, "Error Base de Datos", ex.getMessage());
+            }
+        });
+
+        HBox botones = new HBox(10, btnRenombrar, btnEliminar);
+        VBox contenido = new VBox(10, listCategorias, botones);
+        contenido.setPadding(new Insets(10));
+        dialog.getDialogPane().setContent(contenido);
+        dialog.showAndWait();
+    }
+
+    /** Categorías reales en uso (excluye "General", que no se renombra/elimina por ser el default del sistema). */
+    private void actualizarListaCategorias(ListView<String> listView) {
+        listView.getItems().setAll(
+            cmbCategoria.getItems().stream().filter(c -> !"General".equals(c)).sorted().collect(Collectors.toList()));
     }
 
     @FXML
@@ -511,7 +668,7 @@ public class InventoryController implements Initializable {
             "D  Precio Costo  — Número ≥ 0 (opcional, default 0)\n" +
             "E  Precio Venta  — Número ≥ 0 (requerido)\n" +
             "F  Stock         — Número ≥ 0 (ignorado si es servicio)\n" +
-            "G  Unidad        — u / kg / g / lt  (default: u)\n" +
+            "G  Unidad        — u / kg / g / lt / docena / par  (default: u)\n" +
             "H  Es Servicio   — SI o NO\n\n" +
             "Tip: usá 'Plantilla' para descargar el formato correcto."
         );
@@ -523,6 +680,7 @@ public class InventoryController implements Initializable {
         tablaItems.getSelectionModel().clearSelection();
         txtCodigo.clear();
         txtNombre.clear();
+        txtDescripcion.clear();
         txtPrecio.clear();
         txtStock.clear();
         txtStock.setDisable(false);

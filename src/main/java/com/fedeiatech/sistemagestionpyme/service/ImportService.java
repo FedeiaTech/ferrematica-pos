@@ -15,7 +15,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 public class ImportService {
 
-    private static final Set<String> UNIDADES_VALIDAS = Set.of("u", "kg", "g", "lt");
+    private static final Set<String> UNIDADES_VALIDAS = Set.of("u", "kg", "g", "lt", "docena", "par");
 
     public static class ImportResult {
         public final List<ItemVenta> validos = new ArrayList<>();
@@ -95,7 +95,7 @@ public class ImportService {
         if (esErrorCelda(unidad) || unidad.isEmpty()) {
             unidad = "u";
         } else if (!UNIDADES_VALIDAS.contains(unidad)) {
-            erroresFila.add("Unidad inválida ('" + unidad + "'). Válidas: u / kg / g / lt");
+            erroresFila.add("Unidad inválida ('" + unidad + "'). Válidas: u / kg / g / lt / docena / par");
         }
 
         if (!erroresFila.isEmpty()) {
