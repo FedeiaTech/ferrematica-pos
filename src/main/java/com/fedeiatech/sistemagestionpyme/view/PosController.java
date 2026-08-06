@@ -26,12 +26,16 @@ import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.geometry.Pos;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ChoiceDialog;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListCell;
+import javafx.scene.control.ListView;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
@@ -41,6 +45,8 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.VBox;
+import javafx.stage.Popup;
 import javafx.stage.Stage;
 
 public class PosController implements Initializable {
@@ -66,6 +72,10 @@ public class PosController implements Initializable {
     private double totalVenta = 0.0;
     private ConfiguracionDAO configDAO;
 
+    private Popup popupSugerencias;
+    private ListView<ItemVenta> listSugerencias;
+    private List<Combo> ultimosCombosSugeridos = List.of();
+
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         itemDAO = new ItemDAO();
@@ -78,11 +88,31 @@ public class PosController implements Initializable {
 
         configurarTabla();
 
-        Platform.runLater(() -> txtBuscador.requestFocus());
+        Platform.runLater(() -> {
+            txtBuscador.requestFocus();
+            if (rootPane.getScene() != null) {
+                rootPane.getScene().addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+                    if (event.isControlDown() && event.getCode() == KeyCode.ENTER
+                            && btnCobrar != null && !btnCobrar.isDisabled()) {
+                        finalizarVenta(null);
+                        event.consume();
+                    }
+                });
+            }
+        });
+
+        configurarAutocompletado();
 
         txtBuscador.setOnKeyPressed(event -> {
             if (event.getCode() == KeyCode.ENTER) {
+                popupSugerencias.hide();
                 buscarProducto();
+            } else if (event.getCode() == KeyCode.DOWN && popupSugerencias.isShowing()) {
+                listSugerencias.requestFocus();
+                listSugerencias.getSelectionModel().selectFirst();
+                event.consume();
+            } else if (event.getCode() == KeyCode.ESCAPE) {
+                popupSugerencias.hide();
             }
         });
 
@@ -168,15 +198,99 @@ public class PosController implements Initializable {
         buscarProducto();
     }
 
+    private void configurarAutocompletado() {
+        listSugerencias = new ListView<>();
+        listSugerencias.setPrefWidth(320);
+        listSugerencias.setMaxHeight(220);
+        listSugerencias.setCellFactory(lv -> new ListCell<>() {
+            @Override
+            protected void updateItem(ItemVenta item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : (item.isEsCombo() ? "🧩 " : "") + item.toString());
+            }
+        });
+
+        popupSugerencias = new Popup();
+        popupSugerencias.setAutoHide(true);
+        popupSugerencias.setHideOnEscape(true);
+        popupSugerencias.getContent().add(listSugerencias);
+
+        txtBuscador.textProperty().addListener((obs, valorViejo, valorNuevo) -> actualizarSugerencias(valorNuevo));
+
+        listSugerencias.setOnMouseClicked(event -> {
+            ItemVenta seleccionado = listSugerencias.getSelectionModel().getSelectedItem();
+            if (seleccionado != null) seleccionarSugerencia(seleccionado);
+        });
+
+        listSugerencias.setOnKeyPressed(event -> {
+            if (event.getCode() == KeyCode.ENTER) {
+                ItemVenta seleccionado = listSugerencias.getSelectionModel().getSelectedItem();
+                if (seleccionado != null) seleccionarSugerencia(seleccionado);
+            } else if (event.getCode() == KeyCode.ESCAPE) {
+                popupSugerencias.hide();
+                txtBuscador.requestFocus();
+            }
+        });
+    }
+
+    private void actualizarSugerencias(String termino) {
+        String t = termino == null ? "" : termino.trim();
+        if (t.length() < 2) {
+            popupSugerencias.hide();
+            return;
+        }
+
+        try {
+            List<ItemVenta> items = itemDAO.buscarPorFiltro(t);
+
+            List<Combo> combos = comboDAO.listarTodos().stream()
+                .filter(c -> c.getCodigo().equalsIgnoreCase(t) ||
+                             c.getNombre().toLowerCase().contains(t.toLowerCase()))
+                .collect(Collectors.toList());
+
+            ultimosCombosSugeridos = combos;
+
+            List<ItemVenta> sugerencias = new java.util.ArrayList<>(items);
+            combos.forEach(c -> sugerencias.add(ItemVenta.desdeCombo(c)));
+
+            if (sugerencias.isEmpty()) {
+                popupSugerencias.hide();
+                return;
+            }
+
+            listSugerencias.getItems().setAll(
+                sugerencias.size() > 8 ? sugerencias.subList(0, 8) : sugerencias);
+            listSugerencias.getSelectionModel().clearSelection();
+
+            if (!popupSugerencias.isShowing()) {
+                var bounds = txtBuscador.localToScreen(txtBuscador.getBoundsInLocal());
+                popupSugerencias.show(txtBuscador, bounds.getMinX(), bounds.getMaxY());
+            }
+        } catch (SQLException e) {
+            popupSugerencias.hide();
+        }
+    }
+
+    private void seleccionarSugerencia(ItemVenta seleccionado) {
+        if (seleccionado.isEsCombo()) {
+            ultimosCombosSugeridos.stream()
+                .filter(c -> c.getId() == seleccionado.getIdCombo())
+                .findFirst()
+                .ifPresent(this::agregarComboAlCarrito);
+        } else {
+            agregarAlCarrito(seleccionado);
+        }
+        popupSugerencias.hide();
+        txtBuscador.clear();
+        txtBuscador.requestFocus();
+    }
+
     private void buscarProducto() {
         String termino = txtBuscador.getText().trim();
         if (termino.isEmpty()) return;
 
         try {
-            List<ItemVenta> items = itemDAO.listarTodos().stream()
-                .filter(p -> p.getCodigo().equalsIgnoreCase(termino) ||
-                             p.getNombre().toLowerCase().contains(termino.toLowerCase()))
-                .collect(Collectors.toList());
+            List<ItemVenta> items = itemDAO.buscarPorFiltro(termino);
 
             List<Combo> combos = comboDAO.listarTodos().stream()
                 .filter(c -> c.getCodigo().equalsIgnoreCase(termino) ||
@@ -423,14 +537,27 @@ public class PosController implements Initializable {
             }
         }
 
-        if (hayErrores || listaCarrito.isEmpty()) {
+        boolean sinItems = listaCarrito.isEmpty();
+
+        Label lblPrincipal = new Label(hayErrores ? "STOCK INSUFICIENTE (!)" : "COBRAR");
+        lblPrincipal.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: white;");
+        VBox contenido = new VBox(2, lblPrincipal);
+        contenido.setAlignment(Pos.CENTER);
+        if (!hayErrores) {
+            Label lblAtajo = new Label("(Ctrl+Enter)");
+            lblAtajo.setStyle("-fx-font-size: 10px; -fx-text-fill: white; -fx-opacity: 0.85;");
+            contenido.getChildren().add(lblAtajo);
+        }
+        btnCobrar.setText(null);
+        btnCobrar.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+        btnCobrar.setGraphic(contenido);
+
+        if (hayErrores || sinItems) {
             btnCobrar.setDisable(true);
-            btnCobrar.setText(hayErrores ? "STOCK INSUFICIENTE (!)" : "COBRAR (F12)");
-            btnCobrar.setStyle("-fx-background-color: #95a5a6; -fx-text-fill: white; -fx-font-size: 18px; -fx-font-weight: bold;");
+            btnCobrar.setStyle("-fx-background-color: #95a5a6;");
         } else {
             btnCobrar.setDisable(false);
-            btnCobrar.setText("COBRAR (F12)");
-            btnCobrar.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-size: 18px; -fx-font-weight: bold; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 5, 0, 0, 1);");
+            btnCobrar.setStyle("-fx-background-color: #27ae60; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 5, 0, 0, 1);");
         }
     }
 }
