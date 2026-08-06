@@ -41,12 +41,12 @@ class ConfiguracionDAOTest {
         Configuracion config = configuracionDAO.obtenerConfiguracion();
         assertNotNull(config);
         config.setNombreEmpresa("Ferretería Don José");
-        config.setMargenGananciaPct(35.5);
+        config.setRecargoTarjeta(8.5);
         configuracionDAO.guardarConfiguracion(config);
 
         Configuracion recargado = configuracionDAO.obtenerConfiguracion();
         assertEquals("Ferretería Don José", recargado.getNombreEmpresa());
-        assertEquals(35.5, recargado.getMargenGananciaPct());
+        assertEquals(8.5, recargado.getRecargoTarjeta());
     }
 
     @Test

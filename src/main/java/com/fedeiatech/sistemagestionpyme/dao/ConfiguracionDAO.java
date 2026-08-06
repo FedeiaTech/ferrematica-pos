@@ -41,7 +41,6 @@ public class ConfiguracionDAO {
                 config.setTicketMostrarDireccion(rs.getInt("ticket_mostrar_direccion") != 0);
                 config.setTicketMostrarCuit(rs.getInt("ticket_mostrar_cuit") != 0);
                 config.setUsarEnteros(rs.getInt("usar_enteros") == 1);
-                config.setMargenGananciaPct(rs.getDouble("margen_ganancia_pct"));
                 config.setSupabaseUrl(rs.getString("supabase_url"));
                 config.setSupabaseAnonKey(rs.getString("supabase_anon_key"));
                 config.setSupabaseSyncHabilitado(rs.getInt("supabase_sync_habilitado") == 1);
@@ -61,7 +60,7 @@ public class ConfiguracionDAO {
                    + "ruta_logo=?, mensaje_ticket=?, permitir_stock_negativo=?, recargo_tarjeta=?, "
                    + "ruta_backup=?, ruta_tickets=?, "
                    + "ancho_ticket_mm=?, ticket_mostrar_direccion=?, ticket_mostrar_cuit=?, "
-                   + "usar_enteros=?, margen_ganancia_pct=?, "
+                   + "usar_enteros=?, "
                    + "supabase_url=?, supabase_anon_key=?, supabase_sync_habilitado=?, "
                    + "supabase_sync_intervalo_min=?, supabase_sync_email=?, supabase_sync_password=? "
                    + "WHERE id=1";
@@ -85,13 +84,12 @@ public class ConfiguracionDAO {
             pstmt.setInt(14, config.isTicketMostrarDireccion() ? 1 : 0);
             pstmt.setInt(15, config.isTicketMostrarCuit() ? 1 : 0);
             pstmt.setInt(16, config.isUsarEnteros() ? 1 : 0);
-            pstmt.setDouble(17, config.getMargenGananciaPct());
-            pstmt.setString(18, config.getSupabaseUrl());
-            pstmt.setString(19, config.getSupabaseAnonKey());
-            pstmt.setInt(20, config.isSupabaseSyncHabilitado() ? 1 : 0);
-            pstmt.setInt(21, config.getSupabaseSyncIntervaloMin());
-            pstmt.setString(22, config.getSupabaseSyncEmail());
-            pstmt.setString(23, config.getSupabaseSyncPassword());
+            pstmt.setString(17, config.getSupabaseUrl());
+            pstmt.setString(18, config.getSupabaseAnonKey());
+            pstmt.setInt(19, config.isSupabaseSyncHabilitado() ? 1 : 0);
+            pstmt.setInt(20, config.getSupabaseSyncIntervaloMin());
+            pstmt.setString(21, config.getSupabaseSyncEmail());
+            pstmt.setString(22, config.getSupabaseSyncPassword());
 
             pstmt.executeUpdate();
         }

@@ -18,7 +18,6 @@ public class Configuracion {
     private boolean ticketMostrarDireccion = true;
     private boolean ticketMostrarCuit = true;
     private boolean usarEnteros = false;
-    private double margenGananciaPct = 0.0;
 
     // Sincronización con Supabase
     private String supabaseUrl;
@@ -96,8 +95,6 @@ public class Configuracion {
     public boolean isUsarEnteros() { return usarEnteros; }
     public void setUsarEnteros(boolean v) { this.usarEnteros = v; }
 
-    public double getMargenGananciaPct() { return margenGananciaPct; }
-    public void setMargenGananciaPct(double v) { this.margenGananciaPct = v; }
 
     public String getSupabaseUrl() { return supabaseUrl; }
     public void setSupabaseUrl(String v) { this.supabaseUrl = v; }

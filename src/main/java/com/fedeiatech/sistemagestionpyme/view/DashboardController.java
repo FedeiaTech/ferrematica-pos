@@ -113,17 +113,7 @@ public class DashboardController implements Initializable {
             int cantVentas = ventaDAO.contarVentasDelDia();
             lblContadorVentas.setText(cantVentas + " transacciones hoy");
 
-            double ganancia;
-            try {
-                Configuracion cfg = new ConfiguracionDAO().obtenerConfiguracion();
-                if (cfg != null && cfg.getMargenGananciaPct() > 0) {
-                    ganancia = totalHoy * (cfg.getMargenGananciaPct() / 100.0);
-                } else {
-                    ganancia = ventaDAO.obtenerGananciaEstimadaDelDia();
-                }
-            } catch (Exception ex) {
-                ganancia = ventaDAO.obtenerGananciaEstimadaDelDia();
-            }
+            double ganancia = ventaDAO.obtenerGananciaEstimadaDelDia();
             lblGananciaDia.setText(String.format("ARS %.2f", ganancia));
 
             int critico = ventaDAO.contarItemsStockCritico();

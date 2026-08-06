@@ -60,7 +60,6 @@ public class ConfigController implements Initializable {
     @FXML private CheckBox chkMostrarDireccion;
     @FXML private CheckBox chkMostrarCuit;
     @FXML private CheckBox chkUsarEnteros;
-    @FXML private TextField txtMargenGanancia;
 
     // Sincronización con Supabase (ADMIN-only)
     @FXML private Tab tabSyncSupabase;
@@ -159,8 +158,6 @@ public class ConfigController implements Initializable {
                 if (chkMostrarDireccion != null) chkMostrarDireccion.setSelected(config.isTicketMostrarDireccion());
                 if (chkMostrarCuit != null) chkMostrarCuit.setSelected(config.isTicketMostrarCuit());
                 if (chkUsarEnteros != null) chkUsarEnteros.setSelected(config.isUsarEnteros());
-                if (txtMargenGanancia != null) txtMargenGanancia.setText(
-                    config.getMargenGananciaPct() > 0 ? String.valueOf(config.getMargenGananciaPct()) : "");
 
                 // Sincronización con Supabase
                 if (txtSupabaseUrl != null) txtSupabaseUrl.setText(config.getSupabaseUrl() != null ? config.getSupabaseUrl() : "");
@@ -328,9 +325,6 @@ public class ConfigController implements Initializable {
         config.setTicketMostrarDireccion(chkMostrarDireccion != null && chkMostrarDireccion.isSelected());
         config.setTicketMostrarCuit(chkMostrarCuit != null && chkMostrarCuit.isSelected());
         config.setUsarEnteros(chkUsarEnteros != null && chkUsarEnteros.isSelected());
-        if (txtMargenGanancia != null && !txtMargenGanancia.getText().isBlank()) {
-            config.setMargenGananciaPct(Double.parseDouble(txtMargenGanancia.getText().replace(",", ".")));
-        }
 
         // Sincronización con Supabase
         if (txtSupabaseUrl != null) config.setSupabaseUrl(txtSupabaseUrl.getText());

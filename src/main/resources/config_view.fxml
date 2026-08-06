@@ -52,6 +52,7 @@
                                     <RowConstraints prefHeight="32.0" />
                                     <RowConstraints prefHeight="32.0" />
                                     <RowConstraints prefHeight="32.0" />
+                                    <RowConstraints prefHeight="28.0" />
                                  </rowConstraints>
                                  <children>
                                     <Label text="Nombre Fantasía:" />
@@ -62,8 +63,11 @@
                                     <TextField fx:id="txtDireccion" GridPane.columnIndex="1" GridPane.rowIndex="2" />
                                     <Label text="Condición IVA:" GridPane.rowIndex="3" />
                                     <TextField fx:id="txtCondicionIva" GridPane.columnIndex="1" GridPane.rowIndex="3" />
-                                    <Label text="Punto de Venta:" GridPane.rowIndex="4" />
+                                    <Label text="Punto de Venta (AFIP):" GridPane.rowIndex="4" />
                                     <TextField fx:id="txtPuntoVenta" GridPane.columnIndex="1" GridPane.rowIndex="4" />
+                                    <Label text="Número de punto de venta que te asignó AFIP para numerar comprobantes fiscales — no es el nombre del local ni la caja registradora."
+                                           style="-fx-text-fill: #7f8c8d; -fx-font-size: 11;" wrapText="true" maxWidth="320.0"
+                                           GridPane.columnIndex="1" GridPane.rowIndex="5" />
                                  </children>
                               </GridPane>
                            </children>
@@ -118,18 +122,6 @@
                                     <HBox spacing="10.0" alignment="CENTER_LEFT">
                                        <CheckBox fx:id="chkUsarEnteros" text="Redondear precios a enteros (sin centavos)" />
                                        <Label text="— recomendado para kioscos y locales de ropa" style="-fx-text-fill: #7f8c8d; -fx-font-size: 11;" />
-                                    </HBox>
-
-                                    <Separator />
-
-                                    <!-- Margen ganancia -->
-                                    <Label text="Ganancia Estimada" style="-fx-font-weight: bold; -fx-font-size: 13;" />
-                                    <Label text="Porcentaje estimado de ganancia sobre el total de ventas. Si está en 0, el sistema usa precio_venta − precio_costo por producto."
-                                           style="-fx-text-fill: #7f8c8d; -fx-font-size: 11;" wrapText="true" />
-                                    <HBox spacing="10.0" alignment="CENTER_LEFT">
-                                       <Label text="Margen de ganancia estimada (%):" />
-                                       <TextField fx:id="txtMargenGanancia" prefWidth="70.0" promptText="Ej: 30" />
-                                       <Label text="(dejar vacío para calcular desde precio de costo)" style="-fx-text-fill: #7f8c8d; -fx-font-size: 11;" />
                                     </HBox>
 
                                  </children>
