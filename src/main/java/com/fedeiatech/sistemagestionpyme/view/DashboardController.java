@@ -11,6 +11,7 @@ import com.fedeiatech.sistemagestionpyme.service.MockFiscalProvider;
 import com.fedeiatech.sistemagestionpyme.service.SessionService;
 import com.fedeiatech.sistemagestionpyme.service.LeerMeService;
 import com.fedeiatech.sistemagestionpyme.service.SupabaseSyncService;
+import com.fedeiatech.sistemagestionpyme.service.SyncBloqueadoException;
 import com.fedeiatech.sistemagestionpyme.service.ThemeService;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
@@ -89,6 +90,10 @@ public class DashboardController implements Initializable {
         verificarEstadoFiscal();
         actualizarEstadoSync();
         cargarMetricas();
+
+        if (lblEstadoSync != null) {
+            lblEstadoSync.setOnMouseClicked(e -> sincronizarManualDesdeIndicador());
+        }
     }
 
     private void aplicarRestriccionesPorRol() {
@@ -172,22 +177,67 @@ public class DashboardController implements Initializable {
             boolean habilitado = config != null && config.isSupabaseSyncHabilitado();
             Instant ultimaOk = SupabaseSyncService.getInstance().ultimaSincronizacionExitosaEn();
 
+            boolean esAdmin = SessionService.getInstance().esAdmin();
+            String cursor = esAdmin && habilitado ? "-fx-cursor: hand;" : "";
+
             if (!habilitado) {
                 lblEstadoSync.setText("Sync (deshabilitado)");
-                lblEstadoSync.setStyle("-fx-background-color: #bdc3c7; -fx-text-fill: #7f8c8d; -fx-background-radius: 15; -fx-padding: 5 15;");
+                lblEstadoSync.setStyle("-fx-background-color: #bdc3c7; -fx-text-fill: #7f8c8d; -fx-background-radius: 15; -fx-padding: 5 15;" + cursor);
             } else if (ultimaOk == null) {
                 lblEstadoSync.setText("Sync (nunca sincronizado)");
-                lblEstadoSync.setStyle("-fx-background-color: #f39c12; -fx-text-fill: white; -fx-background-radius: 15; -fx-padding: 5 15;");
+                lblEstadoSync.setStyle("-fx-background-color: #f39c12; -fx-text-fill: white; -fx-background-radius: 15; -fx-padding: 5 15;" + cursor);
             } else {
                 String hora = DateTimeFormatter.ofPattern("HH:mm")
                         .withZone(ZoneId.systemDefault())
                         .format(ultimaOk);
                 lblEstadoSync.setText("Sync ✓ " + hora);
-                lblEstadoSync.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-background-radius: 15; -fx-padding: 5 15;");
+                lblEstadoSync.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-background-radius: 15; -fx-padding: 5 15;" + cursor);
             }
         } catch (Exception e) {
             LOGGER.log(Level.WARNING, "No se pudo determinar el estado de sincronización con Supabase", e);
         }
+    }
+
+    /** Click en el indicador "Sync" del dashboard — dispara una sincronización manual (solo ADMIN, y solo si ya está habilitada desde Configuración). */
+    private void sincronizarManualDesdeIndicador() {
+        if (!SessionService.getInstance().esAdmin()) return;
+
+        try {
+            Configuracion config = new ConfiguracionDAO().obtenerConfiguracion();
+            if (config == null || !config.isSupabaseSyncHabilitado()) {
+                AlertUtil.mostrarInfo("Sincronización deshabilitada",
+                        "Habilitá la sincronización con Supabase desde Configuración → Sincronización antes de sincronizar manualmente.");
+                return;
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error al leer configuración antes de sincronizar", e);
+            return;
+        }
+
+        lblEstadoSync.setText("Sincronizando...");
+        lblEstadoSync.setDisable(true);
+        new Thread(() -> {
+            try {
+                SupabaseSyncService.getInstance().sincronizar();
+                javafx.application.Platform.runLater(() -> {
+                    lblEstadoSync.setDisable(false);
+                    actualizarEstadoSync();
+                });
+            } catch (SyncBloqueadoException e) {
+                javafx.application.Platform.runLater(() -> {
+                    lblEstadoSync.setDisable(false);
+                    actualizarEstadoSync();
+                    AlertUtil.mostrarInfo("Sincronización bloqueada", e.getMessage());
+                });
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Error al sincronizar con Supabase", e);
+                javafx.application.Platform.runLater(() -> {
+                    lblEstadoSync.setDisable(false);
+                    actualizarEstadoSync();
+                    AlertUtil.mostrarInfo("Error", "No se pudo sincronizar con Supabase: " + e.getMessage());
+                });
+            }
+        }, "supabase-sync-manual-dashboard").start();
     }
 
     @FXML
