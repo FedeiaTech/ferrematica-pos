@@ -16,7 +16,7 @@
          <children>
             <VBox style="-fx-background-color: #8e44ad; -fx-padding: 20; -fx-background-radius: 10;">
                <children>
-                  <Label text="Reportes y Métricas (PRO)" textFill="WHITE">
+                  <Label text="Reportes y Métricas" textFill="WHITE">
                      <font>
                         <Font name="System Bold" size="24.0" />
                      </font>

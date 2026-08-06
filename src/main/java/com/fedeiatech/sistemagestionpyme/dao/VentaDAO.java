@@ -322,6 +322,29 @@ public class VentaDAO {
         return venta;
     }
 
+    /** Borra un ticket puntual y sus detalles. El stock NO se restaura (mismo criterio que borrarTodasLasVentas). */
+    public boolean borrarVenta(int idVenta) throws SQLException {
+        Connection conn = null;
+        try {
+            conn = ConexionDB.getConexion();
+            conn.setAutoCommit(false);
+            try (PreparedStatement pstDetalles = conn.prepareStatement("DELETE FROM detalles_venta WHERE id_venta = ?");
+                 PreparedStatement pstVenta = conn.prepareStatement("DELETE FROM ventas WHERE id = ?")) {
+                pstDetalles.setInt(1, idVenta);
+                pstDetalles.executeUpdate();
+                pstVenta.setInt(1, idVenta);
+                int filas = pstVenta.executeUpdate();
+                conn.commit();
+                return filas > 0;
+            }
+        } catch (SQLException e) {
+            if (conn != null) conn.rollback();
+            throw e;
+        } finally {
+            if (conn != null) conn.setAutoCommit(true);
+        }
+    }
+
     public int borrarTodasLasVentas() throws SQLException {
         Connection conn = null;
         try {

@@ -1,8 +1,11 @@
 package com.fedeiatech.sistemagestionpyme.view;
 
+import com.fedeiatech.sistemagestionpyme.dao.UsuarioDAO;
 import com.fedeiatech.sistemagestionpyme.dao.VentaDAO;
+import com.fedeiatech.sistemagestionpyme.model.Usuario;
 import com.fedeiatech.sistemagestionpyme.model.Venta;
 import com.fedeiatech.sistemagestionpyme.service.ExportService;
+import com.fedeiatech.sistemagestionpyme.service.SessionService;
 import com.fedeiatech.sistemagestionpyme.service.ThemeService;
 import com.fedeiatech.sistemagestionpyme.service.TicketService;
 import java.io.File;
@@ -20,12 +23,14 @@ import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import com.fedeiatech.sistemagestionpyme.view.util.AlertUtil;
 import javafx.geometry.Insets;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
+import javafx.scene.control.PasswordField;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
@@ -35,6 +40,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -65,18 +71,31 @@ public class ReportsController implements Initializable {
         colFecha.setCellValueFactory(new PropertyValueFactory<>("fecha"));
         colTotal.setCellValueFactory(new PropertyValueFactory<>("total"));
 
+        boolean esAdmin = SessionService.getInstance().esAdmin();
+
         Callback<TableColumn<Venta, Void>, TableCell<Venta, Void>> cellFactory = new Callback<>() {
             @Override
             public TableCell<Venta, Void> call(final TableColumn<Venta, Void> param) {
                 return new TableCell<>() {
-                    private final Button btn = new Button("🖨️ Ver Ticket");
+                    private final Button btnVer = new Button("🖨️ Ver Ticket");
+                    private final Button btnBorrar = new Button("🗑️");
+                    private final HBox contenedor = new HBox(6, btnVer, btnBorrar);
 
                     {
-                        btn.setStyle("-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand;");
-                        btn.setOnAction((ActionEvent event) -> {
+                        btnVer.setStyle("-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand;");
+                        btnVer.setOnAction((ActionEvent event) -> {
                             Venta ventaSeleccionada = getTableView().getItems().get(getIndex());
                             if (ventaSeleccionada != null) {
                                 reimprimirTicket(ventaSeleccionada.getId());
+                            }
+                        });
+                        btnBorrar.setStyle("-fx-background-color: #c0392b; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand;");
+                        btnBorrar.setVisible(esAdmin);
+                        btnBorrar.setManaged(esAdmin);
+                        btnBorrar.setOnAction((ActionEvent event) -> {
+                            Venta ventaSeleccionada = getTableView().getItems().get(getIndex());
+                            if (ventaSeleccionada != null) {
+                                borrarTicket(ventaSeleccionada);
                             }
                         });
                     }
@@ -84,7 +103,7 @@ public class ReportsController implements Initializable {
                     @Override
                     public void updateItem(Void item, boolean empty) {
                         super.updateItem(item, empty);
-                        setGraphic(empty ? null : btn);
+                        setGraphic(empty ? null : contenedor);
                     }
                 };
             }
@@ -173,6 +192,52 @@ public class ReportsController implements Initializable {
 
         } catch (Exception e) {
             AlertUtil.mostrarAdvertencia("Error al exportar", e.getMessage());
+        }
+    }
+
+    private void borrarTicket(Venta venta) {
+        PasswordField pfPass = new PasswordField();
+        pfPass.setPromptText("Contraseña del administrador");
+        Dialog<ButtonType> dlgPass = new Dialog<>();
+        dlgPass.setTitle("Confirmar identidad");
+        dlgPass.setHeaderText("Ingresá la contraseña del administrador para continuar.");
+        dlgPass.getDialogPane().setContent(pfPass);
+        dlgPass.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        if (dlgPass.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
+
+        try {
+            String nombreAdmin = SessionService.getInstance().getUsuarioActivo().getNombre();
+            Usuario verificado = new UsuarioDAO().autenticar(nombreAdmin, pfPass.getText());
+            if (verificado == null) {
+                AlertUtil.mostrarInfo("Contraseña incorrecta", "La contraseña ingresada no es válida.");
+                return;
+            }
+        } catch (Exception e) {
+            AlertUtil.mostrarInfo("Error", "No se pudo verificar la identidad: " + e.getMessage());
+            return;
+        }
+
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Borrar ticket");
+        confirm.setHeaderText("Esta acción es IRREVERSIBLE.");
+        confirm.setContentText(
+            "Se eliminará el ticket #" + venta.getId() + " (" + venta.getFecha() + ", ARS " + venta.getTotal() + ") y sus detalles.\n" +
+            "El inventario (productos y stock) NO se modificará.\n\n" +
+            "¿Confirmás el borrado de este ticket?");
+        if (confirm.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
+
+        try {
+            boolean eliminado = new VentaDAO().borrarVenta(venta.getId());
+            if (eliminado) {
+                tablaVentas.getItems().remove(venta);
+                AlertUtil.mostrarInfo("Ticket borrado", "El ticket #" + venta.getId() + " fue eliminado. El inventario no fue modificado.");
+            } else {
+                AlertUtil.mostrarAdvertencia("No encontrado", "El ticket #" + venta.getId() + " ya no existe.");
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error al borrar el ticket " + venta.getId(), e);
+            AlertUtil.mostrarInfo("Error", "No se pudo borrar el ticket: " + e.getMessage());
         }
     }
 
