@@ -163,50 +163,63 @@ public class ItemDAO {
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, codigo);
             try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    ItemVenta item = new ItemVenta();
-                    item.setId(rs.getInt("id"));
-                    item.setCodigo(rs.getString("codigo"));
-                    item.setNombre(rs.getString("nombre"));
-                    item.setDescripcion(rs.getString("descripcion"));
-                    item.setPrecioCosto(rs.getDouble("precio_costo"));
-                    item.setPrecioVenta(rs.getDouble("precio_venta"));
-                    item.setStock(rs.getDouble("stock"));
-                    item.setEsServicio(rs.getInt("es_servicio") == 1);
-                    String unidad = rs.getString("unidad");
-                    item.setUnidad(unidad != null ? unidad : "u");
-                    item.setCategoria(rs.getString("categoria"));
-                    return item;
-                }
+                return rs.next() ? mapearItem(rs) : null;
             }
         }
-        return null;
+    }
+
+    /** Reasigna en bloque todos los items de una categoría a otra (rename, o "A asignar" para dar de baja la categoría). */
+    public int renombrarCategoria(String categoriaActual, String categoriaNueva) throws SQLException {
+        String sql = "UPDATE items SET categoria = ? WHERE categoria = ?";
+        try (Connection conn = ConexionDB.getConexion();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, categoriaNueva);
+            pstmt.setString(2, categoriaActual);
+            return pstmt.executeUpdate();
+        }
     }
 
     public List<ItemVenta> listarTodos() throws SQLException {
-        List<ItemVenta> lista = new ArrayList<>();
         String sql = "SELECT * FROM items";
-
         try (Connection conn = ConexionDB.getConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql);
              ResultSet rs = pstmt.executeQuery()) {
+            return mapearLista(rs);
+        }
+    }
 
-            while (rs.next()) {
-                ItemVenta item = new ItemVenta();
-                item.setId(rs.getInt("id"));
-                item.setCodigo(rs.getString("codigo"));
-                item.setNombre(rs.getString("nombre"));
-                item.setDescripcion(rs.getString("descripcion"));
-                item.setPrecioCosto(rs.getDouble("precio_costo"));
-                item.setPrecioVenta(rs.getDouble("precio_venta"));
-                item.setStock(rs.getDouble("stock"));
-                item.setEsServicio(rs.getInt("es_servicio") == 1);
-                String unidad = rs.getString("unidad");
-                item.setUnidad(unidad != null ? unidad : "u");
-                item.setCategoria(rs.getString("categoria"));
-                lista.add(item);
+    /** Búsqueda acotada por SQL (código exacto o nombre parcial) para no cargar toda la tabla — usada por el autocompletado del POS. */
+    public List<ItemVenta> buscarPorFiltro(String termino) throws SQLException {
+        String sql = "SELECT * FROM items WHERE codigo = ? COLLATE NOCASE OR nombre LIKE ? COLLATE NOCASE";
+        try (Connection conn = ConexionDB.getConexion();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, termino);
+            pstmt.setString(2, "%" + termino + "%");
+            try (ResultSet rs = pstmt.executeQuery()) {
+                return mapearLista(rs);
             }
         }
+    }
+
+    private List<ItemVenta> mapearLista(ResultSet rs) throws SQLException {
+        List<ItemVenta> lista = new ArrayList<>();
+        while (rs.next()) lista.add(mapearItem(rs));
         return lista;
+    }
+
+    private ItemVenta mapearItem(ResultSet rs) throws SQLException {
+        ItemVenta item = new ItemVenta();
+        item.setId(rs.getInt("id"));
+        item.setCodigo(rs.getString("codigo"));
+        item.setNombre(rs.getString("nombre"));
+        item.setDescripcion(rs.getString("descripcion"));
+        item.setPrecioCosto(rs.getDouble("precio_costo"));
+        item.setPrecioVenta(rs.getDouble("precio_venta"));
+        item.setStock(rs.getDouble("stock"));
+        item.setEsServicio(rs.getInt("es_servicio") == 1);
+        String unidad = rs.getString("unidad");
+        item.setUnidad(unidad != null ? unidad : "u");
+        item.setCategoria(rs.getString("categoria"));
+        return item;
     }
 }
