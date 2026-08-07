@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<AnchorPane fx:id="rootPane" prefHeight="500.0" prefWidth="900.0" style="-fx-background-color: transparent;"
+            xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.fedeiatech.sistemagestionpyme.view.BalancesController">
+    <children>
+        <VBox spacing="14.0" style="-fx-background-color: transparent; -fx-padding: 15;"
+              AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0"
+              AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+            <children>
+
+                <HBox spacing="12.0" alignment="CENTER_LEFT">
+                    <children>
+                        <Label text="Período:" style="-fx-font-size: 13; -fx-text-fill: #2c3e50; -fx-font-weight: bold;" />
+                        <ComboBox fx:id="cmbPeriodo" prefWidth="180.0" />
+                        <Label fx:id="lblRango" text="" style="-fx-font-size: 12; -fx-text-fill: #7f8c8d;" />
+                    </children>
+                </HBox>
+
+                <HBox spacing="14.0">
+                    <children>
+
+                        <VBox spacing="6.0" HBox.hgrow="ALWAYS"
+                              style="-fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.06), 8, 0, 0, 2); -fx-padding: 18;">
+                            <children>
+                                <Label text="Ventas del período" textFill="#7f8c8d">
+                                    <font><Font size="13.0" /></font>
+                                </Label>
+                                <Label fx:id="lblVentasPeriodo" text="ARS 0.00" textFill="#27ae60">
+                                    <font><Font name="System Bold" size="34.0" /></font>
+                                </Label>
+                            </children>
+                        </VBox>
+
+                        <VBox spacing="6.0" HBox.hgrow="ALWAYS"
+                              style="-fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.06), 8, 0, 0, 2); -fx-padding: 18;">
+                            <children>
+                                <Label text="Compras del período" textFill="#7f8c8d">
+                                    <font><Font size="13.0" /></font>
+                                </Label>
+                                <Label fx:id="lblComprasPeriodo" text="ARS 0.00" textFill="#c0392b">
+                                    <font><Font name="System Bold" size="34.0" /></font>
+                                </Label>
+                            </children>
+                        </VBox>
+
+                        <VBox spacing="6.0" HBox.hgrow="ALWAYS"
+                              style="-fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.06), 8, 0, 0, 2); -fx-padding: 18;">
+                            <children>
+                                <Label text="Balance neto" textFill="#7f8c8d">
+                                    <font><Font size="13.0" /></font>
+                                </Label>
+                                <Label fx:id="lblBalanceNeto" text="ARS 0.00" textFill="#2c3e50">
+                                    <font><Font name="System Bold" size="34.0" /></font>
+                                </Label>
+                                <Label text="ventas − compras del período" textFill="#95a5a6">
+                                    <font><Font size="12.0" /></font>
+                                </Label>
+                            </children>
+                        </VBox>
+
+                    </children>
+                </HBox>
+
+            </children>
+        </VBox>
+    </children>
+</AnchorPane>
