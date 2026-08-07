@@ -3,7 +3,7 @@
 **Sistema de Gestión Comercial para Ferrematica.**  
 *Offline-First, orientado a comercios minoristas. Preparado para integración fiscal ARCA. Sincroniza stock/precio con el catálogo compartido de Ferrematica (Supabase) para alimentar la tienda online.*
 
-**Estado:** v1.0.0 — Producción | **Licencia:** Propietaria  
+**Estado:** v1.1.0 — Producción | **Licencia:** Propietaria  
 **Autor:** Federico Iacono — IATech / FedeiaTech  
 **Contacto:** iaconofede@gmail.com
 
@@ -103,6 +103,20 @@ La base de datos `gestion_pyme.db` se crea automáticamente en la raíz del proy
 ---
 
 ## Changelog
+
+### v1.1.0 — 2026-08-07
+
+- **Compras de mercadería:** nueva ventana para registrar reposición de stock — elegís un producto existente del inventario, cargás cantidad, costo unitario y proveedor (opcional), y el sistema suma el stock y actualiza el costo del producto en una sola transacción atómica. Rechaza combos y servicios (no tienen compra directa). Historial de compras con LEFT JOIN — sobrevive aunque el producto se borre después.
+- **Balances (Dashboard):** nueva pestaña dentro del Dashboard (ahora con solapas) — ventas menos compras del período, semanal o mensual, con carga perezosa (no consulta nada hasta que la abrís). Solo ADMIN.
+- **Atajo de teclado en el POS:** `Ctrl+Enter` cobra la venta sin soltar el teclado; el botón COBRAR muestra el atajo como recordatorio en letra chica.
+- **Autocompletado en vivo en el POS:** sugerencias de productos y combos mientras escribís en el buscador (mínimo 2 caracteres), navegable con flechas y Enter o con el mouse.
+- **Gestión de categorías en Inventario:** renombrar una categoría existente o eliminarla (reasigna en bloque los productos a "A asignar", nunca borra productos).
+- **Inventario:** campo "Descripción" real editable desde el form (antes solo se usaba en el import de Excel), botón "Duplicar" producto, unidades nuevas "docena" y "par".
+- **Reportes:** borrar un ticket individual (antes solo se podía borrar todo el historial), re-autenticación con contraseña admin.
+- **Fix:** el total mensual en Reportes/Estadísticas venía inflado por un JOIN duplicado contra el detalle de cada venta — cualquier ticket con más de un producto se contaba de más.
+- **Fix:** sacado el override manual de "margen de ganancia" en Configuración — la ganancia estimada del Dashboard siempre se calcula por el costo real de cada producto, evitando números que no reflejaban la mezcla real de ventas.
+- **Sync manual:** click en el indicador "Sync" del Dashboard dispara una sincronización con Supabase al toque (antes solo corría por el intervalo automático configurado).
+- **Deuda técnica:** el buscador del POS migró de cargar toda la tabla de productos en memoria a una consulta SQL filtrada — impacto notorio a partir de varios cientos de productos.
 
 ### v1.0.0 — 2026-08-04
 
