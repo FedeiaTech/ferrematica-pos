@@ -110,6 +110,19 @@ public class ConexionDB {
                 + "FOREIGN KEY(id_combo) REFERENCES combos(id),"
                 + "FOREIGN KEY(id_item) REFERENCES items(id)"
                 + ");");
+
+        // Sin FK sobre id_item: ItemDAO.eliminar() hace DELETE real y el histórico
+        // de compras debe sobrevivir al borrado del producto (mismo criterio que
+        // detalles_venta). Toda lectura debe usar LEFT JOIN, nunca INNER JOIN.
+        stmt.execute("CREATE TABLE IF NOT EXISTS compras ("
+                + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                + "id_item INTEGER NOT NULL,"
+                + "cantidad REAL NOT NULL,"
+                + "costo_unitario REAL NOT NULL,"
+                + "costo_total REAL NOT NULL,"
+                + "proveedor TEXT,"
+                + "fecha TEXT NOT NULL"
+                + ");");
     }
 
     private static void migrarDetallesVenta(Statement stmt) throws SQLException {

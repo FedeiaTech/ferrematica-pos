@@ -81,4 +81,29 @@ class VentaDAOTest {
         assertEquals("1", meses.get(0)[1]);
         assertEquals(30.0, Double.parseDouble(meses.get(0)[2]));
     }
+
+    @Test
+    void sumarVentasEntreDevuelveSoloElRango() throws SQLException {
+        itemDAO.guardar(new ItemVenta(0, "COD-1", "Producto", "desc", 5.0, 10.0, 100.0, false));
+        ItemVenta item = itemDAO.buscarPorCodigo("COD-1");
+
+        Venta dentro1 = new Venta();
+        dentro1.setFecha("2026-07-10");
+        dentro1.agregarDetalle(new DetalleVenta(item, 1.0));
+        ventaDAO.registrarVenta(dentro1);
+
+        Venta dentro2 = new Venta();
+        dentro2.setFecha("2026-07-15");
+        dentro2.agregarDetalle(new DetalleVenta(item, 2.0));
+        ventaDAO.registrarVenta(dentro2);
+
+        Venta fuera = new Venta();
+        fuera.setFecha("2026-08-01");
+        fuera.agregarDetalle(new DetalleVenta(item, 1.0));
+        ventaDAO.registrarVenta(fuera);
+
+        double total = ventaDAO.sumarVentasEntre("2026-07-01", "2026-07-31");
+
+        assertEquals(30.0, total);
+    }
 }

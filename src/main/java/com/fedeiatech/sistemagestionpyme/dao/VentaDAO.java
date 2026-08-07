@@ -98,6 +98,19 @@ public class VentaDAO {
         return total;
     }
 
+    /** Usado por Balances. No reusar obtenerVentasPorMes(): ese método tiene un JOIN que infla el total (ver comentario ahí). */
+    public double sumarVentasEntre(String desde, String hasta) throws SQLException {
+        String sql = "SELECT COALESCE(SUM(total), 0) FROM ventas WHERE DATE(fecha) BETWEEN ? AND ?";
+        try (Connection conn = ConexionDB.getConexion();
+             PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setString(1, desde);
+            pst.setString(2, hasta);
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() ? rs.getDouble(1) : 0.0;
+            }
+        }
+    }
+
     public java.util.List<Venta> listarVentasHistoricas() throws SQLException {
         java.util.List<Venta> lista = new java.util.ArrayList<>();
         String sql = "SELECT * FROM ventas ORDER BY fecha DESC";
