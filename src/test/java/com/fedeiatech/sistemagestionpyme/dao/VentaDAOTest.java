@@ -60,4 +60,25 @@ class VentaDAOTest {
         ItemVenta actualizado = itemDAO.buscarPorCodigo("SERV-1");
         assertEquals(0.0, actualizado.getStock());
     }
+
+    @Test
+    void obtenerVentasPorMesNoInflaElTotalConVentasDeVariosItems() throws SQLException {
+        itemDAO.guardar(new ItemVenta(0, "COD-1", "Producto 1", "desc", 5.0, 10.0, 100.0, false));
+        itemDAO.guardar(new ItemVenta(0, "COD-2", "Producto 2", "desc", 5.0, 20.0, 100.0, false));
+        ItemVenta item1 = itemDAO.buscarPorCodigo("COD-1");
+        ItemVenta item2 = itemDAO.buscarPorCodigo("COD-2");
+
+        // Un solo ticket con 2 líneas de producto distintas: total real = 10 + 20 = 30.
+        Venta venta = new Venta();
+        venta.setFecha("2026-07-28");
+        venta.agregarDetalle(new DetalleVenta(item1, 1.0));
+        venta.agregarDetalle(new DetalleVenta(item2, 1.0));
+        ventaDAO.registrarVenta(venta);
+
+        java.util.List<String[]> meses = ventaDAO.obtenerVentasPorMes();
+
+        assertEquals(1, meses.size());
+        assertEquals("1", meses.get(0)[1]);
+        assertEquals(30.0, Double.parseDouble(meses.get(0)[2]));
+    }
 }

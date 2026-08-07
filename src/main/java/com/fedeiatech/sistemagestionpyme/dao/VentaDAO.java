@@ -387,11 +387,12 @@ public class VentaDAO {
 
     public java.util.List<String[]> obtenerVentasPorMes() throws SQLException {
         java.util.List<String[]> resultado = new java.util.ArrayList<>();
+        // Sin JOIN a detalles_venta: un LEFT JOIN acá duplica cada fila de
+        // "ventas" por cada línea de producto del ticket, inflando
+        // COUNT(*) y SUM(total) en cualquier venta con más de un ítem.
         String sql = "SELECT strftime('%Y-%m', fecha) as mes, " +
-                     "COUNT(*) as cant, SUM(total) as total_mes, " +
-                     "SUM(d.subtotal) as total_productos " +
-                     "FROM ventas v " +
-                     "LEFT JOIN detalles_venta d ON d.id_venta = v.id " +
+                     "COUNT(*) as cant, SUM(total) as total_mes " +
+                     "FROM ventas " +
                      "GROUP BY mes ORDER BY mes DESC LIMIT 12";
         try (Connection conn = ConexionDB.getConexion();
              Statement stmt = conn.createStatement();
