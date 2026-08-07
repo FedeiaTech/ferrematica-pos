@@ -39,6 +39,8 @@ import javafx.scene.chart.XYChart;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.paint.Color;
 import javafx.stage.Modality;
@@ -58,7 +60,11 @@ public class DashboardController implements Initializable {
     @FXML private Label lblUsuario;
     @FXML private BarChart<String, Number> chartVentas7Dias;
     @FXML private PieChart chartTop5;
+    @FXML private TabPane tabPaneDashboard;
+    @FXML private Tab tabBalances;
+    @FXML private BalancesController balancesController;
     @FXML private Button btnInventario;
+    @FXML private Button btnCompras;
     @FXML private Button btnConfiguracion;
     @FXML private Button btnReportes;
     @FXML private Button btnUsuarios;
@@ -94,6 +100,10 @@ public class DashboardController implements Initializable {
         if (lblEstadoSync != null) {
             lblEstadoSync.setOnMouseClicked(e -> sincronizarManualDesdeIndicador());
         }
+
+        tabBalances.setOnSelectionChanged(e -> {
+            if (tabBalances.isSelected()) balancesController.cargar();
+        });
     }
 
     private void aplicarRestriccionesPorRol() {
@@ -105,6 +115,8 @@ public class DashboardController implements Initializable {
         boolean esAdmin = usuario.esAdmin();
 
         btnInventario.setDisable(!esAdmin);
+        btnCompras.setDisable(!esAdmin);
+        tabBalances.setDisable(!esAdmin);
         btnConfiguracion.setDisable(!esAdmin);
         btnUsuarios.setVisible(esAdmin);
         btnUsuarios.setManaged(esAdmin);
@@ -243,6 +255,14 @@ public class DashboardController implements Initializable {
     @FXML
     void abrirInventario(ActionEvent event) {
         abrirVentana("/inventory_view.fxml", "Gestión de Inventario", false, this::cargarMetricas);
+    }
+
+    @FXML
+    void abrirCompras(ActionEvent event) {
+        abrirVentana("/compras_view.fxml", "Compras de Mercadería", false, () -> {
+            cargarMetricas();
+            if (tabBalances.isSelected()) balancesController.cargar();
+        });
     }
 
     @FXML
