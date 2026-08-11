@@ -2,6 +2,8 @@
 
 <?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
@@ -54,13 +56,25 @@
                         <VBox spacing="6.0" HBox.hgrow="ALWAYS"
                               style="-fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.06), 8, 0, 0, 2); -fx-padding: 18;">
                             <children>
+                                <Label text="Gastos del período" textFill="#7f8c8d">
+                                    <font><Font size="13.0" /></font>
+                                </Label>
+                                <Label fx:id="lblGastosPeriodo" text="ARS 0.00" textFill="#e67e22">
+                                    <font><Font name="System Bold" size="34.0" /></font>
+                                </Label>
+                            </children>
+                        </VBox>
+
+                        <VBox spacing="6.0" HBox.hgrow="ALWAYS"
+                              style="-fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.06), 8, 0, 0, 2); -fx-padding: 18;">
+                            <children>
                                 <Label text="Balance neto" textFill="#7f8c8d">
                                     <font><Font size="13.0" /></font>
                                 </Label>
                                 <Label fx:id="lblBalanceNeto" text="ARS 0.00" textFill="#2c3e50">
                                     <font><Font name="System Bold" size="34.0" /></font>
                                 </Label>
-                                <Label text="ventas − compras del período" textFill="#95a5a6">
+                                <Label text="ventas − compras − gastos del período" textFill="#95a5a6">
                                     <font><Font size="12.0" /></font>
                                 </Label>
                             </children>
@@ -68,6 +82,20 @@
 
                     </children>
                 </HBox>
+
+                <VBox spacing="8.0" VBox.vgrow="ALWAYS"
+                      style="-fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.06), 8, 0, 0, 2); -fx-padding: 18;">
+                    <children>
+                        <Label text="Detalle de ventas del período" style="-fx-font-size: 13; -fx-text-fill: #2c3e50; -fx-font-weight: bold;" />
+                        <TableView fx:id="tblDetalle" VBox.vgrow="ALWAYS">
+                            <columns>
+                                <TableColumn fx:id="colDetalleFecha" text="Fecha" prefWidth="200.0" />
+                                <TableColumn fx:id="colDetalleId" text="Ticket" prefWidth="120.0" />
+                                <TableColumn fx:id="colDetalleTotal" text="Total" prefWidth="150.0" />
+                            </columns>
+                        </TableView>
+                    </children>
+                </VBox>
 
             </children>
         </VBox>
