@@ -92,4 +92,20 @@ class ConfiguracionDAOTest {
         assertEquals(instante, recargado.getSupabaseUltimaSyncExitosa());
         assertEquals("Ferretería Don José", recargado.getNombreEmpresa());
     }
+
+    @Test
+    void obtenerOGenerarInstallIdGeneraUnaSolaVezYLoReutiliza() throws SQLException {
+        configuracionDAO.inicializarTabla();
+
+        String primeraLlamada = configuracionDAO.obtenerOGenerarInstallId();
+        assertNotNull(primeraLlamada);
+        assertDoesNotThrow(() -> java.util.UUID.fromString(primeraLlamada));
+
+        String segundaLlamada = configuracionDAO.obtenerOGenerarInstallId();
+        assertEquals(primeraLlamada, segundaLlamada);
+
+        // Simula un reinicio: nueva instancia del DAO debe seguir viendo el mismo install_id persistido.
+        ConfiguracionDAO reiniciado = new ConfiguracionDAO();
+        assertEquals(primeraLlamada, reiniciado.obtenerOGenerarInstallId());
+    }
 }

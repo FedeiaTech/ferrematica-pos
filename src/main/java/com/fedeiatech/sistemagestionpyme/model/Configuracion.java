@@ -27,6 +27,10 @@ public class Configuracion {
     private String supabaseSyncEmail;
     private String supabaseSyncPassword;
     private String supabaseUltimaSyncExitosa;
+    /** UUID de esta instalación del POS, generado una sola vez (lazy) y reutilizado en todo push de ventas. */
+    private String installId;
+    /** Interruptor de rollback (design decision D5): permite apagar el push de ventas sin tocar el de products. */
+    private boolean supabaseSyncVentasHabilitado = false;
 
     public Configuracion() {
     }
@@ -117,4 +121,10 @@ public class Configuracion {
     /** Instant.toString() de la última sincronización exitosa, o null si nunca sincronizó. */
     public String getSupabaseUltimaSyncExitosa() { return supabaseUltimaSyncExitosa; }
     public void setSupabaseUltimaSyncExitosa(String v) { this.supabaseUltimaSyncExitosa = v; }
+
+    public String getInstallId() { return installId; }
+    public void setInstallId(String v) { this.installId = v; }
+
+    public boolean isSupabaseSyncVentasHabilitado() { return supabaseSyncVentasHabilitado; }
+    public void setSupabaseSyncVentasHabilitado(boolean v) { this.supabaseSyncVentasHabilitado = v; }
 }

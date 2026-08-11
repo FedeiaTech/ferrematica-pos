@@ -28,6 +28,7 @@ import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
@@ -80,6 +81,15 @@ public class ConfigController implements Initializable {
     public void initialize(URL url, ResourceBundle rb) {
         configDAO = new ConfiguracionDAO();
         rootPane.setStyle(ThemeService.getInstance().getBgStyle());
+        rootPane.sceneProperty().addListener((obs, sceneAnterior, sceneNueva) -> {
+            if (sceneNueva != null) {
+                sceneNueva.setOnKeyPressed(event -> {
+                    if (event.getCode() == KeyCode.ESCAPE) {
+                        ((Stage) sceneNueva.getWindow()).close();
+                    }
+                });
+            }
+        });
         if (cmbAnchoTicket != null) {
             cmbAnchoTicket.getItems().addAll("58 mm", "80 mm");
         }
@@ -336,7 +346,9 @@ public class ConfigController implements Initializable {
         } else {
             config.setSupabaseSyncIntervaloMin(15);
         }
-        config.setSupabaseSyncHabilitado(chkSupabaseSyncHabilitado != null && chkSupabaseSyncHabilitado.isSelected());
+        boolean syncHabilitado = chkSupabaseSyncHabilitado != null && chkSupabaseSyncHabilitado.isSelected();
+        config.setSupabaseSyncHabilitado(syncHabilitado);
+        config.setSupabaseSyncVentasHabilitado(syncHabilitado);
 
         configDAO.guardarConfiguracion(config);
         SupabaseSyncService.getInstance().iniciarProgramacionSiCorresponde();

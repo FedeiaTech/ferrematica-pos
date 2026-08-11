@@ -4,14 +4,21 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Venta {
+
+    public static final String ESTADO_COMPLETADA = "completada";
+    public static final String ESTADO_ANULADA = "anulada";
+
     private int id;
     private String fecha;
     private double total;
     private List<DetalleVenta> detalles;
+    private String estado;
+    private String motivoAnulacion;
 
     public Venta() {
         this.detalles = new ArrayList<>();
         this.total = 0.0;
+        this.estado = ESTADO_COMPLETADA;
     }
 
     public void agregarDetalle(DetalleVenta detalle) {
@@ -39,4 +46,12 @@ public class Venta {
     }
 
     public List<DetalleVenta> getDetalles() { return detalles; }
+
+    public String getEstado() { return estado; }
+    public void setEstado(String estado) { this.estado = estado; }
+
+    public String getMotivoAnulacion() { return motivoAnulacion; }
+    public void setMotivoAnulacion(String motivoAnulacion) { this.motivoAnulacion = motivoAnulacion; }
+
+    public boolean estaAnulada() { return ESTADO_ANULADA.equals(estado); }
 }
