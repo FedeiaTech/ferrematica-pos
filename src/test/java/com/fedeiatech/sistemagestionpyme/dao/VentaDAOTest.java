@@ -465,4 +465,40 @@ class VentaDAOTest {
         assertEquals(Venta.ESTADO_COMPLETADA, filaPrevia.getEstado());
         assertFalse(filaPrevia.estaAnulada());
     }
+
+    @Test
+    void migracionRutaTicketEsIdempotente() throws SQLException {
+        ConexionDB.resetParaTests();
+        Connection reconectada = ConexionDB.getConexion();
+        assertNotNull(reconectada);
+
+        ConexionDB.resetParaTests();
+        Connection reconectadaDeNuevo = ConexionDB.getConexion();
+        assertNotNull(reconectadaDeNuevo, "Reconectar dos veces no debe fallar aunque la columna ruta_ticket ya exista");
+    }
+
+    @Test
+    void actualizarRutaTicketPersisteYSeLeeAlHidratarLaVenta() throws SQLException {
+        itemDAO.guardar(new ItemVenta(0, "COD-TICKET", "Producto Ticket", "desc", 5.0, 10.0, 10.0, false));
+        ItemVenta item = itemDAO.buscarPorCodigo("COD-TICKET");
+
+        Venta venta = new Venta();
+        venta.setFecha("2026-07-28");
+        venta.agregarDetalle(new DetalleVenta(item, 1.0));
+        ventaDAO.registrarVenta(venta);
+
+        Venta antesDeGuardarRuta = ventaDAO.obtenerVentaCompleta(venta.getId());
+        assertEquals(null, antesDeGuardarRuta.getRutaTicket());
+
+        String ruta = "tickets/venta-" + venta.getId() + ".pdf";
+        ventaDAO.actualizarRutaTicket(venta.getId(), ruta);
+
+        Venta ventaCompleta = ventaDAO.obtenerVentaCompleta(venta.getId());
+        assertEquals(ruta, ventaCompleta.getRutaTicket());
+
+        Venta ventaHistorica = ventaDAO.listarVentasHistoricas().stream()
+                .filter(v -> v.getId() == venta.getId())
+                .findFirst().orElseThrow();
+        assertEquals(ruta, ventaHistorica.getRutaTicket());
+    }
 }

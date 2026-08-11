@@ -49,4 +49,39 @@ class ReportsControllerTest {
     void formatearTooltipSaldoPendienteEsNullCuandoNoHaySaldo() {
         assertNull(ReportsController.formatearTooltipSaldoPendiente(null));
     }
+
+    @Test
+    void estadoTicketEsNuncaGeneradoCuandoRutaEsNullOVacia() {
+        assertEquals(ReportsController.EstadoTicket.NUNCA_GENERADO, ReportsController.estadoTicket(null, false));
+        assertEquals(ReportsController.EstadoTicket.NUNCA_GENERADO, ReportsController.estadoTicket("", false));
+        assertEquals(ReportsController.EstadoTicket.NUNCA_GENERADO, ReportsController.estadoTicket("  ", false));
+    }
+
+    @Test
+    void estadoTicketEsExisteCuandoHayRutaYElArchivoEsta() {
+        assertEquals(ReportsController.EstadoTicket.EXISTE,
+            ReportsController.estadoTicket("C:/tickets/Ticket_1.pdf", true));
+    }
+
+    @Test
+    void estadoTicketEsFaltaCuandoHayRutaPeroElArchivoNoEsta() {
+        assertEquals(ReportsController.EstadoTicket.FALTA,
+            ReportsController.estadoTicket("C:/tickets/Ticket_1.pdf", false));
+    }
+
+    @Test
+    void textoBotonTicketVariaPorEstado() {
+        assertEquals("🖨️ Ver Ticket", ReportsController.textoBotonTicket(ReportsController.EstadoTicket.NUNCA_GENERADO));
+        assertEquals("✅ Ver Ticket", ReportsController.textoBotonTicket(ReportsController.EstadoTicket.EXISTE));
+        assertEquals("⚠️ Ver Ticket", ReportsController.textoBotonTicket(ReportsController.EstadoTicket.FALTA));
+    }
+
+    @Test
+    void estiloBotonTicketVariaPorEstado() {
+        assertEquals(ReportsController.estiloBotonTicket(ReportsController.EstadoTicket.NUNCA_GENERADO),
+            ReportsController.estiloBotonTicket(ReportsController.EstadoTicket.NUNCA_GENERADO));
+        org.junit.jupiter.api.Assertions.assertNotEquals(
+            ReportsController.estiloBotonTicket(ReportsController.EstadoTicket.EXISTE),
+            ReportsController.estiloBotonTicket(ReportsController.EstadoTicket.FALTA));
+    }
 }
