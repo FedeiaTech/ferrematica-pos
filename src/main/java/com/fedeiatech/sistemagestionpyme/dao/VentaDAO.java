@@ -279,6 +279,10 @@ public class VentaDAO {
         return gananciaBruta - gastosDelDia;
     }
 
+    public record ItemCritico(String nombre, double stock, String unidad) {}
+
+    public record TopProducto(String nombre, double cantidad, String unidad) {}
+
     public int contarItemsStockCritico() throws SQLException {
         String sql = "SELECT COUNT(*) FROM items WHERE es_servicio = 0 AND stock <= 5";
         try (Connection conn = ConexionDB.getConexion();
@@ -286,6 +290,22 @@ public class VentaDAO {
              ResultSet rs = stmt.executeQuery(sql)) {
             return rs.next() ? rs.getInt(1) : 0;
         }
+    }
+
+    /** Items (no combos) con stock crítico, del más bajo al más alto, hasta {@code limite}. */
+    public java.util.List<ItemCritico> obtenerItemsStockCritico(int limite) throws SQLException {
+        java.util.List<ItemCritico> resultado = new java.util.ArrayList<>();
+        String sql = "SELECT nombre, stock, unidad FROM items WHERE es_servicio = 0 AND stock <= 5 ORDER BY stock ASC LIMIT ?";
+        try (Connection conn = ConexionDB.getConexion();
+             PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setInt(1, limite);
+            try (ResultSet rs = pst.executeQuery()) {
+                while (rs.next()) {
+                    resultado.add(new ItemCritico(rs.getString("nombre"), rs.getDouble("stock"), rs.getString("unidad")));
+                }
+            }
+        }
+        return resultado;
     }
 
     public Map<String, Double> obtenerVentasUltimos7Dias() throws SQLException {
@@ -305,9 +325,10 @@ public class VentaDAO {
         return resultado;
     }
 
-    public Map<String, Double> obtenerTop5ProductosMasVendidos() throws SQLException {
-        Map<String, Double> resultado = new LinkedHashMap<>();
-        String sql = "SELECT COALESCE(i.nombre, c.nombre) as nombre, SUM(d.cantidad) as total_vendido " +
+    public java.util.List<TopProducto> obtenerTop5ProductosMasVendidos() throws SQLException {
+        java.util.List<TopProducto> resultado = new java.util.ArrayList<>();
+        String sql = "SELECT COALESCE(i.nombre, c.nombre) as nombre, SUM(d.cantidad) as total_vendido, " +
+                     "COALESCE(i.unidad, 'u') as unidad " +
                      "FROM detalles_venta d " +
                      "LEFT JOIN items i ON d.id_item = i.id " +
                      "LEFT JOIN combos c ON d.id_combo = c.id " +
@@ -320,7 +341,7 @@ public class VentaDAO {
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
-                resultado.put(rs.getString("nombre"), rs.getDouble("total_vendido"));
+                resultado.add(new TopProducto(rs.getString("nombre"), rs.getDouble("total_vendido"), rs.getString("unidad")));
             }
         }
         return resultado;

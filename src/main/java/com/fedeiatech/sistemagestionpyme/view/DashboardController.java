@@ -14,8 +14,12 @@ import com.fedeiatech.sistemagestionpyme.service.SupabaseSyncService;
 import com.fedeiatech.sistemagestionpyme.service.SyncBloqueadoException;
 import com.fedeiatech.sistemagestionpyme.service.ThemeService;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.ZoneId;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+import javafx.util.Duration;
 import com.fedeiatech.sistemagestionpyme.view.util.AlertUtil;
 import java.io.IOException;
 import java.net.URL;
@@ -42,7 +46,9 @@ import javafx.scene.control.Label;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Text;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
@@ -57,7 +63,10 @@ public class DashboardController implements Initializable {
     @FXML private Label lblContadorVentas;
     @FXML private Label lblGananciaDia;
     @FXML private Label lblStockCritico;
+    @FXML private VBox vboxItemsCriticos;
     @FXML private Label lblUsuario;
+    @FXML private Label lblFechaHora;
+    @FXML private Label lblSaludo;
     @FXML private BarChart<String, Number> chartVentas7Dias;
     @FXML private PieChart chartTop5;
     @FXML private TabPane tabPaneDashboard;
@@ -65,6 +74,7 @@ public class DashboardController implements Initializable {
     @FXML private BalancesController balancesController;
     @FXML private Button btnInventario;
     @FXML private Button btnCompras;
+    @FXML private Button btnGastos;
     @FXML private Button btnConfiguracion;
     @FXML private Button btnReportes;
     @FXML private Button btnUsuarios;
@@ -96,6 +106,7 @@ public class DashboardController implements Initializable {
         verificarEstadoFiscal();
         actualizarEstadoSync();
         cargarMetricas();
+        iniciarRelojFechaHora();
 
         if (lblEstadoSync != null) {
             lblEstadoSync.setOnMouseClicked(e -> sincronizarManualDesdeIndicador());
@@ -116,6 +127,7 @@ public class DashboardController implements Initializable {
 
         btnInventario.setDisable(!esAdmin);
         btnCompras.setDisable(!esAdmin);
+        btnGastos.setDisable(!esAdmin);
         tabBalances.setDisable(!esAdmin);
         btnConfiguracion.setDisable(!esAdmin);
         btnUsuarios.setVisible(esAdmin);
@@ -139,6 +151,7 @@ public class DashboardController implements Initializable {
                 critico == 0 ? Color.web("#27ae60") :
                 critico <= 3 ? Color.web("#f39c12") : Color.web("#e74c3c")
             );
+            actualizarListaStockCritico();
 
         } catch (SQLException e) {
             lblVentasDia.setText("Error");
@@ -157,10 +170,20 @@ public class DashboardController implements Initializable {
 
     private void cargarGraficoVentas7Dias() throws SQLException {
         Map<String, Double> datos = ventaDAO.obtenerVentasUltimos7Dias();
+        java.time.LocalDate hoyFecha = java.time.LocalDate.now();
         XYChart.Series<String, Number> serie = new XYChart.Series<>();
-        for (Map.Entry<String, Double> entry : datos.entrySet()) {
-            String dia = entry.getKey().substring(5);
-            serie.getData().add(new XYChart.Data<>(dia, entry.getValue()));
+        for (int i = 6; i >= 0; i--) {
+            java.time.LocalDate fecha = hoyFecha.minusDays(i);
+            String clave = fecha.toString();
+            boolean esHoy = i == 0;
+            String etiqueta = esHoy ? clave.substring(5) + " (Hoy)" : clave.substring(5);
+            double valor = datos.getOrDefault(clave, 0.0);
+            XYChart.Data<String, Number> dato = new XYChart.Data<>(etiqueta, valor);
+            String colorBarra = esHoy ? "#1f618d" : "#5dade2";
+            dato.nodeProperty().addListener((obs, nodoAnterior, nodo) -> {
+                if (nodo != null) nodo.setStyle("-fx-bar-fill: " + colorBarra + ";");
+            });
+            serie.getData().add(dato);
         }
         chartVentas7Dias.getData().clear();
         ((CategoryAxis) chartVentas7Dias.getXAxis()).getCategories().clear();
@@ -168,13 +191,58 @@ public class DashboardController implements Initializable {
     }
 
     private void cargarGraficoTop5() throws SQLException {
-        Map<String, Double> datos = ventaDAO.obtenerTop5ProductosMasVendidos();
+        java.util.List<VentaDAO.TopProducto> datos = ventaDAO.obtenerTop5ProductosMasVendidos();
         ObservableList<PieChart.Data> pieData = FXCollections.observableArrayList();
-        for (Map.Entry<String, Double> entry : datos.entrySet()) {
-            pieData.add(new PieChart.Data(entry.getKey(), entry.getValue()));
+        Map<String, String> etiquetaPorNombre = new java.util.LinkedHashMap<>();
+        for (VentaDAO.TopProducto p : datos) {
+            pieData.add(new PieChart.Data(p.nombre(), p.cantidad()));
+            etiquetaPorNombre.put(p.nombre(), formatearCantidad(p.cantidad()) + " " + p.unidad());
         }
         chartTop5.setData(pieData);
         chartTop5.layout();
+
+        javafx.application.Platform.runLater(() -> {
+            for (javafx.scene.Node nodo : chartTop5.lookupAll(".chart-pie-label")) {
+                if (nodo instanceof Text texto) {
+                    String etiqueta = etiquetaPorNombre.get(texto.getText());
+                    if (etiqueta != null) texto.setText(etiqueta);
+                }
+            }
+        });
+    }
+
+    private String formatearCantidad(double cantidad) {
+        return cantidad % 1 == 0 ? String.valueOf((int) cantidad) : String.valueOf(cantidad);
+    }
+
+    private void actualizarListaStockCritico() throws SQLException {
+        java.util.List<VentaDAO.ItemCritico> items = ventaDAO.obtenerItemsStockCritico(5);
+        vboxItemsCriticos.getChildren().clear();
+        for (VentaDAO.ItemCritico item : items) {
+            Label fila = new Label("• " + item.nombre() + " — " + formatearCantidad(item.stock()) + " " + item.unidad());
+            fila.setTextFill(Color.web(item.stock() == 0 ? "#e74c3c" : "#f39c12"));
+            fila.setStyle("-fx-font-size: 11; -fx-font-weight: bold;");
+            vboxItemsCriticos.getChildren().add(fila);
+        }
+    }
+
+    private void iniciarRelojFechaHora() {
+        if (lblFechaHora == null) return;
+        actualizarFechaHora();
+        Timeline reloj = new Timeline(new KeyFrame(Duration.seconds(1), e -> actualizarFechaHora()));
+        reloj.setCycleCount(Timeline.INDEFINITE);
+        reloj.play();
+    }
+
+    private void actualizarFechaHora() {
+        LocalDateTime ahora = LocalDateTime.now();
+        String fecha = ahora.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+        String hora = ahora.format(DateTimeFormatter.ofPattern("HH:mm:ss"));
+        String saludo = ahora.getHour() >= 12 ? "Buenas tardes" : "Buenos días";
+        Usuario usuario = SessionService.getInstance().getUsuarioActivo();
+        String nombre = usuario != null ? usuario.getNombre() : "";
+        if (lblSaludo != null) lblSaludo.setText(saludo + ", " + nombre);
+        lblFechaHora.setText(fecha + " · " + hora);
     }
 
     private void verificarEstadoFiscal() {
@@ -266,6 +334,14 @@ public class DashboardController implements Initializable {
     }
 
     @FXML
+    void abrirGastos(ActionEvent event) {
+        abrirVentana("/gastos_view.fxml", "Gastos Operativos", false, () -> {
+            cargarMetricas();
+            if (tabBalances.isSelected()) balancesController.cargar();
+        });
+    }
+
+    @FXML
     void abrirPOS(ActionEvent event) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/pos_view.fxml"));
@@ -316,7 +392,7 @@ public class DashboardController implements Initializable {
     void abrirAcercaDe(ActionEvent event) {
         Alert dlg = new Alert(Alert.AlertType.INFORMATION);
         dlg.setTitle("Acerca de");
-        dlg.setHeaderText("Sistema de Gestión PyME  —  v1.0.0");
+        dlg.setHeaderText("Sistema de Gestión PyME  —  v1.2.0");
         dlg.setContentText(
             "Desarrollado por Federico Iacono\n" +
             "IATech — Soluciones de software para PyMEs argentinas\n\n" +
@@ -341,9 +417,12 @@ public class DashboardController implements Initializable {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/login_view.fxml"));
             Parent root = loader.load();
             Stage stage = (Stage) lblUsuario.getScene().getWindow();
-            stage.setScene(new Scene(root));
+            stage.getScene().setRoot(root);
+            stage.setTitle("Sistema FedeiaTech - Pyme v1.2.0");
             stage.setMaximized(false);
-            stage.setTitle("Sistema FedeiaTech - Pyme v1.0.0");
+            stage.setResizable(false);
+            stage.sizeToScene();
+            stage.centerOnScreen();
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Error al cerrar sesión", e);
         }

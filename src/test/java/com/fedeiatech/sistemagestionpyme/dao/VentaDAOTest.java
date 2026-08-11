@@ -330,7 +330,10 @@ class VentaDAOTest {
         int contarDelDiaAntes = ventaDAO.contarVentasDelDia();
         double gananciaAntes = ventaDAO.obtenerGananciaEstimadaDelDia();
         double ventasUltimos7DiasAntes = ventaDAO.obtenerVentasUltimos7Dias().getOrDefault(hoy, 0.0);
-        double top5Antes = ventaDAO.obtenerTop5ProductosMasVendidos().getOrDefault("Producto A", 0.0);
+        double top5Antes = ventaDAO.obtenerTop5ProductosMasVendidos().stream()
+                .filter(p -> p.nombre().equals("Producto A"))
+                .mapToDouble(VentaDAO.TopProducto::cantidad)
+                .findFirst().orElse(0.0);
         int resumenDiarioCantAntes = Integer.parseInt(ventaDAO.obtenerResumenDiario(hoy, hoy).get(0)[1]);
         int detalleCompletoFilasAntes = ventaDAO.obtenerDetalleCompleto(hoy, hoy).size();
         int porSemanaCantAntes = Integer.parseInt(ultimaFila(ventaDAO.obtenerVentasPorSemana())[1]);
@@ -355,7 +358,10 @@ class VentaDAOTest {
         assertEquals(contarDelDiaAntes - 1, ventaDAO.contarVentasDelDia());
         assertTrue(ventaDAO.obtenerGananciaEstimadaDelDia() < gananciaAntes);
         assertTrue(ventaDAO.obtenerVentasUltimos7Dias().getOrDefault(hoy, 0.0) < ventasUltimos7DiasAntes);
-        double top5Despues = ventaDAO.obtenerTop5ProductosMasVendidos().getOrDefault("Producto A", 0.0);
+        double top5Despues = ventaDAO.obtenerTop5ProductosMasVendidos().stream()
+                .filter(p -> p.nombre().equals("Producto A"))
+                .mapToDouble(VentaDAO.TopProducto::cantidad)
+                .findFirst().orElse(0.0);
         assertTrue(top5Despues < top5Antes);
         assertTrue(Integer.parseInt(ventaDAO.obtenerResumenDiario(hoy, hoy).get(0)[1]) < resumenDiarioCantAntes);
         assertTrue(ventaDAO.obtenerDetalleCompleto(hoy, hoy).size() < detalleCompletoFilasAntes);
