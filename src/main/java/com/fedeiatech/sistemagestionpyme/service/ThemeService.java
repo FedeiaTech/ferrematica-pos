@@ -13,13 +13,13 @@ public class ThemeService {
     private static final Logger LOGGER = Logger.getLogger(ThemeService.class.getName());
 
     public static final String[] COLORES = {"#ffffff", "#c9cfd4", "#c9d3cd", "#b3cad6", "#cbafd4", "#d6c9b3", "#f0e4c4"};
-    public static final String[] NOMBRES  = {"Blanco", "Azul claro", "Verde claro", "Azul", "Lavanda", "Crema", "Ferrematica"};
+    public static final String[] NOMBRES  = {"Blanco", "Azul claro", "Verde claro", "Azul", "Lavanda", "Crema", "Ferremática"};
 
-    /** Rojo óxido de la identidad de marca Ferrematica — para acentos puntuales (íconos, bordes), nunca como fondo completo. */
+    /** Rojo óxido de la identidad de marca Ferremática — para acentos puntuales (íconos, bordes), nunca como fondo completo. */
     public static final String ACENTO_MARCA = "#B24C37";
 
     private static ThemeService instancia;
-    // Default: tema Ferrematica (crema, último de COLORES) en vez de blanco puro.
+    // Default: tema Ferremática (crema, último de COLORES) en vez de blanco puro.
     private String colorActual = COLORES[COLORES.length - 1];
 
     private ThemeService() {

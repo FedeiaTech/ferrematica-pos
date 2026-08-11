@@ -76,6 +76,9 @@ public class SupabaseSyncService {
     // No matchea "null" ni ausencia de la clave (POS corriendo contra un backend sin la 0013 aplicada
     // todavía) — en ambos casos saldoPendiente queda en null, no se descarta la fila.
     private static final Pattern P_PENDING_BALANCE = Pattern.compile("\"pending_balance\"\\s*:\\s*\"?(-?\\d+(?:\\.\\d+)?)\"?");
+    // Misma lógica de "no matchea null/ausencia" que P_PENDING_BALANCE — 0014 amplía estado_envios_pos()
+    // con delivered_at, un POS contra un backend pre-0014 simplemente deja entregadoEn en null.
+    private static final Pattern P_DELIVERED_AT = Pattern.compile("\"delivered_at\"\\s*:\\s*\"([^\"]*)\"");
 
     private static SupabaseSyncService instancia;
 
@@ -198,10 +201,12 @@ public class SupabaseSyncService {
 
     /**
      * Estado de envío de una venta, resuelto vía el RPC {@code estado_envios_pos()} (migración 0012,
-     * ampliada por 0013 con {@code saldoPendiente}). {@code saldoPendiente == null} significa pagado
-     * por completo o cobro aún no registrado — nunca implica que la columna no exista.
+     * ampliada por 0013 con {@code saldoPendiente} y por 0014 con {@code entregadoEn}).
+     * {@code saldoPendiente == null} significa pagado por completo o cobro aún no registrado —
+     * nunca implica que la columna no exista. {@code entregadoEn == null} significa que el pedido
+     * todavía no fue marcado como entregado, o que el backend no tiene la 0014 aplicada todavía.
      */
-    public record EstadoEnvio(String status, Instant actualizadoEn, Double saldoPendiente) {}
+    public record EstadoEnvio(String status, Instant actualizadoEn, Double saldoPendiente, Instant entregadoEn) {}
 
     /**
      * Resultado de {@link #obtenerEstadoEnvios()} — separa explícitamente "no se pudo consultar"
@@ -294,7 +299,17 @@ public class SupabaseSyncService {
                 }
             }
 
-            resultado.put(ventaLocalId, new EstadoEnvio(status, actualizadoEn, saldoPendiente));
+            Instant entregadoEn = null;
+            Matcher mDeliveredAt = P_DELIVERED_AT.matcher(objeto);
+            if (mDeliveredAt.find() && !mDeliveredAt.group(1).isEmpty()) {
+                try {
+                    entregadoEn = OffsetDateTime.parse(mDeliveredAt.group(1)).toInstant();
+                } catch (DateTimeParseException e) {
+                    LOGGER.log(Level.FINE, "delivered_at no parseable en estado_envios_pos para venta " + ventaLocalId, e);
+                }
+            }
+
+            resultado.put(ventaLocalId, new EstadoEnvio(status, actualizadoEn, saldoPendiente, entregadoEn));
         }
         return resultado;
     }

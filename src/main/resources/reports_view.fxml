@@ -47,6 +47,7 @@
                 <TableColumn fx:id="colTotal" prefWidth="150.0" text="Total (ARS)" />
                 <TableColumn fx:id="colEstado" prefWidth="110.0" text="Estado" />
                 <TableColumn fx:id="colEstadoEnvio" prefWidth="140.0" text="Estado de envío" />
+                <TableColumn fx:id="colHoraEntrega" prefWidth="130.0" text="Hora de entrega" />
                 <TableColumn fx:id="colAccion" prefWidth="200.0" text="Acción" />
               </columns>
                <columnResizePolicy>

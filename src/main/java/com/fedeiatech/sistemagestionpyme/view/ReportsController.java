@@ -13,7 +13,10 @@ import com.fedeiatech.sistemagestionpyme.service.TicketService;
 import java.io.File;
 import java.net.URL;
 import java.sql.SQLException;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -65,6 +68,7 @@ public class ReportsController implements Initializable {
     @FXML private TableColumn<Object, String> colTotal;
     @FXML private TableColumn<Object, String> colEstado;
     @FXML private TableColumn<Object, String> colEstadoEnvio;
+    @FXML private TableColumn<Object, String> colHoraEntrega;
     @FXML private TableColumn<Object, Void> colAccion;
     @FXML private Button btnExportar;
     @FXML private Label lblAvisoEnvios;
@@ -116,6 +120,19 @@ public class ReportsController implements Initializable {
     /** Segunda línea del tooltip (design decision DA8). {@code null} cuando no hay saldo pendiente. */
     static String formatearTooltipSaldoPendiente(Double saldoPendiente) {
         return saldoPendiente == null ? null : String.format("Saldo pendiente: $ %.2f", saldoPendiente);
+    }
+
+    private static final DateTimeFormatter FORMATO_HORA_ENTREGA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
+    /**
+     * "Hora de entrega" solo tiene sentido para un pedido ya entregado (design decision, mismo
+     * criterio que {@link #formatearSaldoPendiente}: {@code null} es un estado válido, no un fallo).
+     * Un {@code status == "entregado"} sin {@code entregadoEn} (backend pre-0014, o el RPC nunca
+     * llegó a persistir el timestamp) también degrada a guion, no a excepción.
+     */
+    static String formatearHoraEntrega(String status, Instant entregadoEn) {
+        if (!"entregado".equals(status) || entregadoEn == null) return "—";
+        return FORMATO_HORA_ENTREGA.format(entregadoEn.atZone(ZoneId.systemDefault()));
     }
 
     static String formatearEstadoEnvio(String status) {
@@ -251,6 +268,22 @@ public class ReportsController implements Initializable {
                     sb.append(lineaSaldo);
                 }
                 return sb.length() > 0 ? new javafx.scene.control.Tooltip(sb.toString()) : null;
+            }
+        });
+
+        colHoraEntrega.setCellValueFactory(data -> {
+            if (!(data.getValue() instanceof Venta v)) return new javafx.beans.property.SimpleStringProperty(null);
+            SupabaseSyncService.EstadoEnvio estado = estadoEnvios.get(v.getId());
+            String status = estado != null ? estado.status() : null;
+            Instant entregadoEn = estado != null ? estado.entregadoEn() : null;
+            return new javafx.beans.property.SimpleStringProperty(formatearHoraEntrega(status, entregadoEn));
+        });
+        colHoraEntrega.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String texto, boolean empty) {
+                super.updateItem(texto, empty);
+                boolean esFilaVenta = getTableRow() != null && getTableRow().getItem() instanceof Venta;
+                setText(empty || !esFilaVenta ? null : texto);
             }
         });
 
