@@ -2,6 +2,8 @@ package com.fedeiatech.sistemagestionpyme.dao;
 
 import com.fedeiatech.sistemagestionpyme.model.Compra;
 import com.fedeiatech.sistemagestionpyme.model.ItemVenta;
+import com.fedeiatech.sistemagestionpyme.model.Usuario;
+import com.fedeiatech.sistemagestionpyme.service.SessionService;
 import java.io.File;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -26,12 +28,14 @@ class CompraDAOTest {
     void setUp(@TempDir File tempDir) throws SQLException {
         System.setProperty("db.path", new File(tempDir, "test.db").getAbsolutePath());
         ConexionDB.resetParaTests();
+        SessionService.getInstance().iniciarSesion(new Usuario("admin-test", "hash", Usuario.Rol.ADMIN));
     }
 
     @AfterEach
     void tearDown() throws SQLException {
         ConexionDB.resetParaTests();
         System.clearProperty("db.path");
+        SessionService.getInstance().cerrarSesion();
     }
 
     private Compra nuevaCompra(int idItem, double cantidad, double costoUnitario, String fecha) {
@@ -123,6 +127,26 @@ class CompraDAOTest {
 
         assertEquals(1, historico.size());
         assertEquals("(producto eliminado)", historico.get(0).getNombreItem());
+    }
+
+    @Test
+    void registrarCompraRechazaSiElUsuarioActivoNoEsAdmin() throws SQLException {
+        itemDAO.guardar(new ItemVenta(0, "COD-5", "Producto 5", "desc", 5.0, 10.0, 10.0, false));
+        ItemVenta item = itemDAO.buscarPorCodigo("COD-5");
+
+        SessionService.getInstance().iniciarSesion(new Usuario("cajero-test", "hash", Usuario.Rol.CAJERO));
+        try {
+            Compra compra = nuevaCompra(item.getId(), 4.0, 8.0, "2026-08-01");
+            compraDAO.registrarCompra(compra);
+            assertEquals(0, compra.getId(),
+                    "Un CAJERO no debe poder registrar una compra, aunque invoque el DAO directamente");
+        } finally {
+            SessionService.getInstance().iniciarSesion(new Usuario("admin-test", "hash", Usuario.Rol.ADMIN));
+        }
+
+        assertEquals(0, contarCompras());
+        ItemVenta sinCambios = itemDAO.buscarPorCodigo("COD-5");
+        assertEquals(10.0, sinCambios.getStock(), "El stock no debe cambiar si la compra fue rechazada");
     }
 
     private int contarCompras() throws SQLException {

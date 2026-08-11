@@ -1,6 +1,7 @@
 package com.fedeiatech.sistemagestionpyme.dao;
 
 import com.fedeiatech.sistemagestionpyme.model.Compra;
+import com.fedeiatech.sistemagestionpyme.service.SessionService;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -21,9 +22,15 @@ public class CompraDAO {
      * (suma stock en vez de restar). Diferencia deliberada: acá SÍ se valida el
      * resultado del UPDATE de stock — 0 filas afectadas significa que el id_item
      * no existe o es un servicio, y eso invalida toda la compra (a diferencia de
-     * una venta de servicio, que legítimamente no toca stock).
+     * una venta de servicio, que legítimamente no toca stock). Solo ADMIN puede
+     * registrar compras (chequeo server-side vía SessionService, no depende
+     * únicamente de que la UI oculte el formulario).
      */
     public void registrarCompra(Compra compra) throws SQLException {
+        if (!SessionService.getInstance().esAdmin()) {
+            return;
+        }
+
         String sqlCompra = "INSERT INTO compras (id_item, cantidad, costo_unitario, costo_total, proveedor, fecha) VALUES (?, ?, ?, ?, ?, ?)";
         String sqlStock = "UPDATE items SET stock = stock + ?, precio_costo = ? WHERE id = ? AND es_servicio = 0";
 
