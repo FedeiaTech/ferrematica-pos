@@ -15,6 +15,7 @@ import com.fedeiatech.sistemagestionpyme.view.util.AlertUtil;
 import java.io.File;
 import java.net.URL;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -31,8 +32,10 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ChoiceDialog;
 import javafx.scene.control.ContentDisplay;
+import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -57,6 +60,8 @@ public class PosController implements Initializable {
     @FXML private Button btnCobrar;
     @FXML private Button btnEliminar;
     @FXML private Button btnVaciar;
+    @FXML private CheckBox chkFechaAnterior;
+    @FXML private DatePicker dpFechaVenta;
 
     @FXML private TableView<DetalleVenta> tablaDetalles;
     @FXML private TableColumn<DetalleVenta, String> colCodigo;
@@ -83,6 +88,19 @@ public class PosController implements Initializable {
         ventaDAO = new VentaDAO();
         listaCarrito = FXCollections.observableArrayList();
         configDAO = new ConfiguracionDAO();
+
+        dpFechaVenta.setValue(LocalDate.now());
+        dpFechaVenta.setDayCellFactory(picker -> new javafx.scene.control.DateCell() {
+            @Override
+            public void updateItem(LocalDate fecha, boolean empty) {
+                super.updateItem(fecha, empty);
+                setDisable(empty || fecha.isAfter(LocalDate.now()));
+            }
+        });
+        chkFechaAnterior.selectedProperty().addListener((obs, estabaTildado, tildado) -> {
+            dpFechaVenta.setDisable(!tildado);
+            if (!tildado) dpFechaVenta.setValue(LocalDate.now());
+        });
 
         rootPane.setStyle(ThemeService.getInstance().getBgStyle());
 
@@ -461,9 +479,18 @@ public class PosController implements Initializable {
     void finalizarVenta(ActionEvent event) {
         if (listaCarrito.isEmpty()) return;
 
+        if (chkFechaAnterior.isSelected() && dpFechaVenta.getValue() != null
+                && dpFechaVenta.getValue().isAfter(LocalDate.now())) {
+            AlertUtil.mostrar(Alert.AlertType.WARNING, "Fecha inválida", "No se puede registrar una venta con fecha futura.");
+            return;
+        }
+
         try {
             Venta venta = new Venta();
-            venta.setFecha(LocalDateTime.now().toString());
+            LocalDateTime fechaVenta = chkFechaAnterior.isSelected() && dpFechaVenta.getValue() != null
+                    ? dpFechaVenta.getValue().atTime(LocalDateTime.now().toLocalTime())
+                    : LocalDateTime.now();
+            venta.setFecha(fechaVenta.toString());
             for(DetalleVenta d : listaCarrito) venta.agregarDetalle(d);
             venta.calcularTotal();
 
@@ -502,6 +529,8 @@ public class PosController implements Initializable {
     private void limpiarPantalla() {
         listaCarrito.clear();
         recalcularTotal();
+        chkFechaAnterior.setSelected(false);
+        dpFechaVenta.setValue(LocalDate.now());
         txtBuscador.requestFocus();
     }
 
