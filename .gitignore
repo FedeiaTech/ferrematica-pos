@@ -4,6 +4,7 @@ dependency-reduced-pom.xml
 
 # Base de datos local
 *.db
+*.db.bak*
 
 # Logs de la app
 logs/
