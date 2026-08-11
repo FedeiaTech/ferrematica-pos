@@ -41,6 +41,7 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -92,6 +93,16 @@ public class InventoryController implements Initializable {
         comboDAO = new ComboDAO();
 
         rootPane.setStyle(ThemeService.getInstance().getBgStyle());
+
+        rootPane.sceneProperty().addListener((obs, sceneAnterior, sceneNueva) -> {
+            if (sceneNueva != null) {
+                sceneNueva.setOnKeyPressed(event -> {
+                    if (event.getCode() == KeyCode.ESCAPE) {
+                        ((Stage) sceneNueva.getWindow()).close();
+                    }
+                });
+            }
+        });
 
         cmbUnidad.getItems().addAll("u", "kg", "g", "lt", "docena", "par");
         cmbUnidad.setValue("u");
@@ -228,23 +239,24 @@ public class InventoryController implements Initializable {
 
                 if (item == null) {
                     setText("0 " + rowData.getUnidad());
-                    setTextFill(Color.ORANGE);
-                    setStyle("-fx-alignment: CENTER_RIGHT;");
+                    setTextFill(Color.web("#e74c3c"));
+                    setStyle("-fx-alignment: CENTER_RIGHT; -fx-font-weight: bold;");
                     return;
                 }
 
                 setText(item % 1 == 0
                         ? (int) item.doubleValue() + " " + rowData.getUnidad()
                         : item + " " + rowData.getUnidad());
-                setStyle("-fx-alignment: CENTER_RIGHT;");
 
-                if (item < 0) {
-                    setTextFill(Color.RED);
-                    setStyle("-fx-font-weight: bold; -fx-alignment: CENTER_RIGHT;");
-                } else if (item == 0) {
-                    setTextFill(Color.ORANGE);
+                if (item <= 0) {
+                    setTextFill(Color.web("#e74c3c"));
+                    setStyle("-fx-alignment: CENTER_RIGHT; -fx-font-weight: bold;");
+                } else if (item <= 5) {
+                    setTextFill(Color.web("#f39c12"));
+                    setStyle("-fx-alignment: CENTER_RIGHT; -fx-font-weight: bold;");
                 } else {
                     setTextFill(Color.BLACK);
+                    setStyle("-fx-alignment: CENTER_RIGHT;");
                 }
             }
         });
