@@ -2,12 +2,19 @@ package com.fedeiatech.sistemagestionpyme.service;
 
 import com.fedeiatech.sistemagestionpyme.dao.ConfiguracionDAO;
 import com.fedeiatech.sistemagestionpyme.dao.ItemDAO;
+import com.fedeiatech.sistemagestionpyme.dao.VentaDAO;
 import com.fedeiatech.sistemagestionpyme.model.Configuracion;
 import com.fedeiatech.sistemagestionpyme.model.ItemVenta;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -52,24 +59,46 @@ public class SupabaseSyncService {
     private static final List<String> COLUMNAS_PUSH = List.of(
         "sku", "name", "price", "stock", "unit", "category", "is_service", "is_active", "synced_at");
 
+    // Allow-list de ventas/detalle_ventas — ver migración 0011_ventas_mirror.sql (design decision D1/D2/D3).
+    private static final List<String> COLUMNAS_PUSH_VENTAS = List.of(
+        "install_id", "venta_local_id", "fecha", "fecha_local", "total", "estado");
+    private static final List<String> COLUMNAS_PUSH_DETALLE_VENTAS = List.of(
+        "install_id", "venta_local_id", "detalle_local_id", "producto_codigo", "combo_id",
+        "descripcion", "cantidad", "precio_unitario", "subtotal");
+
     private static final Pattern ACCESS_TOKEN_PATTERN = Pattern.compile("\"access_token\"\\s*:\\s*\"([^\"]+)\"");
+
+    // Extracción por clave, no por posición — la migración 0013 amplió estado_envios_pos() con
+    // pending_balance y el orden de columnas ya no es una garantía a la que atarse (design decision DA7).
+    private static final Pattern P_VENTA_LOCAL_ID = Pattern.compile("\"venta_local_id\"\\s*:\\s*\"?(\\d+)\"?");
+    private static final Pattern P_STATUS = Pattern.compile("\"status\"\\s*:\\s*\"([^\"]*)\"");
+    private static final Pattern P_UPDATED_AT = Pattern.compile("\"updated_at\"\\s*:\\s*\"([^\"]*)\"");
+    // No matchea "null" ni ausencia de la clave (POS corriendo contra un backend sin la 0013 aplicada
+    // todavía) — en ambos casos saldoPendiente queda en null, no se descarta la fila.
+    private static final Pattern P_PENDING_BALANCE = Pattern.compile("\"pending_balance\"\\s*:\\s*\"?(-?\\d+(?:\\.\\d+)?)\"?");
 
     private static SupabaseSyncService instancia;
 
     private final ItemDAO itemDAO;
     private final ConfiguracionDAO configDAO;
+    private final VentaDAO ventaDAO;
     /** Solo para tests — si es null, se construye un {@link JdkPostgrestClient} por sincronización con la URL vigente. */
     private final PostgrestClient clienteInyectado;
 
     private ScheduledExecutorService scheduler;
 
     private SupabaseSyncService() {
-        this(new ItemDAO(), new ConfiguracionDAO(), null);
+        this(new ItemDAO(), new ConfiguracionDAO(), new VentaDAO(), null);
     }
 
     SupabaseSyncService(ItemDAO itemDAO, ConfiguracionDAO configDAO, PostgrestClient clienteInyectado) {
+        this(itemDAO, configDAO, new VentaDAO(), clienteInyectado);
+    }
+
+    SupabaseSyncService(ItemDAO itemDAO, ConfiguracionDAO configDAO, VentaDAO ventaDAO, PostgrestClient clienteInyectado) {
         this.itemDAO = itemDAO;
         this.configDAO = configDAO;
+        this.ventaDAO = ventaDAO;
         this.clienteInyectado = clienteInyectado;
     }
 
@@ -120,7 +149,202 @@ public class SupabaseSyncService {
             }
         }
 
+        if (config.isSupabaseSyncVentasHabilitado()) {
+            sincronizarVentas(http, headers);
+        }
+
         configDAO.actualizarUltimaSincronizacionExitosa(Instant.now().toString());
+    }
+
+    /**
+     * Empuja las ventas locales pendientes ({@code sincronizada_en IS NULL}) y sus detalles a
+     * {@code public.ventas}/{@code public.detalle_ventas}, con la misma cuenta de servicio y JWT
+     * ya autenticados por {@link #sincronizar()}. Nunca lanza — un fallo acá (red, RLS, lo que
+     * sea) se loguea como WARNING y no debe invalidar una sincronización de productos exitosa
+     * (mismo criterio que el bloque de tombstones, design decision D5).
+     */
+    private void sincronizarVentas(PostgrestClient http, Map<String, String> headers) {
+        try {
+            List<VentaDAO.VentaPendiente> pendientes = ventaDAO.listarVentasPendientesDeSync();
+            if (pendientes.isEmpty()) return;
+
+            String installId = configDAO.obtenerOGenerarInstallId();
+
+            String payloadVentas = serializarVentas(pendientes, installId);
+            PostgrestResponse respVentas = http.post(
+                "/rest/v1/ventas?on_conflict=install_id,venta_local_id", payloadVentas, headers);
+            if (!respVentas.esExitosa()) {
+                throw new IOException("Error al sincronizar ventas: HTTP "
+                    + respVentas.statusCode() + " - " + respVentas.body());
+            }
+
+            String payloadDetalles = serializarDetalleVentas(pendientes, installId);
+            if (!payloadDetalles.equals("[]")) {
+                PostgrestResponse respDetalles = http.post(
+                    "/rest/v1/detalle_ventas?on_conflict=install_id,venta_local_id,detalle_local_id",
+                    payloadDetalles, headers);
+                if (!respDetalles.esExitosa()) {
+                    throw new IOException("Error al sincronizar detalles de venta: HTTP "
+                        + respDetalles.statusCode() + " - " + respDetalles.body());
+                }
+            }
+
+            List<Integer> idsSincronizados = pendientes.stream().map(VentaDAO.VentaPendiente::id).toList();
+            ventaDAO.marcarVentasSincronizadas(idsSincronizados);
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Fallo al empujar ventas a Supabase", e);
+        }
+    }
+
+    /**
+     * Estado de envío de una venta, resuelto vía el RPC {@code estado_envios_pos()} (migración 0012,
+     * ampliada por 0013 con {@code saldoPendiente}). {@code saldoPendiente == null} significa pagado
+     * por completo o cobro aún no registrado — nunca implica que la columna no exista.
+     */
+    public record EstadoEnvio(String status, Instant actualizadoEn, Double saldoPendiente) {}
+
+    /**
+     * Resultado de {@link #obtenerEstadoEnvios()} — separa explícitamente "no se pudo consultar"
+     * de "se consultó bien y no hay envíos vinculados", algo que un {@code Map} vacío por sí solo
+     * no puede distinguir. {@code exitoso=false} es la señal para mostrar el aviso no bloqueante en
+     * Reportes; {@code exitoso=true} con {@code estados} vacío es un resultado válido y NO debe
+     * mostrar ningún aviso.
+     */
+    public record ResultadoEstadoEnvios(Map<Integer, EstadoEnvio> estados, boolean exitoso) {
+        static ResultadoEstadoEnvios fallo() {
+            return new ResultadoEstadoEnvios(Map.of(), false);
+        }
+
+        static ResultadoEstadoEnvios exito(Map<Integer, EstadoEnvio> estados) {
+            return new ResultadoEstadoEnvios(estados, true);
+        }
+    }
+
+    /**
+     * Consulta el RPC {@code estado_envios_pos()} y devuelve el estado de envío de cada venta
+     * vinculada a un pedido, en una ventana fija de 90 días resuelta server-side. Nunca lanza:
+     * ante red caída, configuración incompleta, POS sin provisionar ({@code pos_installs}, HTTP 42501)
+     * o cualquier otro fallo, devuelve {@link ResultadoEstadoEnvios#fallo()} y loguea WARNING —
+     * mismo criterio que {@link #sincronizarVentas}, pero marcando el fallo explícitamente en vez
+     * de devolver un mapa vacío indistinguible de "no hay envíos". Llamar FUERA del hilo FX (el
+     * caller hace {@code Platform.runLater} con el resultado).
+     */
+    public ResultadoEstadoEnvios obtenerEstadoEnvios() {
+        try {
+            Configuracion config = configDAO.obtenerConfiguracion();
+            if (config == null || esVacio(config.getSupabaseUrl()) || esVacio(config.getSupabaseAnonKey())
+                    || esVacio(config.getSupabaseSyncEmail()) || esVacio(config.getSupabaseSyncPassword())) {
+                return ResultadoEstadoEnvios.fallo();
+            }
+
+            PostgrestClient http = clienteInyectado != null ? clienteInyectado : new JdkPostgrestClient(config.getSupabaseUrl());
+            String jwt = autenticar(http, config);
+            Map<String, String> headers = construirHeadersRpc(config.getSupabaseAnonKey(), jwt);
+
+            PostgrestResponse resp = http.post("/rest/v1/rpc/estado_envios_pos", "{}", headers);
+            if (!resp.esExitosa()) {
+                LOGGER.log(Level.WARNING, "No se pudo obtener el estado de envíos: HTTP "
+                    + resp.statusCode() + " - " + resp.body());
+                return ResultadoEstadoEnvios.fallo();
+            }
+            return ResultadoEstadoEnvios.exito(parsearEstadoEnvios(resp.body()));
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Fallo al consultar el estado de envíos en Supabase", e);
+            return ResultadoEstadoEnvios.fallo();
+        }
+    }
+
+    private static Map<Integer, EstadoEnvio> parsearEstadoEnvios(String jsonBody) {
+        Map<Integer, EstadoEnvio> resultado = new LinkedHashMap<>();
+        if (jsonBody == null) return resultado;
+        for (String objeto : dividirObjetos(jsonBody)) {
+            Matcher mId = P_VENTA_LOCAL_ID.matcher(objeto);
+            Matcher mStatus = P_STATUS.matcher(objeto);
+            if (!mId.find() || !mStatus.find()) {
+                LOGGER.log(Level.FINE, "Objeto de estado_envios_pos sin venta_local_id o status, descartado: " + objeto);
+                continue;
+            }
+
+            int ventaLocalId;
+            try {
+                ventaLocalId = Integer.parseInt(mId.group(1));
+            } catch (NumberFormatException e) {
+                LOGGER.log(Level.FINE, "venta_local_id no parseable en estado_envios_pos, descartado: " + objeto, e);
+                continue;
+            }
+            String status = mStatus.group(1);
+
+            Instant actualizadoEn = null;
+            Matcher mUpdatedAt = P_UPDATED_AT.matcher(objeto);
+            if (mUpdatedAt.find()) {
+                try {
+                    actualizadoEn = OffsetDateTime.parse(mUpdatedAt.group(1)).toInstant();
+                } catch (DateTimeParseException e) {
+                    LOGGER.log(Level.FINE, "updated_at no parseable en estado_envios_pos para venta " + ventaLocalId, e);
+                }
+            }
+
+            Double saldoPendiente = null;
+            Matcher mSaldo = P_PENDING_BALANCE.matcher(objeto);
+            if (mSaldo.find()) {
+                try {
+                    saldoPendiente = Double.parseDouble(mSaldo.group(1));
+                } catch (NumberFormatException e) {
+                    LOGGER.log(Level.FINE, "pending_balance no parseable en estado_envios_pos para venta " + ventaLocalId, e);
+                }
+            }
+
+            resultado.put(ventaLocalId, new EstadoEnvio(status, actualizadoEn, saldoPendiente));
+        }
+        return resultado;
+    }
+
+    /**
+     * Separa el array JSON del RPC en sus objetos de nivel superior, sin depender de una librería
+     * JSON (pom.xml no tiene ninguna — design decision DA7). Rastrea profundidad de llaves y estado
+     * de string (con escapes) para que un futuro valor de texto con {@code {}} no desincronice el
+     * corte. Package-private para poder testearlo directamente.
+     */
+    static List<String> dividirObjetos(String json) {
+        List<String> objetos = new java.util.ArrayList<>();
+        if (json == null) return objetos;
+        int profundidad = 0;
+        boolean enString = false;
+        boolean escapado = false;
+        int inicio = -1;
+        for (int i = 0; i < json.length(); i++) {
+            char c = json.charAt(i);
+            if (enString) {
+                if (escapado) {
+                    escapado = false;
+                } else if (c == '\\') {
+                    escapado = true;
+                } else if (c == '"') {
+                    enString = false;
+                }
+                continue;
+            }
+            if (c == '"') {
+                enString = true;
+            } else if (c == '{') {
+                if (profundidad == 0) inicio = i;
+                profundidad++;
+            } else if (c == '}') {
+                profundidad--;
+                if (profundidad == 0 && inicio >= 0) {
+                    objetos.add(json.substring(inicio, i + 1));
+                    inicio = -1;
+                }
+            }
+        }
+        return objetos;
+    }
+
+    private static Map<String, String> construirHeadersRpc(String anonKey, String jwt) {
+        Map<String, String> headers = new HashMap<>();
+        headers.put("apikey", anonKey);
+        headers.put("Authorization", "Bearer " + jwt);
+        return headers;
     }
 
     /**
@@ -229,6 +453,70 @@ public class SupabaseSyncService {
         sb.append("\"synced_at\":\"").append(syncedAt).append("\"");
         sb.append("}");
         return sb.toString();
+    }
+
+    private static String serializarVentas(List<VentaDAO.VentaPendiente> pendientes, String installId) {
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < pendientes.size(); i++) {
+            if (i > 0) sb.append(",");
+            VentaDAO.VentaPendiente venta = pendientes.get(i);
+            String fechaUtc = convertirFechaLocalAUtc(venta.fecha()).toString();
+            sb.append("{");
+            sb.append("\"install_id\":\"").append(escapeJson(installId)).append("\",");
+            sb.append("\"venta_local_id\":").append(venta.id()).append(",");
+            sb.append("\"fecha\":\"").append(fechaUtc).append("\",");
+            sb.append("\"fecha_local\":\"").append(escapeJson(venta.fecha())).append("\",");
+            sb.append("\"total\":").append(venta.total()).append(",");
+            sb.append("\"estado\":\"").append(escapeJson(venta.estado())).append("\"");
+            sb.append("}");
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+
+    private static String serializarDetalleVentas(List<VentaDAO.VentaPendiente> pendientes, String installId) {
+        StringBuilder sb = new StringBuilder("[");
+        boolean primero = true;
+        for (VentaDAO.VentaPendiente venta : pendientes) {
+            for (VentaDAO.DetallePendiente detalle : venta.detalles()) {
+                if (!primero) sb.append(",");
+                primero = false;
+                sb.append("{");
+                sb.append("\"install_id\":\"").append(escapeJson(installId)).append("\",");
+                sb.append("\"venta_local_id\":").append(venta.id()).append(",");
+                sb.append("\"detalle_local_id\":").append(detalle.id()).append(",");
+                sb.append("\"producto_codigo\":").append(jsonStringOrNull(detalle.productoCodigo())).append(",");
+                sb.append("\"combo_id\":").append(detalle.comboId() != null ? detalle.comboId() : "null").append(",");
+                sb.append("\"descripcion\":\"").append(escapeJson(detalle.descripcion())).append("\",");
+                sb.append("\"cantidad\":").append(detalle.cantidad()).append(",");
+                sb.append("\"precio_unitario\":").append(detalle.precioUnitario()).append(",");
+                sb.append("\"subtotal\":").append(detalle.subtotal());
+                sb.append("}");
+            }
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+
+    private static String jsonStringOrNull(String valor) {
+        return valor == null ? "null" : "\"" + escapeJson(valor) + "\"";
+    }
+
+    /**
+     * Convierte la {@code fecha} local (zone-less, tal como se guarda en SQLite) a UTC en el
+     * momento del push, usando el huso horario del equipo (design decision D3). El valor local
+     * en SQLite nunca se reescribe — este método solo produce el {@code timestamptz} que viaja
+     * a Supabase. Acepta tanto {@code yyyy-MM-dd} (fecha sin hora) como
+     * {@code yyyy-MM-dd'T'HH:mm:ss} (con hora).
+     */
+    private static Instant convertirFechaLocalAUtc(String fechaLocal) {
+        LocalDateTime fechaHora;
+        try {
+            fechaHora = LocalDateTime.parse(fechaLocal);
+        } catch (DateTimeParseException e) {
+            fechaHora = LocalDate.parse(fechaLocal).atStartOfDay();
+        }
+        return fechaHora.atZone(ZoneId.systemDefault()).toInstant();
     }
 
     private static String serializarTombstones(List<ItemDAO.ItemEliminado> pendientes) {

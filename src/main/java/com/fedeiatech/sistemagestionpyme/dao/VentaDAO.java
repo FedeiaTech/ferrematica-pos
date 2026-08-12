@@ -3,12 +3,16 @@ package com.fedeiatech.sistemagestionpyme.dao;
 import com.fedeiatech.sistemagestionpyme.model.ComponenteCombo;
 import com.fedeiatech.sistemagestionpyme.model.DetalleVenta;
 import com.fedeiatech.sistemagestionpyme.model.Venta;
+import com.fedeiatech.sistemagestionpyme.service.SessionService;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -17,8 +21,15 @@ public class VentaDAO {
 
     private static final Logger LOGGER = Logger.getLogger(VentaDAO.class.getName());
 
+    /** Excluye ventas anuladas de queries que ya filtran por columnas de "ventas" sin alias. */
+    private static final String FILTRO_ACTIVAS = " AND estado <> '" + Venta.ESTADO_ANULADA + "'";
+    /** Variante para queries con JOIN a "ventas v". */
+    private static final String FILTRO_ACTIVAS_V = " AND v.estado <> '" + Venta.ESTADO_ANULADA + "'";
+    /** Para queries sobre "ventas" sin WHERE previo. */
+    private static final String WHERE_ACTIVAS = "WHERE estado <> '" + Venta.ESTADO_ANULADA + "' ";
+
     public void registrarVenta(Venta venta) throws SQLException {
-        String sqlVenta = "INSERT INTO ventas (fecha, total) VALUES (?, ?)";
+        String sqlVenta = "INSERT INTO ventas (fecha, total, estado) VALUES (?, ?, ?)";
         String sqlDetalleItem  = "INSERT INTO detalles_venta (id_venta, id_item, id_combo, cantidad, precio_unitario, subtotal) VALUES (?, ?, NULL, ?, ?, ?)";
         String sqlDetalleCombo = "INSERT INTO detalles_venta (id_venta, id_item, id_combo, cantidad, precio_unitario, subtotal) VALUES (?, NULL, ?, ?, ?, ?)";
         String sqlStock = "UPDATE items SET stock = stock - ? WHERE id = ? AND es_servicio = 0";
@@ -31,6 +42,7 @@ public class VentaDAO {
             try (PreparedStatement pstVenta = conn.prepareStatement(sqlVenta, Statement.RETURN_GENERATED_KEYS)) {
                 pstVenta.setString(1, venta.getFecha());
                 pstVenta.setDouble(2, venta.getTotal());
+                pstVenta.setString(3, venta.getEstado() != null ? venta.getEstado() : Venta.ESTADO_COMPLETADA);
                 pstVenta.executeUpdate();
                 try (ResultSet rs = pstVenta.getGeneratedKeys()) {
                     if (rs.next()) venta.setId(rs.getInt(1));
@@ -84,7 +96,7 @@ public class VentaDAO {
     public double sumarVentasDelDia() throws SQLException {
         double total = 0.0;
         String fechaHoy = java.time.LocalDate.now().toString();
-        String sql = "SELECT SUM(total) FROM ventas WHERE fecha LIKE ?";
+        String sql = "SELECT SUM(total) FROM ventas WHERE fecha LIKE ?" + FILTRO_ACTIVAS;
 
         try (Connection conn = ConexionDB.getConexion(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, fechaHoy + "%");
@@ -100,7 +112,7 @@ public class VentaDAO {
 
     /** Usado por Balances. No reusar obtenerVentasPorMes(): ese método tiene un JOIN que infla el total (ver comentario ahí). */
     public double sumarVentasEntre(String desde, String hasta) throws SQLException {
-        String sql = "SELECT COALESCE(SUM(total), 0) FROM ventas WHERE DATE(fecha) BETWEEN ? AND ?";
+        String sql = "SELECT COALESCE(SUM(total), 0) FROM ventas WHERE DATE(fecha) BETWEEN ? AND ?" + FILTRO_ACTIVAS;
         try (Connection conn = ConexionDB.getConexion();
              PreparedStatement pst = conn.prepareStatement(sql)) {
             pst.setString(1, desde);
@@ -124,15 +136,120 @@ public class VentaDAO {
                 v.setId(rs.getInt("id"));
                 v.setFecha(rs.getString("fecha"));
                 v.setTotal(rs.getDouble("total"));
+                v.setEstado(rs.getString("estado"));
+                v.setMotivoAnulacion(rs.getString("motivo_anulacion"));
                 lista.add(v);
             }
         }
         return lista;
     }
 
+    /** Usado por el desglose de Balance. Excluye ventas anuladas. */
+    public java.util.List<Venta> listarVentasEntre(String desde, String hasta) throws SQLException {
+        java.util.List<Venta> lista = new java.util.ArrayList<>();
+        String sql = "SELECT * FROM ventas WHERE DATE(fecha) BETWEEN ? AND ?" + FILTRO_ACTIVAS + " ORDER BY fecha ASC";
+
+        try (Connection conn = ConexionDB.getConexion();
+             PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setString(1, desde);
+            pst.setString(2, hasta);
+            try (ResultSet rs = pst.executeQuery()) {
+                while (rs.next()) {
+                    Venta v = new Venta();
+                    v.setId(rs.getInt("id"));
+                    v.setFecha(rs.getString("fecha"));
+                    v.setTotal(rs.getDouble("total"));
+                    v.setEstado(rs.getString("estado"));
+                    v.setMotivoAnulacion(rs.getString("motivo_anulacion"));
+                    lista.add(v);
+                }
+            }
+        }
+        return lista;
+    }
+
+    /**
+     * Anula una venta en una transacción única: marca estado='anulada' + motivo
+     * (rechaza doble anulación vía guard AND estado='completada') y repone stock
+     * de items físicos y de componentes de combo. Tolerante a items/combos
+     * borrados del catálogo (0 filas afectadas no aborta la transacción) — mismo
+     * criterio asimétrico que registrarVenta. Solo ADMIN puede anular
+     * (chequeo server-side vía SessionService, no depende únicamente de que
+     * la UI oculte el botón).
+     */
+    public boolean anularVenta(int idVenta, String motivo) throws SQLException {
+        if (!SessionService.getInstance().esAdmin()) {
+            return false;
+        }
+
+        // sincronizada_en se limpia acá (design decision D5): un cambio de estado a anulada
+        // debe volver a empujarse a Supabase para que el mirror refleje la anulación.
+        String sqlUpdateVenta = "UPDATE ventas SET estado = ?, motivo_anulacion = ?, sincronizada_en = NULL WHERE id = ? AND estado = ?";
+        String sqlDetalles = "SELECT id_item, id_combo, cantidad FROM detalles_venta WHERE id_venta = ?";
+        String sqlRestockItem = "UPDATE items SET stock = stock + ? WHERE id = ? AND es_servicio = 0";
+        String sqlComponentesCombo = "SELECT id_item, cantidad FROM combo_componentes WHERE id_combo = ?";
+
+        Connection conn = null;
+        try {
+            conn = ConexionDB.getConexion();
+            conn.setAutoCommit(false);
+
+            try (PreparedStatement pstUpdate = conn.prepareStatement(sqlUpdateVenta)) {
+                pstUpdate.setString(1, Venta.ESTADO_ANULADA);
+                pstUpdate.setString(2, motivo);
+                pstUpdate.setInt(3, idVenta);
+                pstUpdate.setString(4, Venta.ESTADO_COMPLETADA);
+                int filas = pstUpdate.executeUpdate();
+                if (filas == 0) {
+                    conn.rollback();
+                    return false;
+                }
+            }
+
+            try (PreparedStatement pstDetalles = conn.prepareStatement(sqlDetalles);
+                 PreparedStatement pstRestock = conn.prepareStatement(sqlRestockItem);
+                 PreparedStatement pstComponentes = conn.prepareStatement(sqlComponentesCombo)) {
+
+                pstDetalles.setInt(1, idVenta);
+                try (ResultSet rs = pstDetalles.executeQuery()) {
+                    while (rs.next()) {
+                        Object idItemObj = rs.getObject("id_item");
+                        Object idComboObj = rs.getObject("id_combo");
+                        double cantidad = rs.getDouble("cantidad");
+
+                        if (idItemObj != null) {
+                            pstRestock.setDouble(1, cantidad);
+                            pstRestock.setInt(2, ((Number) idItemObj).intValue());
+                            pstRestock.executeUpdate();
+                        } else if (idComboObj != null) {
+                            pstComponentes.setInt(1, ((Number) idComboObj).intValue());
+                            try (ResultSet rsComp = pstComponentes.executeQuery()) {
+                                while (rsComp.next()) {
+                                    double cantidadComponente = rsComp.getDouble("cantidad");
+                                    int idItemComponente = rsComp.getInt("id_item");
+                                    pstRestock.setDouble(1, cantidadComponente * cantidad);
+                                    pstRestock.setInt(2, idItemComponente);
+                                    pstRestock.executeUpdate();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            conn.commit();
+            return true;
+        } catch (SQLException e) {
+            if (conn != null) { try { conn.rollback(); } catch (SQLException ex) { LOGGER.log(Level.SEVERE, "Error al hacer rollback de la anulación", ex); } }
+            throw e;
+        } finally {
+            if (conn != null) conn.setAutoCommit(true);
+        }
+    }
+
     public int contarVentasDelDia() throws SQLException {
         String fechaHoy = java.time.LocalDate.now().toString();
-        String sql = "SELECT COUNT(*) FROM ventas WHERE fecha LIKE ?";
+        String sql = "SELECT COUNT(*) FROM ventas WHERE fecha LIKE ?" + FILTRO_ACTIVAS;
         try (Connection conn = ConexionDB.getConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, fechaHoy + "%");
@@ -148,7 +265,7 @@ public class VentaDAO {
                      "FROM detalles_venta d " +
                      "JOIN items i ON d.id_item = i.id " +
                      "JOIN ventas v ON d.id_venta = v.id " +
-                     "WHERE v.fecha LIKE ? AND i.es_servicio = 0 AND d.id_item IS NOT NULL";
+                     "WHERE v.fecha LIKE ? AND i.es_servicio = 0 AND d.id_item IS NOT NULL" + FILTRO_ACTIVAS_V;
         try (Connection conn = ConexionDB.getConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, fechaHoy + "%");
@@ -171,7 +288,7 @@ public class VentaDAO {
         Map<String, Double> resultado = new LinkedHashMap<>();
         String sql = "SELECT DATE(fecha) as dia, SUM(total) as total_dia " +
                      "FROM ventas " +
-                     "WHERE DATE(fecha) >= DATE('now', '-6 days') " +
+                     "WHERE DATE(fecha) >= DATE('now', '-6 days')" + FILTRO_ACTIVAS + " " +
                      "GROUP BY DATE(fecha) " +
                      "ORDER BY dia ASC";
         try (Connection conn = ConexionDB.getConexion();
@@ -190,6 +307,8 @@ public class VentaDAO {
                      "FROM detalles_venta d " +
                      "LEFT JOIN items i ON d.id_item = i.id " +
                      "LEFT JOIN combos c ON d.id_combo = c.id " +
+                     "JOIN ventas v ON d.id_venta = v.id " +
+                     "WHERE 1=1" + FILTRO_ACTIVAS_V + " " +
                      "GROUP BY d.id_item, d.id_combo " +
                      "ORDER BY total_vendido DESC " +
                      "LIMIT 5";
@@ -206,7 +325,7 @@ public class VentaDAO {
     public java.util.List<String[]> obtenerResumenDiario(String desde, String hasta) throws SQLException {
         java.util.List<String[]> resultado = new java.util.ArrayList<>();
         String sql = "SELECT DATE(fecha) as dia, COUNT(*) as cant, SUM(total) as total_dia " +
-                     "FROM ventas WHERE DATE(fecha) BETWEEN ? AND ? " +
+                     "FROM ventas WHERE DATE(fecha) BETWEEN ? AND ?" + FILTRO_ACTIVAS + " " +
                      "GROUP BY DATE(fecha) ORDER BY dia ASC";
         try (Connection conn = ConexionDB.getConexion();
              PreparedStatement pst = conn.prepareStatement(sql)) {
@@ -233,8 +352,8 @@ public class VentaDAO {
                      "LEFT JOIN items i ON d.id_item = i.id " +
                      "LEFT JOIN combos c ON d.id_combo = c.id " +
                      "JOIN ventas v ON d.id_venta = v.id " +
-                     "WHERE DATE(v.fecha) BETWEEN ? AND ? " +
-                     "GROUP BY d.id_item, d.id_combo, nombre, unidad " +
+                     "WHERE DATE(v.fecha) BETWEEN ? AND ?" + FILTRO_ACTIVAS_V + " " +
+                     "GROUP BY d.id_item, d.id_combo " +
                      "ORDER BY cant DESC";
         try (Connection conn = ConexionDB.getConexion();
              PreparedStatement pst = conn.prepareStatement(sql)) {
@@ -263,7 +382,7 @@ public class VentaDAO {
                      "LEFT JOIN items i ON d.id_item = i.id " +
                      "LEFT JOIN combos c ON d.id_combo = c.id " +
                      "JOIN ventas v ON d.id_venta = v.id " +
-                     "WHERE DATE(v.fecha) BETWEEN ? AND ? " +
+                     "WHERE DATE(v.fecha) BETWEEN ? AND ?" + FILTRO_ACTIVAS_V + " " +
                      "ORDER BY v.fecha ASC, v.id ASC";
         try (Connection conn = ConexionDB.getConexion();
              PreparedStatement pst = conn.prepareStatement(sql)) {
@@ -306,6 +425,8 @@ public class VentaDAO {
                     venta.setId(rs.getInt("id"));
                     venta.setFecha(rs.getString("fecha"));
                     venta.setTotal(rs.getDouble("total"));
+                    venta.setEstado(rs.getString("estado"));
+                    venta.setMotivoAnulacion(rs.getString("motivo_anulacion"));
                 }
             }
 
@@ -377,11 +498,13 @@ public class VentaDAO {
         }
     }
 
+    /** row[4] = mes (YYYY-MM) del primer día con ventas de esa semana — usado para mostrar a qué mes pertenece. */
     public java.util.List<String[]> obtenerVentasPorSemana() throws SQLException {
         java.util.List<String[]> resultado = new java.util.ArrayList<>();
         String sql = "SELECT strftime('%Y-W%W', fecha) as semana, " +
-                     "COUNT(*) as cant, SUM(total) as total_semana, AVG(total) as promedio " +
-                     "FROM ventas GROUP BY semana ORDER BY semana DESC LIMIT 16";
+                     "COUNT(*) as cant, SUM(total) as total_semana, AVG(total) as promedio, " +
+                     "strftime('%Y-%m', MIN(fecha)) as mes " +
+                     "FROM ventas " + WHERE_ACTIVAS + "GROUP BY semana ORDER BY semana DESC LIMIT 16";
         try (Connection conn = ConexionDB.getConexion();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
@@ -390,12 +513,89 @@ public class VentaDAO {
                     rs.getString("semana"),
                     String.valueOf(rs.getInt("cant")),
                     String.valueOf(rs.getDouble("total_semana")),
-                    String.valueOf(rs.getDouble("promedio"))
+                    String.valueOf(rs.getDouble("promedio")),
+                    rs.getString("mes")
                 });
             }
         }
         java.util.Collections.reverse(resultado);
         return resultado;
+    }
+
+    /** Venta local no empujada todavía a Supabase, con sus detalles (sdd/ventas-sync-envio, D5). */
+    public record VentaPendiente(int id, String fecha, double total, String estado, List<DetallePendiente> detalles) {}
+
+    /** Línea de una {@link VentaPendiente}. {@code productoCodigo} es null si la línea es un combo. */
+    public record DetallePendiente(int id, String productoCodigo, Integer comboId, String descripcion,
+                                    double cantidad, double precioUnitario, double subtotal) {}
+
+    /** Ventas con {@code sincronizada_en IS NULL}, incluidas las backdateadas — no hay tratamiento especial. */
+    public List<VentaPendiente> listarVentasPendientesDeSync() throws SQLException {
+        List<VentaPendiente> resultado = new ArrayList<>();
+        String sql = "SELECT id, fecha, total, estado FROM ventas WHERE sincronizada_en IS NULL ORDER BY id ASC";
+        try (Connection conn = ConexionDB.getConexion();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                int id = rs.getInt("id");
+                resultado.add(new VentaPendiente(id, rs.getString("fecha"), rs.getDouble("total"),
+                        rs.getString("estado"), listarDetallesPendientes(conn, id)));
+            }
+        }
+        return resultado;
+    }
+
+    private List<DetallePendiente> listarDetallesPendientes(Connection conn, int idVenta) throws SQLException {
+        List<DetallePendiente> detalles = new ArrayList<>();
+        String sql = "SELECT d.id, d.id_combo, d.cantidad, d.precio_unitario, d.subtotal, "
+                + "i.codigo as producto_codigo, COALESCE(i.nombre, c.nombre) as descripcion "
+                + "FROM detalles_venta d "
+                + "LEFT JOIN items i ON d.id_item = i.id "
+                + "LEFT JOIN combos c ON d.id_combo = c.id "
+                + "WHERE d.id_venta = ? ORDER BY d.id ASC";
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setInt(1, idVenta);
+            try (ResultSet rs = pst.executeQuery()) {
+                while (rs.next()) {
+                    Object idComboObj = rs.getObject("id_combo");
+                    detalles.add(new DetallePendiente(
+                            rs.getInt("id"),
+                            rs.getString("producto_codigo"),
+                            idComboObj != null ? ((Number) idComboObj).intValue() : null,
+                            rs.getString("descripcion"),
+                            rs.getDouble("cantidad"),
+                            rs.getDouble("precio_unitario"),
+                            rs.getDouble("subtotal")));
+                }
+            }
+        }
+        return detalles;
+    }
+
+    /** Marca las ventas indicadas como sincronizadas con Supabase, en una única transacción. */
+    public void marcarVentasSincronizadas(List<Integer> idsVenta) throws SQLException {
+        if (idsVenta == null || idsVenta.isEmpty()) return;
+
+        String syncedAt = Instant.now().toString();
+        String sql = "UPDATE ventas SET sincronizada_en = ? WHERE id = ?";
+        Connection conn = null;
+        try {
+            conn = ConexionDB.getConexion();
+            conn.setAutoCommit(false);
+            try (PreparedStatement pst = conn.prepareStatement(sql)) {
+                for (int id : idsVenta) {
+                    pst.setString(1, syncedAt);
+                    pst.setInt(2, id);
+                    pst.executeUpdate();
+                }
+            }
+            conn.commit();
+        } catch (SQLException e) {
+            if (conn != null) { try { conn.rollback(); } catch (SQLException ex) { LOGGER.log(Level.SEVERE, "Error al hacer rollback al marcar ventas sincronizadas", ex); } }
+            throw e;
+        } finally {
+            if (conn != null) conn.setAutoCommit(true);
+        }
     }
 
     public java.util.List<String[]> obtenerVentasPorMes() throws SQLException {
@@ -405,7 +605,7 @@ public class VentaDAO {
         // COUNT(*) y SUM(total) en cualquier venta con más de un ítem.
         String sql = "SELECT strftime('%Y-%m', fecha) as mes, " +
                      "COUNT(*) as cant, SUM(total) as total_mes " +
-                     "FROM ventas " +
+                     "FROM ventas " + WHERE_ACTIVAS +
                      "GROUP BY mes ORDER BY mes DESC LIMIT 12";
         try (Connection conn = ConexionDB.getConexion();
              Statement stmt = conn.createStatement();
@@ -429,10 +629,11 @@ public class VentaDAO {
                      "JOIN detalles_venta db ON da.id_venta = db.id_venta AND da.id_item < db.id_item " +
                      "JOIN items a ON da.id_item = a.id " +
                      "JOIN items b ON db.id_item = b.id " +
-                     "WHERE da.id_item IS NOT NULL AND db.id_item IS NOT NULL " +
+                     "JOIN ventas v ON da.id_venta = v.id " +
+                     "WHERE da.id_item IS NOT NULL AND db.id_item IS NOT NULL" + FILTRO_ACTIVAS_V + " " +
                      "GROUP BY da.id_item, db.id_item " +
                      "HAVING frec >= 2 " +
-                     "ORDER BY frec DESC LIMIT 20";
+                     "ORDER BY frec DESC LIMIT 15";
         try (Connection conn = ConexionDB.getConexion();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
@@ -446,7 +647,7 @@ public class VentaDAO {
     public Map<Integer, Double> obtenerTotalesPorHora() throws SQLException {
         Map<Integer, Double> resultado = new LinkedHashMap<>();
         String sql = "SELECT CAST(strftime('%H', fecha) AS INTEGER) as hora, SUM(total) as total_hora " +
-                     "FROM ventas GROUP BY hora ORDER BY hora ASC";
+                     "FROM ventas " + WHERE_ACTIVAS + "GROUP BY hora ORDER BY hora ASC";
         try (Connection conn = ConexionDB.getConexion();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
@@ -462,7 +663,7 @@ public class VentaDAO {
         String sql = "SELECT CAST(strftime('%w', fecha) AS INTEGER) as dia, " +
                      "CAST(strftime('%H', fecha) AS INTEGER) as hora, " +
                      "COUNT(*) as cant " +
-                     "FROM ventas GROUP BY dia, hora ORDER BY dia, hora";
+                     "FROM ventas " + WHERE_ACTIVAS + "GROUP BY dia, hora ORDER BY dia, hora";
         try (Connection conn = ConexionDB.getConexion();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {

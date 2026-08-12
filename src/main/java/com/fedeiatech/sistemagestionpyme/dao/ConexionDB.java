@@ -94,6 +94,25 @@ public class ConexionDB {
             System.err.println("Migración detalles_venta omitida: " + e.getMessage());
         }
 
+        try {
+            stmt.execute("ALTER TABLE ventas ADD COLUMN estado TEXT");
+        } catch (SQLException ignored) {
+        }
+
+        try {
+            stmt.execute("ALTER TABLE ventas ADD COLUMN motivo_anulacion TEXT");
+        } catch (SQLException ignored) {
+        }
+
+        stmt.execute("UPDATE ventas SET estado = 'completada' WHERE estado IS NULL");
+
+        // sdd/ventas-sync-envio: marca cuándo se empujó la venta a Supabase; NULL = pendiente.
+        // anularVenta() la limpia de nuevo para forzar el re-push (design decision D5).
+        try {
+            stmt.execute("ALTER TABLE ventas ADD COLUMN sincronizada_en TEXT");
+        } catch (SQLException ignored) {
+        }
+
         stmt.execute("CREATE TABLE IF NOT EXISTS combos ("
                 + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
                 + "codigo TEXT UNIQUE NOT NULL,"
@@ -122,6 +141,16 @@ public class ConexionDB {
                 + "costo_total REAL NOT NULL,"
                 + "proveedor TEXT,"
                 + "fecha TEXT NOT NULL"
+                + ");");
+
+        // Sin FK y sin transacción: un gasto operativo no toca stock (ver GastoDAO).
+        stmt.execute("CREATE TABLE IF NOT EXISTS gastos ("
+                + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                + "concepto TEXT NOT NULL,"
+                + "monto REAL NOT NULL,"
+                + "categoria TEXT,"
+                + "fecha TEXT NOT NULL,"
+                + "usuario TEXT"
                 + ");");
     }
 

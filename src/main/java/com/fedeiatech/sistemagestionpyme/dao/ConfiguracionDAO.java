@@ -48,6 +48,8 @@ public class ConfiguracionDAO {
                 config.setSupabaseSyncEmail(rs.getString("supabase_sync_email"));
                 config.setSupabaseSyncPassword(rs.getString("supabase_sync_password"));
                 config.setSupabaseUltimaSyncExitosa(rs.getString("supabase_ultima_sync_exitosa"));
+                config.setInstallId(rs.getString("install_id"));
+                config.setSupabaseSyncVentasHabilitado(rs.getInt("supabase_sync_ventas_habilitado") == 1);
             }
         }
         return config;
@@ -62,7 +64,8 @@ public class ConfiguracionDAO {
                    + "ancho_ticket_mm=?, ticket_mostrar_direccion=?, ticket_mostrar_cuit=?, "
                    + "usar_enteros=?, "
                    + "supabase_url=?, supabase_anon_key=?, supabase_sync_habilitado=?, "
-                   + "supabase_sync_intervalo_min=?, supabase_sync_email=?, supabase_sync_password=? "
+                   + "supabase_sync_intervalo_min=?, supabase_sync_email=?, supabase_sync_password=?, "
+                   + "supabase_sync_ventas_habilitado=? "
                    + "WHERE id=1";
 
         try (Connection conn = ConexionDB.getConexion();
@@ -90,6 +93,7 @@ public class ConfiguracionDAO {
             pstmt.setInt(20, config.getSupabaseSyncIntervaloMin());
             pstmt.setString(21, config.getSupabaseSyncEmail());
             pstmt.setString(22, config.getSupabaseSyncPassword());
+            pstmt.setInt(23, config.isSupabaseSyncVentasHabilitado() ? 1 : 0);
 
             pstmt.executeUpdate();
         }
@@ -101,6 +105,26 @@ public class ConfiguracionDAO {
         try (Connection conn = ConexionDB.getConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, instanteIso);
+            pstmt.executeUpdate();
+        }
+    }
+
+    /** Último usuario que inició sesión en esta instalación — precarga el ComboBox de login. */
+    public String obtenerUltimoUsuario() throws SQLException {
+        String sql = "SELECT ultimo_usuario FROM configuracion WHERE id = 1";
+        try (Connection conn = ConexionDB.getConexion();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+            if (rs.next()) return rs.getString("ultimo_usuario");
+        }
+        return null;
+    }
+
+    public void actualizarUltimoUsuario(String nombreUsuario) throws SQLException {
+        String sql = "UPDATE configuracion SET ultimo_usuario=? WHERE id=1";
+        try (Connection conn = ConexionDB.getConexion();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, nombreUsuario);
             pstmt.executeUpdate();
         }
     }
@@ -148,8 +172,33 @@ public class ConfiguracionDAO {
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN supabase_sync_email TEXT"); } catch (SQLException e) {}
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN supabase_sync_password TEXT"); } catch (SQLException e) {}
             try { stmt.execute("ALTER TABLE configuracion ADD COLUMN supabase_ultima_sync_exitosa TEXT"); } catch (SQLException e) {}
+            try { stmt.execute("ALTER TABLE configuracion ADD COLUMN install_id TEXT"); } catch (SQLException e) {}
+            try { stmt.execute("ALTER TABLE configuracion ADD COLUMN supabase_sync_ventas_habilitado INTEGER DEFAULT 0"); } catch (SQLException e) {}
+            try { stmt.execute("ALTER TABLE configuracion ADD COLUMN ultimo_usuario TEXT"); } catch (SQLException e) {}
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error al migrar columnas de configuracion", e);
         }
+    }
+
+    /**
+     * Devuelve el {@code install_id} persistido, generándolo (UUID v4) la primera vez que se
+     * necesita. Idempotente: llamadas posteriores siempre devuelven el mismo valor — es la
+     * identidad estable de esta instalación del POS que viaja en cada fila de {@code ventas}/
+     * {@code detalle_ventas} empujada a Supabase (design decision D1).
+     */
+    public String obtenerOGenerarInstallId() throws SQLException {
+        Configuracion config = obtenerConfiguracion();
+        if (config != null && config.getInstallId() != null && !config.getInstallId().isBlank()) {
+            return config.getInstallId();
+        }
+
+        String nuevoId = java.util.UUID.randomUUID().toString();
+        String sql = "UPDATE configuracion SET install_id=? WHERE id=1";
+        try (Connection conn = ConexionDB.getConexion();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, nuevoId);
+            pstmt.executeUpdate();
+        }
+        return nuevoId;
     }
 }

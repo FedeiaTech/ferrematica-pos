@@ -4,15 +4,20 @@ import com.fedeiatech.sistemagestionpyme.dao.ComboDAO;
 import com.fedeiatech.sistemagestionpyme.dao.ConexionDB;
 import com.fedeiatech.sistemagestionpyme.dao.ConfiguracionDAO;
 import com.fedeiatech.sistemagestionpyme.dao.ItemDAO;
+import com.fedeiatech.sistemagestionpyme.dao.VentaDAO;
 import com.fedeiatech.sistemagestionpyme.model.Combo;
 import com.fedeiatech.sistemagestionpyme.model.Configuracion;
+import com.fedeiatech.sistemagestionpyme.model.DetalleVenta;
 import com.fedeiatech.sistemagestionpyme.model.ItemVenta;
+import com.fedeiatech.sistemagestionpyme.model.Venta;
 import java.io.File;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -31,6 +36,7 @@ class SupabaseSyncServiceTest {
 
     private final ItemDAO itemDAO = new ItemDAO();
     private final ConfiguracionDAO configDAO = new ConfiguracionDAO();
+    private final VentaDAO ventaDAO = new VentaDAO();
 
     @BeforeEach
     void setUp(@TempDir File tempDir) throws SQLException {
@@ -130,6 +136,228 @@ class SupabaseSyncServiceTest {
         assertTrue(itemDAO.listarCodigosEliminadosPendientes().isEmpty());
     }
 
+    @Test
+    void ventaPendienteSeEmpujaYQuedaMarcadaComoSincronizada() throws Exception {
+        itemDAO.guardar(new ItemVenta(0, "SKU-V1", "Pala", "d", 5.0, 100.0, 10.0, false));
+        ItemVenta item = itemDAO.buscarPorCodigo("SKU-V1");
+        Venta venta = new Venta();
+        venta.setFecha("2026-07-28T10:00:00");
+        venta.agregarDetalle(new DetalleVenta(item, 2.0));
+        ventaDAO.registrarVenta(venta);
+        assertEquals(1, ventaDAO.listarVentasPendientesDeSync().size());
+
+        configurarSyncHabilitado();
+        FakePostgrestClient fake = new FakePostgrestClient();
+        SupabaseSyncService service = new SupabaseSyncService(itemDAO, configDAO, ventaDAO, fake);
+
+        service.sincronizar();
+
+        FakePostgrestClient.Llamada llamadaVentas = fake.buscarLlamada("/rest/v1/ventas");
+        assertTrue(llamadaVentas.jsonBody().contains("\"venta_local_id\":" + venta.getId()));
+        assertTrue(llamadaVentas.jsonBody().contains("\"total\":200.0"));
+        assertTrue(llamadaVentas.jsonBody().contains("\"estado\":\"completada\""));
+        assertTrue(llamadaVentas.jsonBody().contains("\"fecha_local\":\"2026-07-28T10:00:00\""));
+        assertTrue(llamadaVentas.jsonBody().contains("\"install_id\""));
+
+        FakePostgrestClient.Llamada llamadaDetalles = fake.buscarLlamada("/rest/v1/detalle_ventas");
+        assertTrue(llamadaDetalles.jsonBody().contains("\"producto_codigo\":\"SKU-V1\""));
+        assertTrue(llamadaDetalles.jsonBody().contains("\"cantidad\":2.0"));
+        assertTrue(llamadaDetalles.jsonBody().contains("\"combo_id\":null"));
+
+        assertTrue(ventaDAO.listarVentasPendientesDeSync().isEmpty(),
+                "Tras un push exitoso la venta ya no debe listarse como pendiente");
+    }
+
+    @Test
+    void fechaLocalSeConvierteAUtcUsandoElHusoDelEquipo() throws Exception {
+        itemDAO.guardar(new ItemVenta(0, "SKU-V2", "Pinza", "d", 5.0, 50.0, 10.0, false));
+        ItemVenta item = itemDAO.buscarPorCodigo("SKU-V2");
+        Venta venta = new Venta();
+        String fechaLocal = "2026-07-28T10:00:00";
+        venta.setFecha(fechaLocal);
+        venta.agregarDetalle(new DetalleVenta(item, 1.0));
+        ventaDAO.registrarVenta(venta);
+
+        configurarSyncHabilitado();
+        FakePostgrestClient fake = new FakePostgrestClient();
+        SupabaseSyncService service = new SupabaseSyncService(itemDAO, configDAO, ventaDAO, fake);
+
+        service.sincronizar();
+
+        String fechaUtcEsperada = LocalDateTime.parse(fechaLocal).atZone(ZoneId.systemDefault()).toInstant().toString();
+        String body = fake.buscarLlamada("/rest/v1/ventas").jsonBody();
+        assertTrue(body.contains("\"fecha\":\"" + fechaUtcEsperada + "\""));
+    }
+
+    @Test
+    void obtenerEstadoEnviosParseaLaRespuestaDelRpc() throws Exception {
+        configurarSyncHabilitado();
+        FakePostgrestClient fake = new FakePostgrestClient();
+        fake.respuestaEstadoEnvios = new PostgrestResponse(200,
+            "[{\"venta_local_id\":1,\"status\":\"entregado\",\"updated_at\":\"2026-08-01T10:00:00+00:00\"},"
+            + "{\"venta_local_id\":2,\"status\":\"pendiente\",\"updated_at\":\"2026-08-05T12:30:00Z\"}]");
+        SupabaseSyncService service = new SupabaseSyncService(itemDAO, configDAO, fake);
+
+        SupabaseSyncService.ResultadoEstadoEnvios resultado = service.obtenerEstadoEnvios();
+
+        assertTrue(resultado.exitoso());
+        assertEquals(2, resultado.estados().size());
+        assertEquals("entregado", resultado.estados().get(1).status());
+        assertEquals("pendiente", resultado.estados().get(2).status());
+        assertEquals(java.time.Instant.parse("2026-08-01T10:00:00Z"), resultado.estados().get(1).actualizadoEn());
+        FakePostgrestClient.Llamada llamadaRpc = fake.buscarLlamada("/rest/v1/rpc/estado_envios_pos");
+        assertFalse(llamadaRpc.headers().containsKey("Prefer"));
+    }
+
+    @Test
+    void obtenerEstadoEnviosMarcaFalloSiElRpcFalla() throws Exception {
+        configurarSyncHabilitado();
+        FakePostgrestClient fake = new FakePostgrestClient();
+        fake.respuestaEstadoEnvios = new PostgrestResponse(403, "{\"code\":\"42501\"}");
+        SupabaseSyncService service = new SupabaseSyncService(itemDAO, configDAO, fake);
+
+        SupabaseSyncService.ResultadoEstadoEnvios resultado = service.obtenerEstadoEnvios();
+        assertFalse(resultado.exitoso());
+        assertTrue(resultado.estados().isEmpty());
+    }
+
+    @Test
+    void obtenerEstadoEnviosMarcaFalloSiFaltaConfiguracion() {
+        FakePostgrestClient fake = new FakePostgrestClient();
+        SupabaseSyncService service = new SupabaseSyncService(itemDAO, configDAO, fake);
+
+        SupabaseSyncService.ResultadoEstadoEnvios resultado = service.obtenerEstadoEnvios();
+        assertFalse(resultado.exitoso());
+        assertTrue(resultado.estados().isEmpty());
+        assertTrue(fake.llamadas.isEmpty());
+    }
+
+    @Test
+    void obtenerEstadoEnviosMarcaExitoConMapaVacioSiNoHayEnviosVinculados() throws Exception {
+        configurarSyncHabilitado();
+        FakePostgrestClient fake = new FakePostgrestClient();
+        fake.respuestaEstadoEnvios = new PostgrestResponse(200, "[]");
+        SupabaseSyncService service = new SupabaseSyncService(itemDAO, configDAO, fake);
+
+        SupabaseSyncService.ResultadoEstadoEnvios resultado = service.obtenerEstadoEnvios();
+        assertTrue(resultado.exitoso());
+        assertTrue(resultado.estados().isEmpty());
+    }
+
+    @Test
+    void obtenerEstadoEnviosParseaConPendingBalance() throws Exception {
+        configurarSyncHabilitado();
+        FakePostgrestClient fake = new FakePostgrestClient();
+        fake.respuestaEstadoEnvios = new PostgrestResponse(200,
+            "[{\"venta_local_id\":1,\"status\":\"entregado\",\"updated_at\":\"2026-08-01T10:00:00Z\",\"pending_balance\":60.00}]");
+        SupabaseSyncService service = new SupabaseSyncService(itemDAO, configDAO, fake);
+
+        SupabaseSyncService.ResultadoEstadoEnvios resultado = service.obtenerEstadoEnvios();
+
+        assertTrue(resultado.exitoso());
+        assertEquals(60.00, resultado.estados().get(1).saldoPendiente());
+    }
+
+    @Test
+    void obtenerEstadoEnviosParseaCamposEnOrdenDistinto() throws Exception {
+        configurarSyncHabilitado();
+        FakePostgrestClient fake = new FakePostgrestClient();
+        fake.respuestaEstadoEnvios = new PostgrestResponse(200,
+            "[{\"status\":\"entregado\",\"pending_balance\":60.00,\"venta_local_id\":1,\"updated_at\":\"2026-08-01T10:00:00Z\"}]");
+        SupabaseSyncService service = new SupabaseSyncService(itemDAO, configDAO, fake);
+
+        SupabaseSyncService.ResultadoEstadoEnvios resultado = service.obtenerEstadoEnvios();
+
+        assertTrue(resultado.exitoso());
+        assertEquals(1, resultado.estados().size());
+        assertEquals("entregado", resultado.estados().get(1).status());
+        assertEquals(60.00, resultado.estados().get(1).saldoPendiente());
+        assertEquals(java.time.Instant.parse("2026-08-01T10:00:00Z"), resultado.estados().get(1).actualizadoEn());
+    }
+
+    @Test
+    void obtenerEstadoEnviosSinColumnaPendingBalanceDejaSaldoEnNull() throws Exception {
+        configurarSyncHabilitado();
+        FakePostgrestClient fake = new FakePostgrestClient();
+        fake.respuestaEstadoEnvios = new PostgrestResponse(200,
+            "[{\"venta_local_id\":1,\"status\":\"entregado\",\"updated_at\":\"2026-08-01T10:00:00Z\"}]");
+        SupabaseSyncService service = new SupabaseSyncService(itemDAO, configDAO, fake);
+
+        SupabaseSyncService.ResultadoEstadoEnvios resultado = service.obtenerEstadoEnvios();
+
+        assertTrue(resultado.exitoso());
+        assertEquals(1, resultado.estados().size());
+        assertEquals(null, resultado.estados().get(1).saldoPendiente());
+    }
+
+    @Test
+    void obtenerEstadoEnviosConPendingBalanceNuloDejaSaldoEnNull() throws Exception {
+        configurarSyncHabilitado();
+        FakePostgrestClient fake = new FakePostgrestClient();
+        fake.respuestaEstadoEnvios = new PostgrestResponse(200,
+            "[{\"venta_local_id\":1,\"status\":\"entregado\",\"updated_at\":\"2026-08-01T10:00:00Z\",\"pending_balance\":null}]");
+        SupabaseSyncService service = new SupabaseSyncService(itemDAO, configDAO, fake);
+
+        SupabaseSyncService.ResultadoEstadoEnvios resultado = service.obtenerEstadoEnvios();
+
+        assertTrue(resultado.exitoso());
+        assertEquals(1, resultado.estados().size());
+        assertEquals(null, resultado.estados().get(1).saldoPendiente());
+    }
+
+    @Test
+    void obtenerEstadoEnviosDescartaSoloElObjetoMalformadoSinAbortarLosDemas() throws Exception {
+        configurarSyncHabilitado();
+        FakePostgrestClient fake = new FakePostgrestClient();
+        fake.respuestaEstadoEnvios = new PostgrestResponse(200,
+            "[{\"status\":\"entregado\",\"updated_at\":\"2026-08-01T10:00:00Z\"},"
+            + "{\"venta_local_id\":2,\"status\":\"pendiente\",\"updated_at\":\"2026-08-05T12:30:00Z\"}]");
+        SupabaseSyncService service = new SupabaseSyncService(itemDAO, configDAO, fake);
+
+        SupabaseSyncService.ResultadoEstadoEnvios resultado = service.obtenerEstadoEnvios();
+
+        assertTrue(resultado.exitoso());
+        assertEquals(1, resultado.estados().size());
+        assertEquals("pendiente", resultado.estados().get(2).status());
+    }
+
+    @Test
+    void obtenerEstadoEnviosParseaPendingBalanceComoStringNumerico() throws Exception {
+        configurarSyncHabilitado();
+        FakePostgrestClient fake = new FakePostgrestClient();
+        fake.respuestaEstadoEnvios = new PostgrestResponse(200,
+            "[{\"venta_local_id\":1,\"status\":\"entregado\",\"updated_at\":\"2026-08-01T10:00:00Z\",\"pending_balance\":\"60.50\"}]");
+        SupabaseSyncService service = new SupabaseSyncService(itemDAO, configDAO, fake);
+
+        SupabaseSyncService.ResultadoEstadoEnvios resultado = service.obtenerEstadoEnvios();
+
+        assertTrue(resultado.exitoso());
+        assertEquals(60.50, resultado.estados().get(1).saldoPendiente());
+    }
+
+    @Test
+    void dividirObjetosNoSeDesincronizaPorLlavesDentroDeUnStringEscapado() {
+        String json = "[{\"venta_local_id\":1,\"status\":\"entregado con \\\"comentario {con llaves}\\\"\","
+            + "\"updated_at\":\"2026-08-01T10:00:00Z\"},{\"venta_local_id\":2,\"status\":\"pendiente\"}]";
+
+        List<String> objetos = SupabaseSyncService.dividirObjetos(json);
+
+        assertEquals(2, objetos.size());
+        assertTrue(objetos.get(0).contains("\"venta_local_id\":1"));
+        assertTrue(objetos.get(1).contains("\"venta_local_id\":2"));
+    }
+
+    @Test
+    void sinVentasPendientesNoHaceLlamadaHttpDeVentas() throws Exception {
+        configurarSyncHabilitado();
+        FakePostgrestClient fake = new FakePostgrestClient();
+        SupabaseSyncService service = new SupabaseSyncService(itemDAO, configDAO, ventaDAO, fake);
+
+        service.sincronizar();
+
+        assertTrue(fake.llamadas.stream().noneMatch(l -> l.path().startsWith("/rest/v1/ventas")));
+    }
+
     private void configurarSyncHabilitado() throws SQLException {
         Configuracion config = configDAO.obtenerConfiguracion();
         config.setSupabaseUrl("http://localhost:0");
@@ -138,6 +366,7 @@ class SupabaseSyncServiceTest {
         config.setSupabaseSyncPassword("clave-secreta");
         config.setSupabaseSyncHabilitado(true);
         config.setSupabaseSyncIntervaloMin(15);
+        config.setSupabaseSyncVentasHabilitado(true);
         configDAO.guardarConfiguracion(config);
     }
 
@@ -186,6 +415,7 @@ class SupabaseSyncServiceTest {
         final List<Llamada> llamadas = new ArrayList<>();
         PostgrestResponse respuestaAuth = new PostgrestResponse(200, "{\"access_token\":\"fake-jwt\"}");
         PostgrestResponse respuestaProducts = new PostgrestResponse(201, "[]");
+        PostgrestResponse respuestaEstadoEnvios = new PostgrestResponse(200, "[]");
 
         record Llamada(String path, String jsonBody, Map<String, String> headers) {}
 
@@ -193,12 +423,20 @@ class SupabaseSyncServiceTest {
         public PostgrestResponse post(String path, String jsonBody, Map<String, String> headers) {
             llamadas.add(new Llamada(path, jsonBody, new HashMap<>(headers)));
             if (path.startsWith("/auth/v1/token")) return respuestaAuth;
+            if (path.startsWith("/rest/v1/rpc/estado_envios_pos")) return respuestaEstadoEnvios;
             return respuestaProducts;
         }
 
         Llamada buscarLlamadaProducts() {
             return llamadas.stream()
                 .filter(l -> l.path().startsWith("/rest/v1/products"))
+                .findFirst()
+                .orElseThrow();
+        }
+
+        Llamada buscarLlamada(String prefijoPath) {
+            return llamadas.stream()
+                .filter(l -> l.path().startsWith(prefijoPath))
                 .findFirst()
                 .orElseThrow();
         }
