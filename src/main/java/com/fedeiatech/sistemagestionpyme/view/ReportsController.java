@@ -2,10 +2,12 @@ package com.fedeiatech.sistemagestionpyme.view;
 
 import com.fedeiatech.sistemagestionpyme.dao.UsuarioDAO;
 import com.fedeiatech.sistemagestionpyme.dao.VentaDAO;
+import com.fedeiatech.sistemagestionpyme.model.DetalleVenta;
 import com.fedeiatech.sistemagestionpyme.model.Usuario;
 import com.fedeiatech.sistemagestionpyme.model.Venta;
 import com.fedeiatech.sistemagestionpyme.service.ExportService;
 import com.fedeiatech.sistemagestionpyme.service.SessionService;
+import com.fedeiatech.sistemagestionpyme.service.SupabaseSyncService;
 import com.fedeiatech.sistemagestionpyme.service.ThemeService;
 import com.fedeiatech.sistemagestionpyme.service.TicketService;
 import java.io.File;
@@ -13,11 +15,13 @@ import java.net.URL;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.ResourceBundle;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -33,14 +37,18 @@ import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
-import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.control.TextField;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.input.KeyCode;
+import javafx.geometry.Pos;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -51,75 +59,319 @@ public class ReportsController implements Initializable {
     private static final Logger LOGGER = Logger.getLogger(ReportsController.class.getName());
 
     @FXML private AnchorPane rootPane;
-    @FXML private TableView<Venta> tablaVentas;
-    @FXML private TableColumn<Venta, Integer> colId;
-    @FXML private TableColumn<Venta, String> colFecha;
-    @FXML private TableColumn<Venta, Double> colTotal;
-    @FXML private TableColumn<Venta, Void> colAccion;
+    @FXML private TableView<Object> tablaVentas;
+    @FXML private TableColumn<Object, String> colId;
+    @FXML private TableColumn<Object, String> colFecha;
+    @FXML private TableColumn<Object, String> colTotal;
+    @FXML private TableColumn<Object, String> colEstado;
+    @FXML private TableColumn<Object, String> colEstadoEnvio;
+    @FXML private TableColumn<Object, Void> colAccion;
     @FXML private Button btnExportar;
+    @FXML private Label lblAvisoEnvios;
+
+    // Pastel por estado — ver spec pos-reportes-estado-envio. Status sin match (o no-pedido) queda sin color.
+    private static final Map<String, String> COLORES_ESTADO_ENVIO = Map.of(
+        "entregado", "#d4f4dd",
+        "en_camino", "#fff3cd",
+        "asignado", "#d6e9f8",
+        "pendiente", "#e8e8e8",
+        "cancelado", "#f8d7da");
+
+    static String colorEstadoEnvio(String status) {
+        return status == null ? null : COLORES_ESTADO_ENVIO.get(status);
+    }
+
+    /**
+     * Segunda línea, subordinada, de la celda de estado de envío (design decision DA8). {@code null}
+     * cuando no hay saldo pendiente que mostrar — línea 2 debe quedar colapsada, no en blanco.
+     */
+    static String formatearSaldoPendiente(Double saldoPendiente) {
+        return saldoPendiente == null ? null : String.format("falta $ %.2f", saldoPendiente);
+    }
+
+    /** Segunda línea del tooltip (design decision DA8). {@code null} cuando no hay saldo pendiente. */
+    static String formatearTooltipSaldoPendiente(Double saldoPendiente) {
+        return saldoPendiente == null ? null : String.format("Saldo pendiente: $ %.2f", saldoPendiente);
+    }
+
+    static String formatearEstadoEnvio(String status) {
+        if (status == null || status.isBlank()) return "—";
+        String[] palabras = status.split("_");
+        StringBuilder sb = new StringBuilder();
+        for (String p : palabras) {
+            if (sb.length() > 0) sb.append(' ');
+            sb.append(Character.toUpperCase(p.charAt(0))).append(p.substring(1));
+        }
+        return sb.toString();
+    }
+
+    private Map<Integer, SupabaseSyncService.EstadoEnvio> estadoEnvios = Map.of();
+
+    /** Fila sintética inyectada en la tabla para mostrar el detalle de un ticket expandido. */
+    private static class FilaDetalleTicket {
+        final DetalleVenta detalle;
+        FilaDetalleTicket(DetalleVenta detalle) { this.detalle = detalle; }
+    }
+
+    private final ObservableList<Object> filasVisibles = FXCollections.observableArrayList();
+    private Venta ventaExpandida = null;
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         rootPane.setStyle(ThemeService.getInstance().getBgStyle());
+        rootPane.sceneProperty().addListener((obs, sceneAnterior, sceneNueva) -> {
+            if (sceneNueva != null) {
+                sceneNueva.setOnKeyPressed(event -> {
+                    if (event.getCode() == KeyCode.ESCAPE) {
+                        ((Stage) sceneNueva.getWindow()).close();
+                    }
+                });
+            }
+        });
 
         configurarTabla();
         cargarDatos();
+        cargarEstadoEnvios();
     }
 
     private void configurarTabla() {
-        colId.setCellValueFactory(new PropertyValueFactory<>("id"));
-        colFecha.setCellValueFactory(new PropertyValueFactory<>("fecha"));
-        colTotal.setCellValueFactory(new PropertyValueFactory<>("total"));
+        colId.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(
+            data.getValue() instanceof Venta v ? String.valueOf(v.getId()) : "↳"));
+
+        colFecha.setCellValueFactory(data -> {
+            Object o = data.getValue();
+            if (o instanceof Venta v) return new javafx.beans.property.SimpleStringProperty(v.getFecha());
+            DetalleVenta d = ((FilaDetalleTicket) o).detalle;
+            String unidad = d.esCombo() ? "u" : d.getItem().getUnidad();
+            return new javafx.beans.property.SimpleStringProperty(
+                "      • " + d.getNombreItem() + "  (" + formatearCantidad(d.getCantidad()) + " " + unidad + ")");
+        });
+
+        colTotal.setCellValueFactory(data -> {
+            Object o = data.getValue();
+            if (o instanceof Venta v) return new javafx.beans.property.SimpleStringProperty(String.format("%.2f", v.getTotal()));
+            DetalleVenta d = ((FilaDetalleTicket) o).detalle;
+            return new javafx.beans.property.SimpleStringProperty(String.format("$ %.2f", d.getSubtotal()));
+        });
+
+        colEstado.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(
+            data.getValue() instanceof Venta v ? v.getEstado() : ""));
+
+        colEstadoEnvio.setCellValueFactory(data -> {
+            SupabaseSyncService.EstadoEnvio estado = data.getValue() instanceof Venta v
+                ? estadoEnvios.get(v.getId()) : null;
+            return new javafx.beans.property.SimpleStringProperty(estado != null ? estado.status() : null);
+        });
+        colEstadoEnvio.setCellFactory(col -> new TableCell<>() {
+            // Nodos reutilizados en cada updateItem (mismo patrón que la columna de acciones,
+            // ver más abajo) — evita reasignar el grafo de nodos en cada frame de scroll.
+            private final Label lblEstado = new Label();
+            private final Label lblSaldo = new Label();
+            private final VBox caja = new VBox(1, lblEstado, lblSaldo);
+            {
+                caja.setAlignment(Pos.CENTER);
+                lblSaldo.setStyle("-fx-font-size: 10px; -fx-opacity: 0.75;");
+            }
+
+            @Override
+            protected void updateItem(String status, boolean empty) {
+                super.updateItem(status, empty);
+                // Esta columna solo tiene sentido en filas de Venta — las filas sintéticas de
+                // detalle de ticket (insertadas al expandir, ver FilaDetalleTicket) no tienen
+                // estado de envío propio y deben quedar completamente en blanco, sin guion.
+                boolean esFilaVenta = getTableRow() != null && getTableRow().getItem() instanceof Venta;
+                if (empty || !esFilaVenta) {
+                    setText(null);
+                    setGraphic(null);
+                    setStyle("");
+                    setTooltip(null);
+                    return;
+                }
+                String color = colorEstadoEnvio(status);
+                if (color == null) {
+                    setText("—");
+                    setGraphic(null);
+                    setStyle("");
+                    setTooltip(null);
+                } else {
+                    setText(null);
+                    lblEstado.setText(formatearEstadoEnvio(status));
+                    String textoSaldo = formatearSaldoPendiente(saldoPendienteParaFila());
+                    boolean tieneSaldo = textoSaldo != null;
+                    lblSaldo.setText(tieneSaldo ? textoSaldo : "");
+                    lblSaldo.setVisible(tieneSaldo);
+                    lblSaldo.setManaged(tieneSaldo);
+                    setGraphic(caja);
+                    setStyle("-fx-background-color: " + color + ";");
+                    setTooltip(tooltipParaFila());
+                }
+            }
+
+            private Double saldoPendienteParaFila() {
+                if (!(getTableRow() != null && getTableRow().getItem() instanceof Venta v)) return null;
+                SupabaseSyncService.EstadoEnvio estado = estadoEnvios.get(v.getId());
+                return estado != null ? estado.saldoPendiente() : null;
+            }
+
+            private javafx.scene.control.Tooltip tooltipParaFila() {
+                if (!(getTableRow() != null && getTableRow().getItem() instanceof Venta v)) return null;
+                SupabaseSyncService.EstadoEnvio estado = estadoEnvios.get(v.getId());
+                if (estado == null) return null;
+                StringBuilder sb = new StringBuilder();
+                if (estado.actualizadoEn() != null) {
+                    sb.append("Actualizado: ").append(estado.actualizadoEn());
+                }
+                String lineaSaldo = formatearTooltipSaldoPendiente(estado.saldoPendiente());
+                if (lineaSaldo != null) {
+                    if (sb.length() > 0) sb.append('\n');
+                    sb.append(lineaSaldo);
+                }
+                return sb.length() > 0 ? new javafx.scene.control.Tooltip(sb.toString()) : null;
+            }
+        });
 
         boolean esAdmin = SessionService.getInstance().esAdmin();
 
-        Callback<TableColumn<Venta, Void>, TableCell<Venta, Void>> cellFactory = new Callback<>() {
+        Callback<TableColumn<Object, Void>, TableCell<Object, Void>> cellFactory = new Callback<>() {
             @Override
-            public TableCell<Venta, Void> call(final TableColumn<Venta, Void> param) {
+            public TableCell<Object, Void> call(final TableColumn<Object, Void> param) {
                 return new TableCell<>() {
                     private final Button btnVer = new Button("🖨️ Ver Ticket");
+                    private final Button btnAnular = new Button("🚫 Anular");
                     private final Button btnBorrar = new Button("🗑️");
-                    private final HBox contenedor = new HBox(6, btnVer, btnBorrar);
+                    private final HBox contenedor = new HBox(6, btnVer, btnAnular, btnBorrar);
 
                     {
                         btnVer.setStyle("-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand;");
                         btnVer.setOnAction((ActionEvent event) -> {
-                            Venta ventaSeleccionada = getTableView().getItems().get(getIndex());
-                            if (ventaSeleccionada != null) {
-                                reimprimirTicket(ventaSeleccionada.getId());
-                            }
+                            Venta ventaSeleccionada = (Venta) getTableView().getItems().get(getIndex());
+                            reimprimirTicket(ventaSeleccionada.getId());
+                        });
+                        btnAnular.setStyle("-fx-background-color: #e67e22; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand;");
+                        btnAnular.setVisible(esAdmin);
+                        btnAnular.setManaged(esAdmin);
+                        btnAnular.setOnAction((ActionEvent event) -> {
+                            Venta ventaSeleccionada = (Venta) getTableView().getItems().get(getIndex());
+                            anularVenta(ventaSeleccionada);
                         });
                         btnBorrar.setStyle("-fx-background-color: #c0392b; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand;");
                         btnBorrar.setVisible(esAdmin);
                         btnBorrar.setManaged(esAdmin);
                         btnBorrar.setOnAction((ActionEvent event) -> {
-                            Venta ventaSeleccionada = getTableView().getItems().get(getIndex());
-                            if (ventaSeleccionada != null) {
-                                borrarTicket(ventaSeleccionada);
-                            }
+                            Venta ventaSeleccionada = (Venta) getTableView().getItems().get(getIndex());
+                            borrarTicket(ventaSeleccionada);
                         });
                     }
 
                     @Override
                     public void updateItem(Void item, boolean empty) {
                         super.updateItem(item, empty);
-                        setGraphic(empty ? null : contenedor);
+                        if (empty || !(getTableView().getItems().get(getIndex()) instanceof Venta venta)) {
+                            setGraphic(null);
+                        } else {
+                            btnAnular.setDisable(venta.estaAnulada());
+                            setGraphic(contenedor);
+                        }
                     }
                 };
             }
         };
         colAccion.setCellFactory(cellFactory);
+
+        tablaVentas.setRowFactory(tv -> {
+            TableRow<Object> fila = new TableRow<>() {
+                @Override
+                protected void updateItem(Object item, boolean empty) {
+                    super.updateItem(item, empty);
+                    setStyle(!empty && item instanceof FilaDetalleTicket
+                        ? "-fx-background-color: #f4f6f8; -fx-font-style: italic;" : "");
+                }
+            };
+            fila.setOnMouseClicked(event -> {
+                if (fila.isEmpty() || esClickEnBoton(event, fila)) return;
+                if (fila.getItem() instanceof Venta venta) toggleExpandir(venta);
+            });
+            return fila;
+        });
+    }
+
+    private boolean esClickEnBoton(javafx.scene.input.MouseEvent event, TableRow<Object> fila) {
+        javafx.scene.Node nodo = event.getTarget() instanceof javafx.scene.Node n ? n : null;
+        while (nodo != null && nodo != fila) {
+            if (nodo instanceof Button) return true;
+            nodo = nodo.getParent();
+        }
+        return false;
+    }
+
+    private void toggleExpandir(Venta venta) {
+        boolean yaExpandida = venta == ventaExpandida;
+        colapsarDetalle();
+        if (yaExpandida) return;
+
+        try {
+            Venta completa = new VentaDAO().obtenerVentaCompleta(venta.getId());
+            if (completa == null || completa.getDetalles().isEmpty()) {
+                AlertUtil.mostrarAdvertencia("Sin detalle", "No se encontró el detalle del ticket #" + venta.getId());
+                return;
+            }
+            int idx = filasVisibles.indexOf(venta);
+            if (idx < 0) return;
+
+            List<Object> filasDetalle = new java.util.ArrayList<>();
+            for (DetalleVenta d : completa.getDetalles()) filasDetalle.add(new FilaDetalleTicket(d));
+            filasVisibles.addAll(idx + 1, filasDetalle);
+            ventaExpandida = venta;
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error al cargar detalle del ticket " + venta.getId(), e);
+            AlertUtil.mostrarAdvertencia("Error DB", "No se pudo cargar el detalle del ticket: " + e.getMessage());
+        }
+    }
+
+    private void colapsarDetalle() {
+        if (ventaExpandida == null) return;
+        filasVisibles.removeIf(f -> f instanceof FilaDetalleTicket);
+        ventaExpandida = null;
+    }
+
+    private String formatearCantidad(double valor) {
+        return valor % 1 == 0 ? String.valueOf((int) valor) : String.valueOf(valor);
     }
 
     private void cargarDatos() {
         VentaDAO dao = new VentaDAO();
         try {
             List<Venta> historial = dao.listarVentasHistoricas();
-            tablaVentas.setItems(FXCollections.observableArrayList(historial));
+            ventaExpandida = null;
+            filasVisibles.setAll(historial);
+            if (tablaVentas.getItems() != filasVisibles) tablaVentas.setItems(filasVisibles);
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error al cargar el historial de ventas", e);
             AlertUtil.mostrarAdvertencia("Error BD", "No se pudo cargar el historial.");
         }
+    }
+
+    /**
+     * Consulta el estado de envío en un hilo aparte (mismo patrón que
+     * {@code DashboardController#sincronizarManualDesdeIndicador}) — nunca bloquea la apertura de
+     * Reportes. Ante cualquier fallo, {@link SupabaseSyncService#obtenerEstadoEnvios()} devuelve
+     * {@code exitoso=false} y la columna queda en blanco para todas las filas mostrando el aviso no
+     * bloqueante, sin diálogo de error (spec pos-reportes-estado-envio). Una consulta exitosa con
+     * cero envíos vinculados NO dispara el aviso — son estados distintos, no ambos "sin datos".
+     */
+    private void cargarEstadoEnvios() {
+        new Thread(() -> {
+            SupabaseSyncService.ResultadoEstadoEnvios resultado =
+                SupabaseSyncService.getInstance().obtenerEstadoEnvios();
+            javafx.application.Platform.runLater(() -> {
+                estadoEnvios = resultado.estados();
+                tablaVentas.refresh();
+                if (lblAvisoEnvios != null) {
+                    lblAvisoEnvios.setVisible(!resultado.exitoso());
+                    lblAvisoEnvios.setManaged(!resultado.exitoso());
+                }
+            });
+        }, "reportes-estado-envios").start();
     }
 
     @FXML
@@ -195,28 +447,38 @@ public class ReportsController implements Initializable {
         }
     }
 
-    private void borrarTicket(Venta venta) {
+    /**
+     * Reautentica al usuario admin activo pidiéndole la contraseña por diálogo.
+     * Devuelve true solo si el diálogo fue confirmado y la contraseña es correcta.
+     * Muestra los mensajes de error/cancelación correspondientes por sí misma.
+     */
+    private boolean reautenticarAdmin(String motivoAccion) {
         PasswordField pfPass = new PasswordField();
         pfPass.setPromptText("Contraseña del administrador");
         Dialog<ButtonType> dlgPass = new Dialog<>();
         dlgPass.setTitle("Confirmar identidad");
-        dlgPass.setHeaderText("Ingresá la contraseña del administrador para continuar.");
+        dlgPass.setHeaderText(motivoAccion);
         dlgPass.getDialogPane().setContent(pfPass);
         dlgPass.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
 
-        if (dlgPass.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
+        if (dlgPass.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return false;
 
         try {
             String nombreAdmin = SessionService.getInstance().getUsuarioActivo().getNombre();
             Usuario verificado = new UsuarioDAO().autenticar(nombreAdmin, pfPass.getText());
             if (verificado == null) {
                 AlertUtil.mostrarInfo("Contraseña incorrecta", "La contraseña ingresada no es válida.");
-                return;
+                return false;
             }
+            return true;
         } catch (Exception e) {
             AlertUtil.mostrarInfo("Error", "No se pudo verificar la identidad: " + e.getMessage());
-            return;
+            return false;
         }
+    }
+
+    private void borrarTicket(Venta venta) {
+        if (!reautenticarAdmin("Ingresá la contraseña del administrador para continuar.")) return;
 
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         confirm.setTitle("Borrar ticket");
@@ -238,6 +500,57 @@ public class ReportsController implements Initializable {
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error al borrar el ticket " + venta.getId(), e);
             AlertUtil.mostrarInfo("Error", "No se pudo borrar el ticket: " + e.getMessage());
+        }
+    }
+
+    private void anularVenta(Venta venta) {
+        if (venta.estaAnulada()) {
+            AlertUtil.mostrarInfo("Ya anulada", "El ticket #" + venta.getId() + " ya estaba anulado.");
+            return;
+        }
+
+        TextField tfMotivo = new TextField();
+        tfMotivo.setPromptText("Motivo de la anulación");
+
+        GridPane grid = new GridPane();
+        grid.setHgap(12);
+        grid.setVgap(12);
+        grid.setPadding(new Insets(20));
+        grid.add(new Label("Motivo:"), 0, 0);
+        grid.add(tfMotivo, 1, 0);
+
+        Dialog<ButtonType> dlgMotivo = new Dialog<>();
+        dlgMotivo.setTitle("Motivo de la anulación");
+        dlgMotivo.setHeaderText("Ingresá el motivo de la anulación del ticket #" + venta.getId() + ".");
+        dlgMotivo.getDialogPane().setContent(grid);
+        dlgMotivo.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        if (dlgMotivo.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
+
+        if (!reautenticarAdmin("Ingresá la contraseña del administrador para anular el ticket #" + venta.getId() + ".")) return;
+
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Anular venta");
+        confirm.setHeaderText("Esta acción repone el stock vendido.");
+        confirm.setContentText(
+            "Se anulará el ticket #" + venta.getId() + " (" + venta.getFecha() + ", ARS " + venta.getTotal() + ").\n" +
+            "El stock de los productos vendidos se repondrá automáticamente.\n\n" +
+            "¿Confirmás la anulación de este ticket?");
+        if (confirm.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
+
+        try {
+            boolean anulada = new VentaDAO().anularVenta(venta.getId(), tfMotivo.getText());
+            if (anulada) {
+                venta.setEstado(Venta.ESTADO_ANULADA);
+                venta.setMotivoAnulacion(tfMotivo.getText());
+                tablaVentas.refresh();
+                AlertUtil.mostrarInfo("Venta anulada", "El ticket #" + venta.getId() + " fue anulado y su stock repuesto.");
+            } else {
+                AlertUtil.mostrarAdvertencia("No se pudo anular", "El ticket #" + venta.getId() + " ya estaba anulado o no existe.");
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error al anular el ticket " + venta.getId(), e);
+            AlertUtil.mostrarInfo("Error", "No se pudo anular el ticket: " + e.getMessage());
         }
     }
 
