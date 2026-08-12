@@ -333,6 +333,8 @@ public class ComprasController implements Initializable {
             AlertUtil.mostrarInfo("Compra registrada", "La compra se registró correctamente y el stock fue actualizado.");
             limpiarFormulario();
             cargarHistorico();
+        } catch (SecurityException e) {
+            AlertUtil.mostrarAdvertencia("Permiso denegado", e.getMessage());
         } catch (SQLException e) {
             AlertUtil.mostrarError("Error DB", "No se pudo registrar la compra: " + e.getMessage());
         }

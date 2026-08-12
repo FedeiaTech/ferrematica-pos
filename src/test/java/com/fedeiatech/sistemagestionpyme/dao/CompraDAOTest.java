@@ -137,9 +137,9 @@ class CompraDAOTest {
         SessionService.getInstance().iniciarSesion(new Usuario("cajero-test", "hash", Usuario.Rol.CAJERO));
         try {
             Compra compra = nuevaCompra(item.getId(), 4.0, 8.0, "2026-08-01");
-            compraDAO.registrarCompra(compra);
-            assertEquals(0, compra.getId(),
+            assertThrows(SecurityException.class, () -> compraDAO.registrarCompra(compra),
                     "Un CAJERO no debe poder registrar una compra, aunque invoque el DAO directamente");
+            assertEquals(0, compra.getId());
         } finally {
             SessionService.getInstance().iniciarSesion(new Usuario("admin-test", "hash", Usuario.Rol.ADMIN));
         }

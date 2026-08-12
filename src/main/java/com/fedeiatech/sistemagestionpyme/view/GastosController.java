@@ -128,6 +128,8 @@ public class GastosController implements Initializable {
         try {
             gastoDAO.eliminar(gasto.getId());
             historico.remove(gasto);
+        } catch (SecurityException e) {
+            AlertUtil.mostrarAdvertencia("Permiso denegado", e.getMessage());
         } catch (SQLException e) {
             AlertUtil.mostrarError("Error DB", "No se pudo eliminar el gasto: " + e.getMessage());
         }
@@ -171,6 +173,8 @@ public class GastosController implements Initializable {
             AlertUtil.mostrarInfo("Gasto registrado", "El gasto se registró correctamente.");
             limpiarFormulario();
             cargarHistorico();
+        } catch (SecurityException e) {
+            AlertUtil.mostrarAdvertencia("Permiso denegado", e.getMessage());
         } catch (SQLException e) {
             AlertUtil.mostrarError("Error DB", "No se pudo registrar el gasto: " + e.getMessage());
         }

@@ -131,7 +131,8 @@ public class ReportsController implements Initializable {
      * llegó a persistir el timestamp) también degrada a guion, no a excepción.
      */
     static String formatearHoraEntrega(String status, Instant entregadoEn) {
-        if (!"entregado".equals(status) || entregadoEn == null) return "—";
+        if (!"entregado".equals(status)) return "—";
+        if (entregadoEn == null) return "Entregado (hora desconocida)";
         return FORMATO_HORA_ENTREGA.format(entregadoEn.atZone(ZoneId.systemDefault()));
     }
 

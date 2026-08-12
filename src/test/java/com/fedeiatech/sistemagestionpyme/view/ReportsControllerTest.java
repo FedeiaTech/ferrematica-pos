@@ -2,6 +2,8 @@ package com.fedeiatech.sistemagestionpyme.view;
 
 import org.junit.jupiter.api.Test;
 
+import java.time.Instant;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
@@ -27,6 +29,21 @@ class ReportsControllerTest {
         assertEquals("En Camino", ReportsController.formatearEstadoEnvio("en_camino"));
         assertEquals("Entregado", ReportsController.formatearEstadoEnvio("entregado"));
         assertEquals("—", ReportsController.formatearEstadoEnvio(null));
+    }
+
+    @Test
+    void formatearHoraEntregaDistingueEntregadoSinHoraDeNoEntregado() {
+        assertEquals("—", ReportsController.formatearHoraEntrega("en_camino", null));
+        assertEquals("—", ReportsController.formatearHoraEntrega(null, null));
+        assertEquals("Entregado (hora desconocida)",
+            ReportsController.formatearHoraEntrega("entregado", null));
+    }
+
+    @Test
+    void formatearHoraEntregaFormateaCuandoHayTimestamp() {
+        Instant entregadoEn = Instant.parse("2026-08-11T15:30:00Z");
+        String resultado = ReportsController.formatearHoraEntrega("entregado", entregadoEn);
+        assertEquals(false, resultado.equals("—") || resultado.equals("Entregado (hora desconocida)"));
     }
 
     @Test
