@@ -113,6 +113,12 @@ public class ConexionDB {
         } catch (SQLException ignored) {
         }
 
+        // Ruta del PDF de ticket generado para esta venta; NULL = nunca generado o archivo perdido.
+        try {
+            stmt.execute("ALTER TABLE ventas ADD COLUMN ruta_ticket TEXT");
+        } catch (SQLException ignored) {
+        }
+
         stmt.execute("CREATE TABLE IF NOT EXISTS combos ("
                 + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
                 + "codigo TEXT UNIQUE NOT NULL,"

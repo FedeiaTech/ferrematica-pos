@@ -138,6 +138,7 @@ public class VentaDAO {
                 v.setTotal(rs.getDouble("total"));
                 v.setEstado(rs.getString("estado"));
                 v.setMotivoAnulacion(rs.getString("motivo_anulacion"));
+                v.setRutaTicket(rs.getString("ruta_ticket"));
                 lista.add(v);
             }
         }
@@ -161,6 +162,7 @@ public class VentaDAO {
                     v.setTotal(rs.getDouble("total"));
                     v.setEstado(rs.getString("estado"));
                     v.setMotivoAnulacion(rs.getString("motivo_anulacion"));
+                    v.setRutaTicket(rs.getString("ruta_ticket"));
                     lista.add(v);
                 }
             }
@@ -452,6 +454,7 @@ public class VentaDAO {
                     venta.setTotal(rs.getDouble("total"));
                     venta.setEstado(rs.getString("estado"));
                     venta.setMotivoAnulacion(rs.getString("motivo_anulacion"));
+                    venta.setRutaTicket(rs.getString("ruta_ticket"));
                 }
             }
 
@@ -479,6 +482,17 @@ public class VentaDAO {
             }
         }
         return venta;
+    }
+
+    /** Update liviano de una sola columna tras generar (o regenerar) el PDF del ticket. */
+    public void actualizarRutaTicket(int idVenta, String ruta) throws SQLException {
+        String sql = "UPDATE ventas SET ruta_ticket = ? WHERE id = ?";
+        try (Connection conn = ConexionDB.getConexion();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, ruta);
+            pstmt.setInt(2, idVenta);
+            pstmt.executeUpdate();
+        }
     }
 
     /** Borra un ticket puntual y sus detalles. El stock NO se restaura (mismo criterio que borrarTodasLasVentas). */

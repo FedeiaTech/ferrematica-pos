@@ -14,6 +14,7 @@ public class Venta {
     private List<DetalleVenta> detalles;
     private String estado;
     private String motivoAnulacion;
+    private String rutaTicket;
 
     public Venta() {
         this.detalles = new ArrayList<>();
@@ -52,6 +53,9 @@ public class Venta {
 
     public String getMotivoAnulacion() { return motivoAnulacion; }
     public void setMotivoAnulacion(String motivoAnulacion) { this.motivoAnulacion = motivoAnulacion; }
+
+    public String getRutaTicket() { return rutaTicket; }
+    public void setRutaTicket(String rutaTicket) { this.rutaTicket = rutaTicket; }
 
     public boolean estaAnulada() { return ESTADO_ANULADA.equals(estado); }
 }

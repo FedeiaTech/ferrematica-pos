@@ -81,6 +81,30 @@ public class ReportsController implements Initializable {
         return status == null ? null : COLORES_ESTADO_ENVIO.get(status);
     }
 
+    /** Estado del PDF de ticket para una venta, ver {@link #reimprimirTicket(Venta)}. */
+    enum EstadoTicket { NUNCA_GENERADO, EXISTE, FALTA }
+
+    static EstadoTicket estadoTicket(String rutaTicket, boolean archivoExiste) {
+        if (rutaTicket == null || rutaTicket.isBlank()) return EstadoTicket.NUNCA_GENERADO;
+        return archivoExiste ? EstadoTicket.EXISTE : EstadoTicket.FALTA;
+    }
+
+    static String textoBotonTicket(EstadoTicket estado) {
+        return switch (estado) {
+            case NUNCA_GENERADO -> "🖨️ Ver Ticket";
+            case EXISTE -> "✅ Ver Ticket";
+            case FALTA -> "⚠️ Ver Ticket";
+        };
+    }
+
+    static String estiloBotonTicket(EstadoTicket estado) {
+        return switch (estado) {
+            case NUNCA_GENERADO -> "-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand;";
+            case EXISTE -> "-fx-background-color: #d4f4dd; -fx-text-fill: #1e7e34; -fx-font-size: 11px; -fx-cursor: hand;";
+            case FALTA -> "-fx-background-color: #f8d7da; -fx-text-fill: #a94442; -fx-font-size: 11px; -fx-cursor: hand;";
+        };
+    }
+
     /**
      * Segunda línea, subordinada, de la celda de estado de envío (design decision DA8). {@code null}
      * cuando no hay saldo pendiente que mostrar — línea 2 debe quedar colapsada, no en blanco.
@@ -242,10 +266,9 @@ public class ReportsController implements Initializable {
                     private final HBox contenedor = new HBox(6, btnVer, btnAnular, btnBorrar);
 
                     {
-                        btnVer.setStyle("-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand;");
                         btnVer.setOnAction((ActionEvent event) -> {
                             Venta ventaSeleccionada = (Venta) getTableView().getItems().get(getIndex());
-                            reimprimirTicket(ventaSeleccionada.getId());
+                            reimprimirTicket(ventaSeleccionada);
                         });
                         btnAnular.setStyle("-fx-background-color: #e67e22; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand;");
                         btnAnular.setVisible(esAdmin);
@@ -270,8 +293,29 @@ public class ReportsController implements Initializable {
                             setGraphic(null);
                         } else {
                             btnAnular.setDisable(venta.estaAnulada());
+                            actualizarEstadoBotonTicket(venta);
                             setGraphic(contenedor);
                         }
+                    }
+
+                    /**
+                     * Refleja en el botón si el ticket nunca se generó, si el PDF sigue en la
+                     * carpeta configurada, o si la ruta guardada ya no apunta a un archivo real
+                     * (mismos colores pastel que la columna de estado de envío, ver
+                     * COLORES_ESTADO_ENVIO). El chequeo de disco solo corre para filas visibles
+                     * — TableView virtualiza las celdas, así que no escanea toda la tabla.
+                     */
+                    private void actualizarEstadoBotonTicket(Venta venta) {
+                        String ruta = venta.getRutaTicket();
+                        boolean existe = ruta != null && !ruta.isBlank() && new File(ruta).exists();
+                        EstadoTicket estado = estadoTicket(ruta, existe);
+                        btnVer.setText(textoBotonTicket(estado));
+                        btnVer.setStyle(estiloBotonTicket(estado));
+                        btnVer.setTooltip(switch (estado) {
+                            case NUNCA_GENERADO -> null;
+                            case EXISTE -> new javafx.scene.control.Tooltip(ruta);
+                            case FALTA -> new javafx.scene.control.Tooltip("No se encuentra en: " + ruta);
+                        });
                     }
                 };
             }
@@ -554,24 +598,50 @@ public class ReportsController implements Initializable {
         }
     }
 
-    private void reimprimirTicket(int idVenta) {
+    /**
+     * Ver/reimprimir ticket. Si ya existe una ruta guardada y el archivo sigue ahí, lo abre
+     * directo sin regenerar. Si nunca se generó, genera y persiste la ruta. Si había una ruta
+     * pero el archivo ya no está (carpeta movida, borrado a mano), confirma con el usuario antes
+     * de regenerar — no lo hace en silencio.
+     */
+    private void reimprimirTicket(Venta venta) {
+        String rutaActual = venta.getRutaTicket();
+        if (rutaActual != null && !rutaActual.isBlank()) {
+            File existente = new File(rutaActual);
+            if (existente.exists()) {
+                new TicketService().abrirArchivo(existente);
+                return;
+            }
+            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+            confirm.setTitle("Ticket no encontrado");
+            confirm.setHeaderText("El ticket no se encuentra en la carpeta configurada.");
+            confirm.setContentText("¿Generarlo de nuevo?");
+            if (confirm.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
+        }
+        generarYAbrirTicket(venta);
+    }
+
+    private void generarYAbrirTicket(Venta venta) {
         try {
             VentaDAO dao = new VentaDAO();
-            Venta ventaCompleta = dao.obtenerVentaCompleta(idVenta);
+            Venta ventaCompleta = dao.obtenerVentaCompleta(venta.getId());
             if (ventaCompleta == null) {
-                AlertUtil.mostrarAdvertencia("Error", "No se encontró la venta ID " + idVenta);
+                AlertUtil.mostrarAdvertencia("Error", "No se encontró la venta ID " + venta.getId());
                 return;
             }
             TicketService ts = new TicketService();
             File ticket = ts.generarTicketPDF(ventaCompleta);
             if (ticket != null && ticket.exists()) {
+                dao.actualizarRutaTicket(venta.getId(), ticket.getAbsolutePath());
+                venta.setRutaTicket(ticket.getAbsolutePath());
+                tablaVentas.refresh();
                 ts.abrirArchivo(ticket);
             } else {
                 AlertUtil.mostrarAdvertencia("Error PDF", "El archivo PDF no se pudo generar.");
             }
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error al reimprimir ticket", e);
-            AlertUtil.mostrarAdvertencia("Error Crítico", "Fallo al reimprimir: " + e.getMessage());
+            LOGGER.log(Level.SEVERE, "Error al generar/reimprimir ticket", e);
+            AlertUtil.mostrarAdvertencia("Error Crítico", "Fallo al generar el ticket: " + e.getMessage());
         }
     }
 

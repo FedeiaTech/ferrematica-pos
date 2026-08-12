@@ -48,8 +48,7 @@ public class TicketService {
                 File carpeta = new File(rutaPersonalizada);
                 if (!carpeta.exists()) carpeta.mkdirs();
 
-                String fechaHora = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
-                String nombreArchivo = "Ticket_" + venta.getId() + "_" + fechaHora + ".pdf";
+                String nombreArchivo = "Ticket_" + venta.getId() + ".pdf";
 
                 archivoDestino = new File(carpeta, nombreArchivo);
 
