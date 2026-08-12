@@ -19,7 +19,7 @@ public class GastoDAO {
      */
     public void registrar(Gasto gasto) throws SQLException {
         if (!SessionService.getInstance().esAdmin()) {
-            return;
+            throw new SecurityException("Solo un administrador puede registrar gastos.");
         }
 
         String sql = "INSERT INTO gastos (concepto, monto, categoria, fecha, usuario) VALUES (?, ?, ?, ?, ?)";
@@ -72,7 +72,7 @@ public class GastoDAO {
      */
     public void eliminar(int id) throws SQLException {
         if (!SessionService.getInstance().esAdmin()) {
-            return;
+            throw new SecurityException("Solo un administrador puede eliminar gastos.");
         }
 
         String sql = "DELETE FROM gastos WHERE id = ?";

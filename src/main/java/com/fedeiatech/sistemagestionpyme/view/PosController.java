@@ -5,6 +5,7 @@ import com.fedeiatech.sistemagestionpyme.dao.ConfiguracionDAO;
 import com.fedeiatech.sistemagestionpyme.dao.ItemDAO;
 import com.fedeiatech.sistemagestionpyme.dao.VentaDAO;
 import com.fedeiatech.sistemagestionpyme.model.Combo;
+import com.fedeiatech.sistemagestionpyme.service.SessionService;
 import com.fedeiatech.sistemagestionpyme.service.ThemeService;
 import com.fedeiatech.sistemagestionpyme.model.Configuracion;
 import com.fedeiatech.sistemagestionpyme.model.DetalleVenta;
@@ -101,6 +102,16 @@ public class PosController implements Initializable {
             dpFechaVenta.setDisable(!tildado);
             if (!tildado) dpFechaVenta.setValue(LocalDate.now());
         });
+
+        // Registrar una venta con fecha anterior afecta a qué día se le atribuye el
+        // total — mismo criterio de integridad que anularVenta/Gastos/Compras: solo ADMIN.
+        if (!SessionService.getInstance().esAdmin()) {
+            chkFechaAnterior.setSelected(false);
+            chkFechaAnterior.setVisible(false);
+            chkFechaAnterior.setManaged(false);
+            dpFechaVenta.setVisible(false);
+            dpFechaVenta.setManaged(false);
+        }
 
         rootPane.setStyle(ThemeService.getInstance().getBgStyle());
 

@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class GastoDAOTest {
@@ -128,11 +129,12 @@ class GastoDAOTest {
         SessionService.getInstance().iniciarSesion(new Usuario("cajero-test", "hash", Usuario.Rol.CAJERO));
         try {
             Gasto gastoDeCajero = nuevoGasto("Intento no autorizado", 500.0, null, "2026-08-02");
-            gastoDAO.registrar(gastoDeCajero);
-            assertEquals(0, gastoDeCajero.getId(),
+            assertThrows(SecurityException.class, () -> gastoDAO.registrar(gastoDeCajero),
                     "Un CAJERO no debe poder registrar un gasto, aunque invoque el DAO directamente");
+            assertEquals(0, gastoDeCajero.getId());
 
-            gastoDAO.eliminar(gastoDeAdmin.getId());
+            assertThrows(SecurityException.class, () -> gastoDAO.eliminar(gastoDeAdmin.getId()),
+                    "Un CAJERO no debe poder eliminar un gasto, aunque invoque el DAO directamente");
         } finally {
             SessionService.getInstance().iniciarSesion(new Usuario("admin-test", "hash", Usuario.Rol.ADMIN));
         }

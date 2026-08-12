@@ -28,7 +28,7 @@ public class CompraDAO {
      */
     public void registrarCompra(Compra compra) throws SQLException {
         if (!SessionService.getInstance().esAdmin()) {
-            return;
+            throw new SecurityException("Solo un administrador puede registrar compras.");
         }
 
         String sqlCompra = "INSERT INTO compras (id_item, cantidad, costo_unitario, costo_total, proveedor, fecha) VALUES (?, ?, ?, ?, ?, ?)";
