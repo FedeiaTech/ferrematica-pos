@@ -2,6 +2,8 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.DatePicker?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
@@ -24,6 +26,8 @@
                             </font>
                         </Label>
                         <Region HBox.hgrow="ALWAYS" />
+                        <CheckBox fx:id="chkFechaAnterior" text="Venta de fecha anterior" />
+                        <DatePicker fx:id="dpFechaVenta" disable="true" prefWidth="140.0" />
                         <TextField fx:id="txtBuscador" promptText="🔍 Buscar producto (Código o Nombre)..." prefWidth="300.0" style="-fx-font-size: 14;" />
                         <Button onAction="#agregarProductoManual" text="Agregar" style="-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-weight: bold;" />
                     </children>
