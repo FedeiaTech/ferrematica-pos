@@ -3,7 +3,7 @@
 **Sistema de Gestión Comercial para Ferrematica.**  
 *Offline-First, orientado a comercios minoristas. Preparado para integración fiscal ARCA. Sincroniza stock/precio con el catálogo compartido de Ferrematica (Supabase) para alimentar la tienda online.*
 
-**Estado:** v1.1.0 — Producción | **Licencia:** Propietaria  
+**Estado:** v1.2.0 — Producción | **Licencia:** Propietaria  
 **Autor:** Federico Iacono — IATech / FedeiaTech  
 **Contacto:** iaconofede@gmail.com
 
@@ -103,6 +103,14 @@ La base de datos `gestion_pyme.db` se crea automáticamente en la raíz del proy
 ---
 
 ## Changelog
+
+### v1.2.0 — 2026-08-10
+
+- **Dashboard:** reloj en vivo con fecha, hora y saludo ("Buenos días"/"Buenas tardes" según la hora) junto al indicador de Sync. La barra de "hoy" en el gráfico de 7 días ahora muestra la fecha además de "(Hoy)".
+- **Sincronización con Supabase:** unificado en un solo tilde "Habilitar sincronización automática (productos y ventas)" — antes el flag de ventas no tenía ningún control en la UI y quedaba siempre deshabilitado.
+- **Gestión de Usuarios:** el campo de nombre queda bloqueado al editar un usuario existente — antes se podía escribir un nombre nuevo que nunca se guardaba, sin ningún aviso. Cambiar el nombre de un usuario ahora es explícitamente eliminar y volver a crear.
+- **Fix:** cerrar sesión desmaximizaba la ventana, cambiando su tamaño y posición — ahora mantiene la ventana maximizada, igual que al iniciar sesión.
+- **Fix:** el PDF "Léeme" quedaba cacheado en disco y nunca se regeneraba, mostrando contenido desactualizado (de una versión previa a la dedicada a Ferrematica) en instalaciones que ya lo habían abierto una vez. Ahora se regenera siempre al abrirlo.
 
 ### v1.1.0 — 2026-08-07
 

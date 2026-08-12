@@ -12,7 +12,7 @@ public class LeerMeService {
 
     private static final Logger LOGGER = Logger.getLogger(LeerMeService.class.getName());
 
-    private static final String VERSION = "v1.0.0";
+    private static final String VERSION = "v1.2.0";
     private static final String AUTOR   = "Federico Iacono — IATech";
     private static final String DERECHOS = "© 2026 IATech. Todos los derechos reservados.";
 
@@ -111,8 +111,7 @@ public class LeerMeService {
 
     public static void abrirLeerMe() {
         try {
-            File f = new File("LEEME.pdf");
-            if (!f.exists()) f = generarLeerMe();
+            File f = generarLeerMe();
             if (java.awt.Desktop.isDesktopSupported()) java.awt.Desktop.getDesktop().open(f);
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error al abrir LEEME.pdf", e);
