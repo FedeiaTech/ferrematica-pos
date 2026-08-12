@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.Insets?>
 <?import javafx.scene.chart.BarChart?>
 <?import javafx.scene.chart.CategoryAxis?>
 <?import javafx.scene.chart.NumberAxis?>
@@ -43,6 +42,10 @@
                                text="Sync (deshabilitado)">
                             <font><Font name="System Bold" size="12.0" /></font>
                         </Label>
+                        <Label fx:id="lblSaludo" textFill="#2c3e50">
+                            <font><Font name="System Bold" size="16.0" /></font>
+                        </Label>
+                        <Label fx:id="lblFechaHora" textFill="#7f8c8d" style="-fx-font-size: 12;" />
                         <Region HBox.hgrow="ALWAYS" />
                         <Button fx:id="btnTema0" onAction="#cambiarTema" prefWidth="20.0" prefHeight="20.0"
                                 style="-fx-background-color: #ffffff; -fx-background-radius: 50%; -fx-padding: 0; -fx-cursor: hand; -fx-border-color: #bdc3c7; -fx-border-radius: 50%; -fx-border-width: 1;" />
@@ -72,7 +75,7 @@
 
                 <TabPane fx:id="tabPaneDashboard" VBox.vgrow="ALWAYS">
                     <tabs>
-                        <Tab text="Resumen" closable="false">
+                        <Tab text="Inicio" closable="false">
                             <content>
                                 <VBox spacing="14.0" style="-fx-background-color: transparent;">
                                     <children>
@@ -116,12 +119,21 @@
                                                         <Label text="Items Stock Crítico" textFill="#7f8c8d">
                                                             <font><Font size="13.0" /></font>
                                                         </Label>
-                                                        <Label fx:id="lblStockCritico" text="0" textFill="#27ae60">
-                                                            <font><Font name="System Bold" size="34.0" /></font>
-                                                        </Label>
-                                                        <Label text="con stock ≤ 5 unidades" textFill="#95a5a6">
-                                                            <font><Font size="12.0" /></font>
-                                                        </Label>
+                                                        <HBox spacing="14.0" alignment="CENTER_LEFT">
+                                                            <children>
+                                                                <VBox spacing="2.0">
+                                                                    <children>
+                                                                        <Label fx:id="lblStockCritico" text="0" textFill="#27ae60">
+                                                                            <font><Font name="System Bold" size="34.0" /></font>
+                                                                        </Label>
+                                                                        <Label text="con stock ≤ 5 unidades" textFill="#95a5a6">
+                                                                            <font><Font size="12.0" /></font>
+                                                                        </Label>
+                                                                    </children>
+                                                                </VBox>
+                                                                <VBox fx:id="vboxItemsCriticos" spacing="2.0" />
+                                                            </children>
+                                                        </HBox>
                                                     </children>
                                                 </VBox>
 
@@ -175,28 +187,41 @@
                     <children>
                         <Button fx:id="btnPOS" mnemonicParsing="false" onAction="#abrirPOS"
                                 prefHeight="60.0" HBox.hgrow="ALWAYS" maxWidth="Infinity"
-                                style="-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 15; -fx-background-radius: 10; -fx-cursor: hand;"
+                                style="-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 18; -fx-background-radius: 10; -fx-cursor: hand;"
                                 text="Nueva Venta (POS) 🛒" />
                         <Button fx:id="btnInventario" mnemonicParsing="false" onAction="#abrirInventario"
                                 prefHeight="60.0" HBox.hgrow="ALWAYS" maxWidth="Infinity"
-                                style="-fx-background-color: white; -fx-text-fill: #2c3e50; -fx-font-weight: bold; -fx-font-size: 15; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 5, 0, 0, 2); -fx-cursor: hand;"
-                                text="Inventario 📦" />
+                                style="-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 15; -fx-background-radius: 10; -fx-cursor: hand;"
+                                text="Inventario" />
+
+                        <Region prefWidth="6.0" />
+
                         <Button fx:id="btnCompras" mnemonicParsing="false" onAction="#abrirCompras"
                                 prefHeight="60.0" HBox.hgrow="ALWAYS" maxWidth="Infinity"
-                                style="-fx-background-color: white; -fx-text-fill: #2c3e50; -fx-font-weight: bold; -fx-font-size: 15; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 5, 0, 0, 2); -fx-cursor: hand;"
-                                text="Compras 🧾" />
+                                style="-fx-background-color: #e67e22; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 15; -fx-background-radius: 10; -fx-cursor: hand;"
+                                text="Ingresos" />
+                        <Button fx:id="btnGastos" mnemonicParsing="false" onAction="#abrirGastos"
+                                prefHeight="60.0" HBox.hgrow="ALWAYS" maxWidth="Infinity"
+                                style="-fx-background-color: #e67e22; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 15; -fx-background-radius: 10; -fx-cursor: hand;"
+                                text="Registro de gastos" />
+
+                        <Region prefWidth="6.0" />
+
+                        <Button fx:id="btnReportes" mnemonicParsing="false" onAction="#abrirReportes"
+                                prefHeight="60.0" HBox.hgrow="ALWAYS" maxWidth="Infinity"
+                                style="-fx-background-color: #9b59b6; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 15; -fx-background-radius: 10; -fx-cursor: hand;"
+                                text="Ventas / Devoluciones" />
+                        <Button fx:id="btnEstadisticas" mnemonicParsing="false" onAction="#abrirEstadisticasDashboard"
+                                prefHeight="60.0" HBox.hgrow="ALWAYS" maxWidth="Infinity"
+                                style="-fx-background-color: #9b59b6; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 15; -fx-background-radius: 10; -fx-cursor: hand;"
+                                text="Estadísticas 📊" />
+
+                        <Region prefWidth="6.0" />
+
                         <Button fx:id="btnConfiguracion" mnemonicParsing="false" onAction="#abrirConfiguracion"
                                 prefHeight="60.0" HBox.hgrow="ALWAYS" maxWidth="Infinity"
                                 style="-fx-background-color: white; -fx-text-fill: #7f8c8d; -fx-font-weight: bold; -fx-font-size: 15; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 5, 0, 0, 2); -fx-cursor: hand;"
                                 text="Configuración" />
-                        <Button fx:id="btnReportes" mnemonicParsing="false" onAction="#abrirReportes"
-                                prefHeight="60.0" HBox.hgrow="ALWAYS" maxWidth="Infinity"
-                                style="-fx-background-color: #9b59b6; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 15; -fx-background-radius: 10; -fx-cursor: hand;"
-                                text="Reportes 📈" />
-                        <Button fx:id="btnEstadisticas" mnemonicParsing="false" onAction="#abrirEstadisticasDashboard"
-                                prefHeight="60.0" HBox.hgrow="ALWAYS" maxWidth="Infinity"
-                                style="-fx-background-color: #1abc9c; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 15; -fx-background-radius: 10; -fx-cursor: hand;"
-                                text="Estadísticas 📊" />
                     </children>
                 </HBox>
 
