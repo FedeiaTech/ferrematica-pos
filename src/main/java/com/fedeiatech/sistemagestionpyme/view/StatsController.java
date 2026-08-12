@@ -19,8 +19,10 @@ import javafx.scene.control.TabPane;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
+import javafx.stage.Stage;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -50,10 +52,31 @@ public class StatsController implements Initializable {
     @FXML private TableColumn<String[], String> colPromedioSemanal;
 
     private static final String[] DIAS = {"Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"};
+    private static final String[] MESES = {"Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"};
+
+    /** @param yyyyMm fecha en formato "YYYY-MM" */
+    private static String nombreMes(String yyyyMm) {
+        try {
+            int mes = Integer.parseInt(yyyyMm.substring(5, 7));
+            return MESES[mes - 1];
+        } catch (Exception e) {
+            return yyyyMm;
+        }
+    }
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         rootPane.setStyle(ThemeService.getInstance().getBgStyle());
+        rootPane.sceneProperty().addListener((obs, sceneAnterior, sceneNueva) -> {
+            if (sceneNueva != null) {
+                sceneNueva.setOnKeyPressed(event -> {
+                    if (event.getCode() == KeyCode.ESCAPE) {
+                        ((Stage) sceneNueva.getWindow()).close();
+                    }
+                });
+            }
+        });
 
         configurarTablaBasket();
         configurarTablaSemanal();
@@ -67,7 +90,8 @@ public class StatsController implements Initializable {
     }
 
     private void configurarTablaSemanal() {
-        colSemana.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(data.getValue()[0]));
+        colSemana.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(
+            data.getValue()[0] + " (" + nombreMes(data.getValue()[4]) + ")"));
         colCantSemanal.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(data.getValue()[1]));
         colTotalSemanal.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(
             String.format("$ %.2f", Double.parseDouble(data.getValue()[2]))));
@@ -127,8 +151,8 @@ public class StatsController implements Initializable {
 
         if (mejorHora >= 0) {
             lblMejorHorario.setText(String.format(
-                "La franja %02d:00 — %02d:59 generó más ingresos en total: $ %.2f (suma histórica de todas las ventas en ese horario).",
-                mejorHora, mejorHora, maxTotal));
+                "El horario que más ingresos generó es entre las %02d:00 y las %02d:00 — $ %.2f en total (suma histórica de todas las ventas en esa franja).",
+                mejorHora, (mejorHora + 1) % 24, maxTotal));
         } else {
             lblMejorHorario.setText("Sin datos de horarios aún.");
         }
@@ -140,10 +164,11 @@ public class StatsController implements Initializable {
         XYChart.Series<String, Number> serieSem = new XYChart.Series<>();
         double totalSem = 0; int maxSemCant = 0; String mejorSem = "";
         for (String[] row : semanas) {
-            serieSem.getData().add(new XYChart.Data<>(row[0], Double.parseDouble(row[2])));
+            String etiquetaSemana = row[0] + " (" + nombreMes(row[4]) + ")";
+            serieSem.getData().add(new XYChart.Data<>(etiquetaSemana, Double.parseDouble(row[2])));
             totalSem += Double.parseDouble(row[2]);
             int cant = Integer.parseInt(row[1]);
-            if (cant > maxSemCant) { maxSemCant = cant; mejorSem = row[0]; }
+            if (cant > maxSemCant) { maxSemCant = cant; mejorSem = etiquetaSemana; }
         }
         chartSemanal.getData().clear();
         chartSemanal.getData().add(serieSem);
@@ -160,9 +185,10 @@ public class StatsController implements Initializable {
         double totalMes = 0; String mejorMes = ""; double maxMesTotal = 0;
         for (String[] row : meses) {
             double t = Double.parseDouble(row[2]);
-            serieMes.getData().add(new XYChart.Data<>(row[0], t));
+            String etiquetaMes = row[0] + " (" + nombreMes(row[0]) + ")";
+            serieMes.getData().add(new XYChart.Data<>(etiquetaMes, t));
             totalMes += t;
-            if (t > maxMesTotal) { maxMesTotal = t; mejorMes = row[0]; }
+            if (t > maxMesTotal) { maxMesTotal = t; mejorMes = etiquetaMes; }
         }
         chartMensual.getData().clear();
         chartMensual.getData().add(serieMes);

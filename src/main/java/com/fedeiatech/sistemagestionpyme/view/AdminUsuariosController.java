@@ -80,6 +80,7 @@ public class AdminUsuariosController implements Initializable {
     private void entrarModoEdicion(Usuario usuario) {
         usuarioEnEdicion = usuario;
         txtNombre.setText(usuario.getNombre());
+        txtNombre.setDisable(true);
         txtPassword.clear();
         cmbRol.setValue(usuario.getRol());
         lblFormTitulo.setText("Editando: " + usuario.getNombre());
@@ -196,6 +197,7 @@ public class AdminUsuariosController implements Initializable {
     private void limpiarFormulario() {
         usuarioEnEdicion = null;
         tablaUsuarios.getSelectionModel().clearSelection();
+        txtNombre.setDisable(false);
         txtNombre.clear();
         txtPassword.clear();
         cmbRol.setValue(Rol.CAJERO);
