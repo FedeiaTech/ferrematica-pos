@@ -36,14 +36,14 @@ public class LeerMeService {
         Font fAmarillo= new Font(Font.HELVETICA, 10, Font.BOLD,  new Color(255, 200, 50));
 
         // Encabezado
-        agregarP(doc, "Ferrematica — Sistema de Gestión", fTitulo, Element.ALIGN_CENTER);
+        agregarP(doc, "Ferremática — Sistema de Gestión", fTitulo, Element.ALIGN_CENTER);
         agregarP(doc, AUTOR + "  |  " + VERSION, fGris, Element.ALIGN_CENTER);
         agregarP(doc, DERECHOS, fGris, Element.ALIGN_CENTER);
         agregarLinea(doc);
 
         // Bienvenida
         agregarP(doc, "BIENVENIDO", fSub, Element.ALIGN_LEFT);
-        agregarP(doc, "Este es el sistema de gestión dedicado a Ferrematica: punto de venta, inventario, reportes y estadísticas, todo en una sola aplicación de escritorio y sin conexión a internet.", fNormal, Element.ALIGN_LEFT);
+        agregarP(doc, "Este es el sistema de gestión dedicado a Ferremática: punto de venta, inventario, reportes y estadísticas, todo en una sola aplicación de escritorio y sin conexión a internet.", fNormal, Element.ALIGN_LEFT);
         agregarP(doc, "Todas las funciones están disponibles desde el primer arranque — no hay módulos bloqueados ni claves de activación.", fVerde, Element.ALIGN_LEFT);
         agregarLinea(doc);
 
