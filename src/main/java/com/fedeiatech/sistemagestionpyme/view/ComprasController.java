@@ -21,12 +21,16 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceDialog;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListCell;
+import javafx.scene.control.ListView;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.VBox;
+import javafx.stage.Popup;
 import javafx.stage.Stage;
 
 public class ComprasController implements Initializable {
@@ -35,9 +39,10 @@ public class ComprasController implements Initializable {
     @FXML private VBox formVBox;
     @FXML private TextField txtBuscarProducto;
     @FXML private Label lblProductoElegido;
+    @FXML private Label lblCantidadUnidad;
     @FXML private TextField txtCantidad;
     @FXML private TextField txtCostoUnitario;
-    @FXML private Label lblCostoTotal;
+    @FXML private TextField txtCostoTotal;
     @FXML private DatePicker dpFecha;
     @FXML private TextField txtProveedor;
     @FXML private Button btnGuardar;
@@ -55,22 +60,120 @@ public class ComprasController implements Initializable {
     private final ObservableList<Compra> historico = FXCollections.observableArrayList();
 
     private ItemVenta productoElegido;
+    private Popup popupSugerencias;
+    private ListView<ItemVenta> listSugerencias;
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         if (rootPane != null) rootPane.setStyle(ThemeService.getInstance().getBgStyle());
+        if (rootPane != null) {
+            rootPane.sceneProperty().addListener((obs, sceneAnterior, sceneNueva) -> {
+                if (sceneNueva != null) {
+                    sceneNueva.setOnKeyPressed(event -> {
+                        if (event.getCode() == KeyCode.ESCAPE) {
+                            if (popupSugerencias != null && popupSugerencias.isShowing()) {
+                                popupSugerencias.hide();
+                            } else {
+                                ((Stage) sceneNueva.getWindow()).close();
+                            }
+                        }
+                    });
+                }
+            });
+        }
 
         dpFecha.setValue(LocalDate.now());
 
-        txtCantidad.textProperty().addListener((obs, viejo, nuevo) -> recalcularTotal());
-        txtCostoUnitario.textProperty().addListener((obs, viejo, nuevo) -> recalcularTotal());
+        txtCantidad.textProperty().addListener((obs, viejo, nuevo) -> recalcularTotalDesdeUnitario());
+        txtCostoUnitario.textProperty().addListener((obs, viejo, nuevo) -> recalcularTotalDesdeUnitario());
+        txtCostoTotal.textProperty().addListener((obs, viejo, nuevo) -> recalcularUnitarioDesdeTotal());
 
+        configurarAutocompletado();
         configurarTabla();
         cargarHistorico();
 
         if (!SessionService.getInstance().esAdmin()) {
             formVBox.setVisible(false);
             formVBox.setManaged(false);
+        }
+    }
+
+    private void configurarAutocompletado() {
+        listSugerencias = new ListView<>();
+        listSugerencias.setPrefWidth(320);
+        listSugerencias.setMaxHeight(220);
+        listSugerencias.setCellFactory(lv -> new ListCell<>() {
+            @Override
+            protected void updateItem(ItemVenta item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item.toString());
+            }
+        });
+
+        popupSugerencias = new Popup();
+        popupSugerencias.setAutoHide(true);
+        popupSugerencias.setHideOnEscape(true);
+        popupSugerencias.getContent().add(listSugerencias);
+
+        txtBuscarProducto.textProperty().addListener((obs, valorViejo, valorNuevo) -> actualizarSugerencias(valorNuevo));
+
+        listSugerencias.setOnMouseClicked(event -> {
+            ItemVenta seleccionado = listSugerencias.getSelectionModel().getSelectedItem();
+            if (seleccionado != null) {
+                seleccionarProducto(seleccionado);
+                popupSugerencias.hide();
+            }
+        });
+
+        listSugerencias.setOnKeyPressed(event -> {
+            if (event.getCode() == KeyCode.ENTER) {
+                ItemVenta seleccionado = listSugerencias.getSelectionModel().getSelectedItem();
+                if (seleccionado != null) {
+                    seleccionarProducto(seleccionado);
+                    popupSugerencias.hide();
+                }
+            } else if (event.getCode() == KeyCode.ESCAPE) {
+                popupSugerencias.hide();
+                txtBuscarProducto.requestFocus();
+            }
+        });
+
+        txtBuscarProducto.setOnKeyPressed(event -> {
+            if (event.getCode() == KeyCode.DOWN && popupSugerencias.isShowing()) {
+                listSugerencias.requestFocus();
+                listSugerencias.getSelectionModel().selectFirst();
+                event.consume();
+            }
+        });
+    }
+
+    private void actualizarSugerencias(String termino) {
+        String t = termino == null ? "" : termino.trim();
+        if (t.length() < 2) {
+            popupSugerencias.hide();
+            return;
+        }
+
+        try {
+            List<ItemVenta> sugerencias = itemDAO.buscarPorFiltro(t).stream()
+                    .filter(i -> !i.isEsServicio() && !i.isEsCombo())
+                    .toList();
+
+            if (sugerencias.isEmpty()) {
+                popupSugerencias.hide();
+                return;
+            }
+
+            listSugerencias.getItems().setAll(
+                sugerencias.size() > 8 ? sugerencias.subList(0, 8) : sugerencias);
+            listSugerencias.getSelectionModel().clearSelection();
+
+            if (!popupSugerencias.isShowing()) {
+                var bounds = txtBuscarProducto.localToScreen(txtBuscarProducto.getBoundsInLocal());
+                popupSugerencias.show(txtBuscarProducto, bounds.getMinX(), bounds.getMaxY());
+            }
+        } catch (SQLException e) {
+            popupSugerencias.hide();
         }
     }
 
@@ -136,6 +239,8 @@ public class ComprasController implements Initializable {
         lblProductoElegido.setText(item.getCodigo() + " · " + item.getNombre()
                 + " · stock actual " + formatearCantidad(item.getStock()) + " " + item.getUnidad()
                 + " · costo actual $" + String.format("%.2f", item.getPrecioCosto()));
+        lblProductoElegido.setStyle("-fx-font-size: 12; -fx-font-weight: bold; -fx-text-fill: black;");
+        lblCantidadUnidad.setText("- " + item.getUnidad());
         txtBuscarProducto.clear();
     }
 
@@ -143,10 +248,32 @@ public class ComprasController implements Initializable {
         return valor % 1 == 0 ? String.valueOf((int) valor) : String.valueOf(valor);
     }
 
-    private void recalcularTotal() {
-        double cantidad = parsearODefault(txtCantidad.getText());
-        double costoUnitario = parsearODefault(txtCostoUnitario.getText());
-        lblCostoTotal.setText(String.format("ARS %.2f", cantidad * costoUnitario));
+    private boolean actualizandoCostos = false;
+
+    private void recalcularTotalDesdeUnitario() {
+        if (actualizandoCostos) return;
+        actualizandoCostos = true;
+        try {
+            double cantidad = parsearODefault(txtCantidad.getText());
+            double costoUnitario = parsearODefault(txtCostoUnitario.getText());
+            txtCostoTotal.setText(String.format("%.2f", cantidad * costoUnitario));
+        } finally {
+            actualizandoCostos = false;
+        }
+    }
+
+    private void recalcularUnitarioDesdeTotal() {
+        if (actualizandoCostos) return;
+        actualizandoCostos = true;
+        try {
+            double cantidad = parsearODefault(txtCantidad.getText());
+            double costoTotal = parsearODefault(txtCostoTotal.getText());
+            if (cantidad > 0) {
+                txtCostoUnitario.setText(String.format("%.2f", costoTotal / cantidad));
+            }
+        } finally {
+            actualizandoCostos = false;
+        }
     }
 
     private double parsearODefault(String texto) {
@@ -214,12 +341,14 @@ public class ComprasController implements Initializable {
     private void limpiarFormulario() {
         productoElegido = null;
         lblProductoElegido.setText("Ningún producto seleccionado");
+        lblProductoElegido.setStyle("-fx-font-size: 12; -fx-text-fill: #7f8c8d;");
+        lblCantidadUnidad.setText("");
         txtBuscarProducto.clear();
         txtCantidad.clear();
         txtCostoUnitario.clear();
+        txtCostoTotal.clear();
         txtProveedor.clear();
         dpFecha.setValue(LocalDate.now());
-        recalcularTotal();
     }
 
     @FXML
