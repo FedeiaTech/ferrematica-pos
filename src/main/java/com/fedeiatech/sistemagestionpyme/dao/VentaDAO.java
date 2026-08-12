@@ -259,6 +259,7 @@ public class VentaDAO {
         }
     }
 
+    /** Resta los gastos operativos del día (decisión D4): ganancia = ventas - costo_mercaderia - gastos_del_dia. */
     public double obtenerGananciaEstimadaDelDia() throws SQLException {
         String fechaHoy = java.time.LocalDate.now().toString();
         String sql = "SELECT SUM((d.precio_unitario - i.precio_costo) * d.cantidad) " +
@@ -266,13 +267,16 @@ public class VentaDAO {
                      "JOIN items i ON d.id_item = i.id " +
                      "JOIN ventas v ON d.id_venta = v.id " +
                      "WHERE v.fecha LIKE ? AND i.es_servicio = 0 AND d.id_item IS NOT NULL" + FILTRO_ACTIVAS_V;
+        double gananciaBruta;
         try (Connection conn = ConexionDB.getConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, fechaHoy + "%");
             try (ResultSet rs = pstmt.executeQuery()) {
-                return rs.next() ? rs.getDouble(1) : 0.0;
+                gananciaBruta = rs.next() ? rs.getDouble(1) : 0.0;
             }
         }
+        double gastosDelDia = new GastoDAO().sumarGastosEntre(fechaHoy, fechaHoy);
+        return gananciaBruta - gastosDelDia;
     }
 
     public int contarItemsStockCritico() throws SQLException {

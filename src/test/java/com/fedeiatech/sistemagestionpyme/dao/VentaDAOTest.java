@@ -73,6 +73,34 @@ class VentaDAOTest {
     }
 
     @Test
+    void obtenerGananciaEstimadaDelDiaRestaLosGastosDelDia() throws SQLException {
+        itemDAO.guardar(new ItemVenta(0, "COD-GAN", "Producto Ganancia", "desc", 5.0, 10.0, 100.0, false));
+        ItemVenta item = itemDAO.buscarPorCodigo("COD-GAN");
+
+        String hoy = java.time.LocalDate.now().toString();
+        String fechaHoraHoy = hoy + "T10:00:00";
+
+        Venta venta = new Venta();
+        venta.setFecha(fechaHoraHoy);
+        venta.agregarDetalle(new DetalleVenta(item, 2.0));
+        ventaDAO.registrarVenta(venta);
+
+        double gananciaSinGastos = ventaDAO.obtenerGananciaEstimadaDelDia();
+        assertEquals(10.0, gananciaSinGastos);
+
+        GastoDAO gastoDAO = new GastoDAO();
+        com.fedeiatech.sistemagestionpyme.model.Gasto gasto = new com.fedeiatech.sistemagestionpyme.model.Gasto();
+        gasto.setConcepto("Nafta");
+        gasto.setMonto(4.0);
+        gasto.setFecha(hoy);
+        gastoDAO.registrar(gasto);
+
+        double gananciaConGastos = ventaDAO.obtenerGananciaEstimadaDelDia();
+
+        assertEquals(6.0, gananciaConGastos);
+    }
+
+    @Test
     void obtenerVentasPorMesNoInflaElTotalConVentasDeVariosItems() throws SQLException {
         itemDAO.guardar(new ItemVenta(0, "COD-1", "Producto 1", "desc", 5.0, 10.0, 100.0, false));
         itemDAO.guardar(new ItemVenta(0, "COD-2", "Producto 2", "desc", 5.0, 20.0, 100.0, false));

@@ -40,6 +40,11 @@ public class ExportService {
         return exportar("Detalle Completo", headers, new int[]{1, 3, 5, 6}, datos, destino);
     }
 
+    public File exportarGastos(List<String[]> datos, File destino) throws IOException {
+        String[] headers = {"Fecha", "Concepto", "Categoría", "Monto"};
+        return exportar("Gastos", headers, new int[]{3}, datos, destino);
+    }
+
     private File exportar(String sheetName, String[] headers, int[] colsNumericas, List<String[]> datos, File destino) throws IOException {
         try (XSSFWorkbook workbook = new XSSFWorkbook()) {
             XSSFSheet sheet = workbook.createSheet(sheetName);
