@@ -87,10 +87,12 @@ class ReportsControllerTest {
     }
 
     @Test
-    void textoBotonTicketVariaPorEstado() {
-        assertEquals("🖨️ Ver Ticket", ReportsController.textoBotonTicket(ReportsController.EstadoTicket.NUNCA_GENERADO));
-        assertEquals("✅ Ver Ticket", ReportsController.textoBotonTicket(ReportsController.EstadoTicket.EXISTE));
-        assertEquals("⚠️ Ver Ticket", ReportsController.textoBotonTicket(ReportsController.EstadoTicket.FALTA));
+    void textoBotonTicketEsSiempreTextoPlano() {
+        // Sin emoji — el estado se distingue por color (estiloBotonTicket),
+        // no por el texto del botón.
+        assertEquals("Ver Ticket", ReportsController.textoBotonTicket(ReportsController.EstadoTicket.NUNCA_GENERADO));
+        assertEquals("Ver Ticket", ReportsController.textoBotonTicket(ReportsController.EstadoTicket.EXISTE));
+        assertEquals("Ver Ticket", ReportsController.textoBotonTicket(ReportsController.EstadoTicket.FALTA));
     }
 
     @Test

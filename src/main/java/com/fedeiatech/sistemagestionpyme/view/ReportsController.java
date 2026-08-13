@@ -94,11 +94,10 @@ public class ReportsController implements Initializable {
     }
 
     static String textoBotonTicket(EstadoTicket estado) {
-        return switch (estado) {
-            case NUNCA_GENERADO -> "🖨️ Ver Ticket";
-            case EXISTE -> "✅ Ver Ticket";
-            case FALTA -> "⚠️ Ver Ticket";
-        };
+        // Texto puro, sin emoji — el estado ya se distingue por el color de
+        // fondo (ver estiloBotonTicket) y los emoji no se leían bien en la
+        // tabla.
+        return "Ver Ticket";
     }
 
     static String estiloBotonTicket(EstadoTicket estado) {
@@ -120,6 +119,24 @@ public class ReportsController implements Initializable {
     /** Segunda línea del tooltip (design decision DA8). {@code null} cuando no hay saldo pendiente. */
     static String formatearTooltipSaldoPendiente(Double saldoPendiente) {
         return saldoPendiente == null ? null : String.format("Saldo pendiente: $ %.2f", saldoPendiente);
+    }
+
+    /**
+     * Segunda línea de la celda de estado de envío, ahora distinguiendo "incobrable" (0018): el
+     * dueño ya dio de baja la deuda en la app, así que aunque {@code saldoPendiente} siga presente
+     * (se conserva como registro histórico, ver {@code Order.incobrableAt}) NO debe seguir leyéndose
+     * como "falta $X" — eso implicaría que todavía se está persiguiendo ese cobro. {@code
+     * paymentStatus == null} (backend pre-0018) degrada al comportamiento anterior sin cambios.
+     */
+    static String formatearSaldoOEstadoPago(Double saldoPendiente, String paymentStatus) {
+        if ("incobrable".equals(paymentStatus)) return "Incobrable";
+        return formatearSaldoPendiente(saldoPendiente);
+    }
+
+    /** Versión tooltip de {@link #formatearSaldoOEstadoPago}. */
+    static String formatearTooltipSaldoOEstadoPago(Double saldoPendiente, String paymentStatus) {
+        if ("incobrable".equals(paymentStatus)) return "Incobrable — deuda dada de baja";
+        return formatearTooltipSaldoPendiente(saldoPendiente);
     }
 
     private static final DateTimeFormatter FORMATO_HORA_ENTREGA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -212,7 +229,18 @@ public class ReportsController implements Initializable {
             private final VBox caja = new VBox(1, lblEstado, lblSaldo);
             {
                 caja.setAlignment(Pos.CENTER);
-                lblSaldo.setStyle("-fx-font-size: 10px; -fx-opacity: 0.75;");
+                // Explicit black text-fill — without it, JavaFX's default
+                // `:selected` row style (Modena) overrides a Label's text
+                // color to white, and since these two live inside a custom
+                // `setGraphic(...)` (not a plain `setText(...)`), that white
+                // stayed illegible against this column's own pastel
+                // background once the row was selected. Inline `setStyle`
+                // wins over the stylesheet's `:selected` rule regardless of
+                // selection state — `lblSaldo`'s own text-fill is re-set the
+                // same way in `updateItem` below (its style there is fully
+                // replaced per-row), so this initial value only covers
+                // `lblEstado`, which `updateItem` never re-styles.
+                lblEstado.setStyle("-fx-text-fill: black;");
             }
 
             @Override
@@ -238,32 +266,39 @@ public class ReportsController implements Initializable {
                 } else {
                     setText(null);
                     lblEstado.setText(formatearEstadoEnvio(status));
-                    String textoSaldo = formatearSaldoPendiente(saldoPendienteParaFila());
+                    SupabaseSyncService.EstadoEnvio estadoFila = estadoParaFila();
+                    String paymentStatus = estadoFila != null ? estadoFila.paymentStatus() : null;
+                    boolean esIncobrable = "incobrable".equals(paymentStatus);
+                    String textoSaldo = formatearSaldoOEstadoPago(
+                        estadoFila != null ? estadoFila.saldoPendiente() : null, paymentStatus);
                     boolean tieneSaldo = textoSaldo != null;
                     lblSaldo.setText(tieneSaldo ? textoSaldo : "");
                     lblSaldo.setVisible(tieneSaldo);
                     lblSaldo.setManaged(tieneSaldo);
+                    // "Incobrable" se destaca en rojo oscuro/negrita — a diferencia de "falta $X"
+                    // (deuda todavía activa), esto es información de cierre, no un llamado a la acción.
+                    lblSaldo.setStyle(esIncobrable
+                        ? "-fx-font-size: 10px; -fx-text-fill: #a94442; -fx-font-weight: bold;"
+                        : "-fx-font-size: 10px; -fx-opacity: 0.75; -fx-text-fill: black;");
                     setGraphic(caja);
                     setStyle("-fx-background-color: " + color + ";");
                     setTooltip(tooltipParaFila());
                 }
             }
 
-            private Double saldoPendienteParaFila() {
+            private SupabaseSyncService.EstadoEnvio estadoParaFila() {
                 if (!(getTableRow() != null && getTableRow().getItem() instanceof Venta v)) return null;
-                SupabaseSyncService.EstadoEnvio estado = estadoEnvios.get(v.getId());
-                return estado != null ? estado.saldoPendiente() : null;
+                return estadoEnvios.get(v.getId());
             }
 
             private javafx.scene.control.Tooltip tooltipParaFila() {
-                if (!(getTableRow() != null && getTableRow().getItem() instanceof Venta v)) return null;
-                SupabaseSyncService.EstadoEnvio estado = estadoEnvios.get(v.getId());
+                SupabaseSyncService.EstadoEnvio estado = estadoParaFila();
                 if (estado == null) return null;
                 StringBuilder sb = new StringBuilder();
                 if (estado.actualizadoEn() != null) {
                     sb.append("Actualizado: ").append(estado.actualizadoEn());
                 }
-                String lineaSaldo = formatearTooltipSaldoPendiente(estado.saldoPendiente());
+                String lineaSaldo = formatearTooltipSaldoOEstadoPago(estado.saldoPendiente(), estado.paymentStatus());
                 if (lineaSaldo != null) {
                     if (sb.length() > 0) sb.append('\n');
                     sb.append(lineaSaldo);
@@ -294,9 +329,9 @@ public class ReportsController implements Initializable {
             @Override
             public TableCell<Object, Void> call(final TableColumn<Object, Void> param) {
                 return new TableCell<>() {
-                    private final Button btnVer = new Button("🖨️ Ver Ticket");
-                    private final Button btnAnular = new Button("🚫 Anular");
-                    private final Button btnBorrar = new Button("🗑️");
+                    private final Button btnVer = new Button("Ver Ticket");
+                    private final Button btnAnular = new Button("Anular");
+                    private final Button btnBorrar = new Button("Borrar");
                     private final HBox contenedor = new HBox(6, btnVer, btnAnular, btnBorrar);
 
                     {
@@ -304,16 +339,16 @@ public class ReportsController implements Initializable {
                             Venta ventaSeleccionada = (Venta) getTableView().getItems().get(getIndex());
                             reimprimirTicket(ventaSeleccionada);
                         });
+                        // Anular queda disponible para cualquier usuario logueado
+                        // (admin o cajero) — no borra el registro, solo lo marca
+                        // como anulado y repone stock, así que el error queda
+                        // igual de auditable que si lo hiciera un admin.
                         btnAnular.setStyle("-fx-background-color: #e67e22; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand;");
-                        btnAnular.setVisible(esAdmin);
-                        btnAnular.setManaged(esAdmin);
                         btnAnular.setOnAction((ActionEvent event) -> {
                             Venta ventaSeleccionada = (Venta) getTableView().getItems().get(getIndex());
                             anularVenta(ventaSeleccionada);
                         });
                         btnBorrar.setStyle("-fx-background-color: #c0392b; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand;");
-                        btnBorrar.setVisible(esAdmin);
-                        btnBorrar.setManaged(esAdmin);
                         btnBorrar.setOnAction((ActionEvent event) -> {
                             Venta ventaSeleccionada = (Venta) getTableView().getItems().get(getIndex());
                             borrarTicket(ventaSeleccionada);
@@ -327,6 +362,15 @@ public class ReportsController implements Initializable {
                             setGraphic(null);
                         } else {
                             btnAnular.setDisable(venta.estaAnulada());
+                            // Borrar solo tiene sentido (y solo se ofrece) una vez
+                            // que la venta ya fue anulada: anular repone el stock
+                            // y deja el motivo auditado; borrar recién ahí puede
+                            // limpiar el registro sin el riesgo de un stock nunca
+                            // repuesto por un borrado directo de una venta real.
+                            // Sigue siendo admin-only, a diferencia de Anular.
+                            boolean puedeBorrar = esAdmin && venta.estaAnulada();
+                            btnBorrar.setVisible(puedeBorrar);
+                            btnBorrar.setManaged(puedeBorrar);
                             actualizarEstadoBotonTicket(venta);
                             setGraphic(contenedor);
                         }
@@ -526,13 +570,15 @@ public class ReportsController implements Initializable {
     }
 
     /**
-     * Reautentica al usuario admin activo pidiéndole la contraseña por diálogo.
-     * Devuelve true solo si el diálogo fue confirmado y la contraseña es correcta.
-     * Muestra los mensajes de error/cancelación correspondientes por sí misma.
+     * Reautentica al usuario actualmente logueado (admin o cajero) pidiéndole
+     * su propia contraseña por diálogo — confirma identidad antes de una
+     * acción sensible, no requiere una cuenta admin específica. Devuelve true
+     * solo si el diálogo fue confirmado y la contraseña es correcta. Muestra
+     * los mensajes de error/cancelación correspondientes por sí misma.
      */
-    private boolean reautenticarAdmin(String motivoAccion) {
+    private boolean reautenticarUsuarioActivo(String motivoAccion) {
         PasswordField pfPass = new PasswordField();
-        pfPass.setPromptText("Contraseña del administrador");
+        pfPass.setPromptText("Contraseña");
         Dialog<ButtonType> dlgPass = new Dialog<>();
         dlgPass.setTitle("Confirmar identidad");
         dlgPass.setHeaderText(motivoAccion);
@@ -556,7 +602,7 @@ public class ReportsController implements Initializable {
     }
 
     private void borrarTicket(Venta venta) {
-        if (!reautenticarAdmin("Ingresá la contraseña del administrador para continuar.")) return;
+        if (!reautenticarUsuarioActivo("Ingresá la contraseña del administrador para continuar.")) return;
 
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         confirm.setTitle("Borrar ticket");
@@ -605,7 +651,7 @@ public class ReportsController implements Initializable {
 
         if (dlgMotivo.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
 
-        if (!reautenticarAdmin("Ingresá la contraseña del administrador para anular el ticket #" + venta.getId() + ".")) return;
+        if (!reautenticarUsuarioActivo("Ingresá tu contraseña para confirmar la anulación del ticket #" + venta.getId() + ".")) return;
 
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         confirm.setTitle("Anular venta");

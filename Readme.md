@@ -3,7 +3,7 @@
 **Sistema de Gestión Comercial para Ferrematica.**  
 *Offline-First, orientado a comercios minoristas. Preparado para integración fiscal ARCA. Sincroniza stock/precio con el catálogo compartido de Ferrematica (Supabase) para alimentar la tienda online.*
 
-**Estado:** v1.2.0 — Producción | **Licencia:** Propietaria  
+**Estado:** v1.3.0 — Producción | **Licencia:** Propietaria  
 **Autor:** Federico Iacono — IATech / FedeiaTech  
 **Contacto:** iaconofede@gmail.com
 
@@ -103,6 +103,16 @@ La base de datos `gestion_pyme.db` se crea automáticamente en la raíz del proy
 ---
 
 ## Changelog
+
+### v1.3.0 — 2026-08-13
+
+- **Reportes — columna "Estado de Venta":** renombrada desde "Estado" para no confundirla con "Estado de envío" (columna aparte, viene de los pedidos de la app).
+- **Reportes — Anular:** ahora disponible para cualquier usuario logueado (admin o cajero), no solo admin — anular repone stock y deja el motivo auditado (la venta queda marcada "anulada", nunca se borra el registro), así que el error queda igual de trazable.
+- **Reportes — Borrar:** ahora solo aparece la opción una vez que el ticket ya fue anulado — sigue siendo exclusivo de ADMIN. Antes se podía borrar directamente una venta activa sin reponer stock, dejando el inventario descontado sin corrección.
+- **Reportes — botones sin emoji:** "Ver Ticket"/"Anular"/"Borrar" en texto plano (los emoji no se leían bien); columna "Acción" ensanchada para que entren sin recortarse.
+- **Reportes — legibilidad:** el texto de la columna "Estado de envío" ya no se ponía blanco (ilegible) al seleccionar la fila.
+- **Estado de envío:** ahora también refleja cuando el dueño marcó un pedido como "incobrable" desde la app, en vez de seguir mostrando "falta $X" para una deuda ya dada de baja.
+- Corregido el número de versión en el título de la ventana, que había quedado en v1.1.0 desde el release de v1.2.0.
 
 ### v1.2.0 — 2026-08-10
 

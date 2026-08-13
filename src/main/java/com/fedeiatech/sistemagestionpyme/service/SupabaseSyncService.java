@@ -79,6 +79,11 @@ public class SupabaseSyncService {
     // Misma lógica de "no matchea null/ausencia" que P_PENDING_BALANCE — 0014 amplía estado_envios_pos()
     // con delivered_at, un POS contra un backend pre-0014 simplemente deja entregadoEn en null.
     private static final Pattern P_DELIVERED_AT = Pattern.compile("\"delivered_at\"\\s*:\\s*\"([^\"]*)\"");
+    // 0018 amplía estado_envios_pos() con payment_status ("pendiente"/"cobrado"/"incobrable") — un POS
+    // contra un backend pre-0018 simplemente deja paymentStatus en null, mismo criterio que arriba.
+    // Clave completa "payment_status" (no "status") — no colisiona con P_STATUS porque esa clave
+    // exige una comilla justo antes de "status", que "payment_status" no tiene en esa posición.
+    private static final Pattern P_PAYMENT_STATUS = Pattern.compile("\"payment_status\"\\s*:\\s*\"([^\"]*)\"");
 
     private static SupabaseSyncService instancia;
 
@@ -201,12 +206,18 @@ public class SupabaseSyncService {
 
     /**
      * Estado de envío de una venta, resuelto vía el RPC {@code estado_envios_pos()} (migración 0012,
-     * ampliada por 0013 con {@code saldoPendiente} y por 0014 con {@code entregadoEn}).
+     * ampliada por 0013 con {@code saldoPendiente}, por 0014 con {@code entregadoEn} y por 0018 con
+     * {@code paymentStatus}).
      * {@code saldoPendiente == null} significa pagado por completo o cobro aún no registrado —
      * nunca implica que la columna no exista. {@code entregadoEn == null} significa que el pedido
      * todavía no fue marcado como entregado, o que el backend no tiene la 0014 aplicada todavía.
+     * {@code paymentStatus} vale {@code "pendiente"}, {@code "cobrado"} o {@code "incobrable"} —
+     * este último significa que el dueño dio de baja la deuda como incobrable en la app: aunque
+     * {@code saldoPendiente} siga presente (se conserva como registro histórico de lo condonado),
+     * ya no es una deuda activa. {@code null} solo si el backend no tiene la 0018 aplicada todavía.
      */
-    public record EstadoEnvio(String status, Instant actualizadoEn, Double saldoPendiente, Instant entregadoEn) {}
+    public record EstadoEnvio(String status, Instant actualizadoEn, Double saldoPendiente, Instant entregadoEn,
+                               String paymentStatus) {}
 
     /**
      * Resultado de {@link #obtenerEstadoEnvios()} — separa explícitamente "no se pudo consultar"
@@ -309,7 +320,13 @@ public class SupabaseSyncService {
                 }
             }
 
-            resultado.put(ventaLocalId, new EstadoEnvio(status, actualizadoEn, saldoPendiente, entregadoEn));
+            String paymentStatus = null;
+            Matcher mPaymentStatus = P_PAYMENT_STATUS.matcher(objeto);
+            if (mPaymentStatus.find()) {
+                paymentStatus = mPaymentStatus.group(1);
+            }
+
+            resultado.put(ventaLocalId, new EstadoEnvio(status, actualizadoEn, saldoPendiente, entregadoEn, paymentStatus));
         }
         return resultado;
     }
