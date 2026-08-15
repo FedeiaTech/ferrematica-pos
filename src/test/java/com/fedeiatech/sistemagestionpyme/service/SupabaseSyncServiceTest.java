@@ -87,9 +87,9 @@ class SupabaseSyncServiceTest {
     }
 
     @Test
-    void noIncluyeCombosEnElSnapshot() throws Exception {
+    void incluyeCombosEnElSnapshotConPrefijoDeSkuYSinStockPropio() throws Exception {
         itemDAO.guardar(new ItemVenta(0, "SKU-2", "Tornillo", "d", 1.0, 2.0, 100.0, false));
-        Combo combo = new Combo("COMBO-1", "Kit de arranque", "d", 500.0);
+        Combo combo = new Combo("KIT-1", "Kit de arranque", "d", 500.0);
         new ComboDAO().guardar(combo);
         configurarSyncHabilitado();
         FakePostgrestClient fake = new FakePostgrestClient();
@@ -99,8 +99,20 @@ class SupabaseSyncServiceTest {
 
         String body = fake.buscarLlamadaProducts().jsonBody();
         assertEquals(1, itemDAO.listarTodos().size());
-        assertTrue(body.contains("SKU-2"));
-        assertFalse(body.contains("COMBO-1"));
+        assertTrue(body.contains("\"sku\":\"SKU-2\""));
+        // sku con prefijo "COMBO-": combos.codigo no comparte espacio de unicidad con items.codigo
+        // en SQLite, así que el prefijo evita colisionar con un item que use el mismo código.
+        assertTrue(body.contains("\"sku\":\"COMBO-KIT-1\""));
+        assertTrue(body.contains("\"name\":\"Kit de arranque\""));
+        assertTrue(body.contains("\"price\":500.0"));
+        assertTrue(body.contains("\"category\":\"Combos\""));
+        assertTrue(body.contains("\"is_combo\":true"));
+        // Un combo no tiene stock propio (se resuelve de sus componentes solo dentro del POS al
+        // vender) — viaja con stock=0/unit="u" fijos; Web-Shop no debe mostrar ese número.
+        int comboStart = body.indexOf("\"sku\":\"COMBO-KIT-1\"");
+        String comboObjeto = body.substring(comboStart, body.indexOf('}', comboStart) + 1);
+        assertTrue(comboObjeto.contains("\"stock\":0"));
+        assertTrue(comboObjeto.contains("\"unit\":\"u\""));
     }
 
     @Test

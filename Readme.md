@@ -104,6 +104,11 @@ La base de datos `gestion_pyme.db` se crea automáticamente en la raíz del proy
 
 ## Changelog
 
+### v1.4.0 — 2026-08-15
+
+- **Backup/Restauración en dos niveles:** nueva pestaña "Base de Datos" en Configuración (agrupa ubicación del archivo, borrar historial y backup/restauración, antes repartidos entre dos secciones sin relación). "Backup completo" sigue siendo una copia cruda del archivo; "Backup solo datos" exporta únicamente ventas/inventario/combos/compras/gastos, sin config de ticket/sincronización ni usuarios. Restaurar detecta automáticamente qué tipo de backup es (por el esquema del archivo, no por el nombre) y aplica un merge en caliente para "solo datos" (sin reiniciar el programa) o el reemplazo total de siempre para "completo".
+- **Combos visibles en la tienda online:** la sincronización con Supabase ahora también empuja los combos a la tabla compartida `products` (prefijo `COMBO-` en el código para no pisar el de un producto), para que el Web-Shop los muestre en el catálogo. Solo lectura: el Web-Shop no vende online, y el stock de un combo sigue descontándose exclusivamente por sus componentes al vender en el POS.
+
 ### v1.3.0 — 2026-08-13
 
 - **Reportes — columna "Estado de Venta":** renombrada desde "Estado" para no confundirla con "Estado de envío" (columna aparte, viene de los pedidos de la app).

@@ -35,7 +35,7 @@ public class App extends Application {
 
         Scene scene = new Scene(root);
         stage.setScene(scene);
-        stage.setTitle("Sistema FedeiaTech - Pyme v1.3.0");
+        stage.setTitle("Sistema FedeiaTech - Pyme v1.4.0");
         stage.setResizable(false);
         stage.sizeToScene();
         stage.centerOnScreen();

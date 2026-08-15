@@ -1,8 +1,10 @@
 package com.fedeiatech.sistemagestionpyme.service;
 
+import com.fedeiatech.sistemagestionpyme.dao.ComboDAO;
 import com.fedeiatech.sistemagestionpyme.dao.ConfiguracionDAO;
 import com.fedeiatech.sistemagestionpyme.dao.ItemDAO;
 import com.fedeiatech.sistemagestionpyme.dao.VentaDAO;
+import com.fedeiatech.sistemagestionpyme.model.Combo;
 import com.fedeiatech.sistemagestionpyme.model.Configuracion;
 import com.fedeiatech.sistemagestionpyme.model.ItemVenta;
 import java.io.IOException;
@@ -34,9 +36,14 @@ import java.util.regex.Pattern;
  *   <li>{@link ItemDAO#validarCodigosParaSync()} — no vacío ⇒ {@link SyncBloqueadoException}, antes de
  *       cualquier llamada HTTP. Este es el gate autoritativo (el de la UI en ConfigController es solo
  *       informativo, este es el que realmente bloquea).</li>
- *   <li>{@link ItemDAO#listarTodos()} — snapshot. Los combos están estructuralmente ausentes: entran al
- *       dominio únicamente vía {@code ItemVenta.desdeCombo()} en los controllers (merges de vista), nunca
- *       en el DAO. No hace falta (ni corresponde) filtrarlos acá.</li>
+ *   <li>{@link ItemDAO#listarTodos()} + {@link ComboDAO#listarTodos()} — snapshot de items y combos, ambos
+ *       empujados a la MISMA tabla {@code products} en un solo POST (migración 0022, {@code is_combo}).
+ *       Un combo no tiene stock propio (se resuelve de sus componentes solo dentro del POS al vender,
+ *       ver {@code VentaDAO#registrarVenta}), así que viaja con {@code stock=0}/{@code unit="u"} fijos —
+ *       Web-Shop es responsable de no mostrar ese número para filas {@code is_combo=true}. El código de
+ *       combo no comparte espacio de unicidad con {@code items.codigo} en SQLite, así que su {@code sku}
+ *       en Supabase lleva el prefijo {@code "COMBO-"} para no colisionar con un item que use el mismo
+ *       código.</li>
  *   <li>Autenticación GoTrue como cuenta dedicada {@code rol='dueno'} — el JWT resultante viaja como
  *       {@code Authorization: Bearer}, la anon key se mantiene únicamente como header {@code apikey}
  *       (nunca escrituras solo-con-anon-key).</li>
@@ -90,23 +97,33 @@ public class SupabaseSyncService {
     private final ItemDAO itemDAO;
     private final ConfiguracionDAO configDAO;
     private final VentaDAO ventaDAO;
+    private final ComboDAO comboDAO;
     /** Solo para tests — si es null, se construye un {@link JdkPostgrestClient} por sincronización con la URL vigente. */
     private final PostgrestClient clienteInyectado;
 
     private ScheduledExecutorService scheduler;
 
     private SupabaseSyncService() {
-        this(new ItemDAO(), new ConfiguracionDAO(), new VentaDAO(), null);
+        this(new ItemDAO(), new ConfiguracionDAO(), new VentaDAO(), new ComboDAO(), null);
     }
 
+    // Constructores de test existentes: comboDAO no inyectable por ellos, defaulteado a una instancia
+    // real (igual que ventaDAO ya lo era antes de este cambio) para no romper ningún call site de test
+    // ya escrito. Solo el nuevo overload de 5 args permite inyectar un ComboDAO fake.
     SupabaseSyncService(ItemDAO itemDAO, ConfiguracionDAO configDAO, PostgrestClient clienteInyectado) {
-        this(itemDAO, configDAO, new VentaDAO(), clienteInyectado);
+        this(itemDAO, configDAO, new VentaDAO(), new ComboDAO(), clienteInyectado);
     }
 
     SupabaseSyncService(ItemDAO itemDAO, ConfiguracionDAO configDAO, VentaDAO ventaDAO, PostgrestClient clienteInyectado) {
+        this(itemDAO, configDAO, ventaDAO, new ComboDAO(), clienteInyectado);
+    }
+
+    SupabaseSyncService(ItemDAO itemDAO, ConfiguracionDAO configDAO, VentaDAO ventaDAO, ComboDAO comboDAO,
+                         PostgrestClient clienteInyectado) {
         this.itemDAO = itemDAO;
         this.configDAO = configDAO;
         this.ventaDAO = ventaDAO;
+        this.comboDAO = comboDAO;
         this.clienteInyectado = clienteInyectado;
     }
 
@@ -137,8 +154,9 @@ public class SupabaseSyncService {
         String jwt = autenticar(http, config);
         Map<String, String> headers = construirHeadersProducts(config.getSupabaseAnonKey(), jwt);
 
-        List<ItemVenta> items = itemDAO.listarTodos(); // combos estructuralmente ausentes — ver Javadoc de clase
-        String payloadItems = serializarItems(items);
+        List<ItemVenta> items = itemDAO.listarTodos();
+        List<Combo> combos = comboDAO.listarTodos();
+        String payloadItems = serializarItems(items, combos);
         PostgrestResponse respItems = http.post("/rest/v1/products?on_conflict=sku", payloadItems, headers);
         if (!respItems.esExitosa()) {
             throw new IOException("Error al sincronizar productos: HTTP " + respItems.statusCode() + " - " + respItems.body());
@@ -461,12 +479,19 @@ public class SupabaseSyncService {
         return headers;
     }
 
-    private static String serializarItems(List<ItemVenta> items) {
+    private static String serializarItems(List<ItemVenta> items, List<Combo> combos) {
         String syncedAt = Instant.now().toString();
         StringBuilder sb = new StringBuilder("[");
-        for (int i = 0; i < items.size(); i++) {
-            if (i > 0) sb.append(",");
-            sb.append(serializarItem(items.get(i), syncedAt));
+        boolean primero = true;
+        for (ItemVenta item : items) {
+            if (!primero) sb.append(",");
+            primero = false;
+            sb.append(serializarItem(item, syncedAt));
+        }
+        for (Combo combo : combos) {
+            if (!primero) sb.append(",");
+            primero = false;
+            sb.append(serializarCombo(combo, syncedAt));
         }
         sb.append("]");
         return sb.toString();
@@ -482,6 +507,26 @@ public class SupabaseSyncService {
         sb.append("\"category\":\"").append(escapeJson(item.getCategoria())).append("\",");
         sb.append("\"is_service\":").append(item.isEsServicio()).append(",");
         sb.append("\"is_active\":true,");
+        sb.append("\"synced_at\":\"").append(syncedAt).append("\"");
+        sb.append("}");
+        return sb.toString();
+    }
+
+    // stock=0/unit="u" fijos: un combo no tiene stock propio (se resuelve de sus componentes
+    // solo dentro del POS al vender), pero products.stock/unit son NOT NULL — Web-Shop no debe
+    // mostrar este número para is_combo=true, ver comentario de clase. sku con prefijo "COMBO-"
+    // porque combos.codigo no comparte espacio de unicidad con items.codigo en SQLite.
+    private static String serializarCombo(Combo combo, String syncedAt) {
+        StringBuilder sb = new StringBuilder("{");
+        sb.append("\"sku\":\"COMBO-").append(escapeJson(combo.getCodigo())).append("\",");
+        sb.append("\"name\":\"").append(escapeJson(combo.getNombre())).append("\",");
+        sb.append("\"price\":").append(combo.getPrecioVenta()).append(",");
+        sb.append("\"stock\":0,");
+        sb.append("\"unit\":\"u\",");
+        sb.append("\"category\":\"Combos\",");
+        sb.append("\"is_service\":false,");
+        sb.append("\"is_active\":true,");
+        sb.append("\"is_combo\":true,");
         sb.append("\"synced_at\":\"").append(syncedAt).append("\"");
         sb.append("}");
         return sb.toString();
