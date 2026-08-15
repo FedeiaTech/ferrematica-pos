@@ -6,6 +6,7 @@ import com.fedeiatech.sistemagestionpyme.dao.UsuarioDAO;
 import com.fedeiatech.sistemagestionpyme.dao.VentaDAO;
 import com.fedeiatech.sistemagestionpyme.model.Configuracion;
 import com.fedeiatech.sistemagestionpyme.model.Usuario;
+import com.fedeiatech.sistemagestionpyme.service.BackupService;
 import com.fedeiatech.sistemagestionpyme.service.SessionService;
 import com.fedeiatech.sistemagestionpyme.service.SupabaseSyncService;
 import com.fedeiatech.sistemagestionpyme.service.SyncBloqueadoException;
@@ -15,8 +16,6 @@ import java.awt.Desktop;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.ResourceBundle;
@@ -280,19 +279,38 @@ public class ConfigController implements Initializable {
     }
 
     @FXML
-    void generarBackup(ActionEvent event) {
+    void generarBackupCompleto(ActionEvent event) {
+        File destino = elegirDestinoBackup("gestion_pyme_backup.db");
+        if (destino == null) return;
+        try {
+            BackupService.backupCompleto(destino);
+            AlertUtil.mostrarInfo("Backup Exitoso",
+                "Copia COMPLETA guardada en: " + destino.getAbsolutePath() +
+                "\n\nIncluye configuración, ticket, sincronización y usuarios.");
+        } catch (IOException e) {
+            AlertUtil.mostrarInfo("Error", "No se pudo crear el backup: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    void generarBackupSoloDatos(ActionEvent event) {
+        File destino = elegirDestinoBackup("gestion_pyme_backup_datos.db");
+        if (destino == null) return;
+        try {
+            BackupService.backupSoloDatos(destino);
+            AlertUtil.mostrarInfo("Backup Exitoso",
+                "Copia de SOLO DATOS guardada en: " + destino.getAbsolutePath() +
+                "\n\nIncluye inventario, ventas, combos, compras y gastos. No incluye configuración ni usuarios.");
+        } catch (SQLException e) {
+            AlertUtil.mostrarInfo("Error", "No se pudo crear el backup: " + e.getMessage());
+        }
+    }
+
+    private File elegirDestinoBackup(String nombreSugerido) {
         FileChooser fc = new FileChooser();
         fc.setTitle("Guardar Copia de Seguridad");
-        fc.setInitialFileName("gestion_pyme_backup.db");
-        File destino = fc.showSaveDialog(txtNombreEmpresa.getScene().getWindow());
-        if (destino != null) {
-            try {
-                Files.copy(new File("gestion_pyme.db").toPath(), destino.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                AlertUtil.mostrarInfo("Backup Exitoso", "Copia guardada en: " + destino.getAbsolutePath());
-            } catch (IOException e) {
-                AlertUtil.mostrarInfo("Error", "No se pudo crear el backup: " + e.getMessage());
-            }
-        }
+        fc.setInitialFileName(nombreSugerido);
+        return fc.showSaveDialog(txtNombreEmpresa.getScene().getWindow());
     }
 
     @FXML
@@ -401,23 +419,56 @@ public class ConfigController implements Initializable {
         fc.setTitle("Seleccionar Copia de Seguridad para Restaurar");
         fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("Base de Datos SQLite", "*.db"));
         File origen = fc.showOpenDialog(txtNombreEmpresa.getScene().getWindow());
-        if (origen != null) {
-            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-            confirm.setTitle("Peligro: Sobrescribir Datos");
-            confirm.setHeaderText("¿Estás seguro de restaurar esta copia?");
-            confirm.setContentText("Se borrarán TODOS los datos actuales. El programa se cerrará al finalizar.");
-            if (confirm.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
-                try {
-                    File destino = new File("gestion_pyme.db").getAbsoluteFile();
-                    Files.copy(origen.toPath(), destino.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                    AlertUtil.mostrarInfo("Restauración Exitosa",
-                        "La base de datos fue restaurada en:\n" + destino.getAbsolutePath() +
-                        "\n\nEl sistema se cerrará para aplicar los cambios.");
-                    System.exit(0);
-                } catch (IOException e) {
-                    AlertUtil.mostrarInfo("Error", "No se pudo restaurar: " + e.getMessage());
-                }
-            }
+        if (origen == null) return;
+
+        boolean completo;
+        try {
+            completo = BackupService.esBackupCompleto(origen);
+        } catch (SQLException e) {
+            AlertUtil.mostrarInfo("Error", "El archivo elegido no es una base de datos válida: " + e.getMessage());
+            return;
+        }
+
+        if (completo) {
+            restaurarBackupCompleto(origen);
+        } else {
+            restaurarBackupSoloDatos(origen);
+        }
+    }
+
+    private void restaurarBackupCompleto(File origen) {
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Peligro: Sobrescribir Datos");
+        confirm.setHeaderText("Backup COMPLETO detectado — ¿estás seguro de restaurar esta copia?");
+        confirm.setContentText("Se borrarán TODOS los datos actuales, incluida la configuración y los usuarios. "
+            + "El programa se cerrará al finalizar.");
+        if (confirm.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
+
+        try {
+            BackupService.restaurarCompleto(origen);
+            AlertUtil.mostrarInfo("Restauración Exitosa",
+                "La base de datos fue restaurada.\n\nEl sistema se cerrará para aplicar los cambios.");
+            System.exit(0);
+        } catch (IOException e) {
+            AlertUtil.mostrarInfo("Error", "No se pudo restaurar: " + e.getMessage());
+        }
+    }
+
+    private void restaurarBackupSoloDatos(File origen) {
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Restaurar solo datos");
+        confirm.setHeaderText("Backup de SOLO DATOS detectado — ¿estás seguro de restaurar esta copia?");
+        confirm.setContentText("Se reemplazarán ventas, inventario, combos, compras y gastos. "
+            + "La configuración y los usuarios de esta instalación NO se modifican.");
+        if (confirm.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
+
+        try {
+            BackupService.restaurarSoloDatos(origen);
+            AlertUtil.mostrarInfo("Restauración Exitosa",
+                "Los datos fueron restaurados. Cerrá y volvé a abrir las pantallas de Inventario/Reportes "
+                + "para ver los cambios reflejados.");
+        } catch (SQLException e) {
+            AlertUtil.mostrarInfo("Error", "No se pudo restaurar: " + e.getMessage());
         }
     }
 
